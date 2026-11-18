@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>獵魔村 v47</title>
+<title>獵魔村 v48</title>
 <style>
   :root { --bg:#1b2130; --panel:#262d3f; --panel2:#2f374c; --line:#3a4359; --text:#f1ece0; --muted:#a3abbd; --gold:#f2c14e; --green:#6fcf97; --red:#ff6b6b; --blue:#59a8ff; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -430,7 +430,7 @@
   <div class="k" id="rbInfo"></div>
   <div class="sec">① 選下一世的紀元</div>
   <div id="rbEras" style="display:flex;flex-direction:column;gap:6px"></div>
-  <div class="sec">② 選一位傳承英雄，按下就轉生</div>
+  <div class="sec">② 所有英雄都會跟你到新世界，按下就轉生</div>
   <div id="rbHeroes" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow:auto"></div>
   <div class="row"><button id="rbNo">取消</button></div>
 </div></div>
@@ -3902,9 +3902,8 @@ function refreshUI(force){
 function openRebirth(){
   if (!canRebirth()) return;
   $('rbInfo').innerHTML = `會得到 <b>${soulsPreview()}</b> 顆星魂（目前 ${S.meta.souls}）。<br>村子、建築、金錢、其他英雄都會重置；星魂天賦和怪物圖鑑永久保留。下一世的魔物會更強，但掉落也更多。`;
-  $('rbHeroes').innerHTML = [...S.heroes].sort((a, b) => b.lv - a.lv).slice(0, 8).map(h =>
-    `<button data-legacy="${h.id}" style="text-align:left">${heroBadge(h.cls, h.job, h.branch)} ${h.name} <span class="k">Lv${h.lv} ${jobName(h)}${h.pet ? ' ' + petOf(h).e : ''}${h.titles.length ? '・' + h.titles.length + ' 個稱號' : ''}</span></button>`).join('') +
-    `<button data-legacy="0">不帶英雄</button>`;
+  $('rbHeroes').innerHTML = `<div class="k" style="font-size:12.5px;line-height:1.6;margin-bottom:6px">${S.heroes.length} 位英雄全部帶走：保留階級、詞條、裝備、寵物、稱號、神器和外觀；等級從 Lv${1 + tl('guild') * 2} 開始，轉職重來。</div>` +
+    `<button class="primary" data-legacy="all" style="width:100%">👑 帶著全部英雄轉生</button>`;
   rbEraOpts = eraChoices(); rbEraPick = rbEraOpts[0].k; drawRbEras();
   $('rbModal').classList.add('on');
 }
@@ -3989,7 +3988,7 @@ function initUI(){
     else if (d.branch) { const h = S.selected; if (h && !h.job) h.branchPref = d.branch; }
     else if (d.zone !== undefined) { const h = S.selected; if (h) { h.zone = d.zone === '-1' ? null : +d.zone; h.target = null; h.hardT = null; if (h.state === 'hunt' || h.state === 'wander') { h.state = 'idle'; h.think = 0; } toast(h.zone == null ? `${h.name}：自己決定去哪打怪` : `${h.name}：前往${ZONES[h.zone]}`); } }
     else if (d.rebirth) { openRebirth(); return; }
-    else if (d.legacy !== undefined) { $('rbModal').classList.remove('on'); doRebirth(+d.legacy, rbEraPick); closeSheet(); }
+    else if (d.legacy !== undefined) { $('rbModal').classList.remove('on'); doRebirth('all', rbEraPick); closeSheet(); }
     else if (d.era) { rbEraPick = d.era; drawRbEras(); return; }
     else if (d.go) { const [t2, s2] = d.go.split(':'); goTab(t2, s2); }
     else if (d.open) {
@@ -4091,7 +4090,7 @@ function doRebirth(legacyId, eraK){
   if (S.world) meta.eras[S.world] = (meta.eras[S.world] || 0) + 1;
   const nextEra = eraK || (eraChoices()[0] || {}).k || null;
   meta.rebirths++; meta.souls += gain; meta.totalSouls += gain;
-  meta.legacy = lh ? { name:lh.name, cls:lh.cls, trait:lh.trait, pet:lh.pet, titles:lh.titles, perks:lh.perks, art:lh.art, legend:lh.legend || null, rank:lh.rank ?? 1 } : null;
+  meta.legacy = S.heroes.map(lh => ({ id:lh.id, name:lh.name, cls:lh.cls, trait:lh.trait, pet:lh.pet, titles:lh.titles, perks:lh.perks, art:lh.art, legend:lh.legend || null, rank:lh.rank ?? 1, weapon:lh.weapon, armor:lh.armor, acc:lh.acc || null }));   // v48：全部英雄，裝備也帶走
   const speed = S.speed;
   newGame(meta);
   S.speed = speed; S.world = nextEra;
@@ -4124,12 +4123,17 @@ function newGame(meta){
   if (meta) { S.meta = meta; S.stats.byName = {}; }
   calcBestiary();
   S.gold += tl('gold0') * 300;
-  const L = S.meta.legacy;
-  if (L) {
-    const h = addHero({ name:L.name, cls:L.cls, trait:L.trait, lv:1 + tl('guild') * 2, perks:L.perks, legend:L.legend, rank:L.rank });
-    h.pet = L.pet; h.titles = [...(L.titles || [])]; h.art = L.art || null; h.legacy = true; h.hp = hpMax(h);
-    S.selected = h; S.meta.legacy = null;
-    log(`👑 傳承英雄 ${h.name} 跟著你來到新的世界，保留了稱號${h.pet ? '和寵物' : ''}`);
+  const LS = Array.isArray(S.meta.legacy) ? S.meta.legacy : S.meta.legacy ? [S.meta.legacy] : [];   // v48：全部英雄（舊存檔是單一傳承英雄）
+  if (LS.length) {
+    S.meta.legacy = null;
+    for (const L of LS) {
+      const h = addHero({ name:L.name, cls:L.cls, trait:L.trait, lv:1 + tl('guild') * 2, perks:L.perks, legend:L.legend, rank:L.rank });
+      h.pet = L.pet; h.titles = [...(L.titles || [])]; h.art = L.art || null; h.legacy = true;
+      if (L.weapon) h.weapon = { ...L.weapon }; if (L.armor) h.armor = { ...L.armor }; if (L.acc) h.acc = { ...L.acc }; h.hp = hpMax(h);
+      if (L.id != null && !S.heroes.some(o => o !== h && o.id === L.id)) { h.id = L.id; S.nextId = Math.max(S.nextId, L.id + 1); }   // 保留編號 → 髮型、髮色不變
+    }
+    S.selected = S.heroes[0];
+    log(`👑 ${LS.length} 位英雄跟著你來到新的世界，保留了階級、裝備、稱號、寵物和神器`);
   } else S.selected = addHero({ name: pick(NAMES), cls:'warrior', trait:'brave', lv:1 + tl('guild') * 2 });
   S.recruited = 0; S.tix = TIX_MAX; S.tixAt = null; S.store = S.store || [];
   refreshCandidates();
