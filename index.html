@@ -2,12 +2,12 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1b2130">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>獵魔村 v46</title>
+<title>獵魔村 v47</title>
 <style>
   :root { --bg:#1b2130; --panel:#262d3f; --panel2:#2f374c; --line:#3a4359; --text:#f1ece0; --muted:#a3abbd; --gold:#f2c14e; --green:#6fcf97; --red:#ff6b6b; --blue:#59a8ff; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -19,6 +19,7 @@
   .stats b { color:var(--gold); }
   .topbtns { display:flex; gap:6px; }
   .topbtns button { padding:6px 10px; font-size:13px; }
+  html, body, button, input, select, .app { touch-action:manipulation; }   /* v47：點兩下不會放大網頁 */
   canvas { width:100%; display:block; border-radius:10px; touch-action:manipulation; background:#3b6b3b; }
   button { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:9px 8px; font-size:14px; line-height:1.3; cursor:pointer; font-family:inherit; }
   button:disabled { opacity:.4; cursor:default; }
@@ -4038,8 +4039,7 @@ function initUI(){
     if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
     if (drag && !drag.moved) {
       const now = Date.now();
-      if (now - lastTap < 300) { const w = screenToWorld(e.clientX, e.clientY); camZoomAt(w.x, w.y, cam.z > 1.2 ? DEFZ : 1.8); updateZoneBtn(); lastTap = 0; }
-      else { lastTap = now; canvasPick(e); htmlCache.clear(); refreshUI(true); }
+      lastTap = now; canvasPick(e); htmlCache.clear(); refreshUI(true);   // v47：點兩下不縮放，只當一般點選
     }
     drag = null;
   };
@@ -4066,6 +4066,8 @@ function initUI(){
     else if (hiddenAt && !catching) { const away = (Date.now() - hiddenAt) / 1000; hiddenAt = 0; catchUp(away); }
   });
   window.addEventListener('pagehide', () => save(true));
+  for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, e => e.preventDefault(), { passive:false });   // v47：iPhone Safari 捏合不放大整個網頁（地圖捏合照常）
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
 }
 
 const speedMax = () => S.meta.rebirths >= 1 ? 8 : vlv() >= 4 ? 4 : 2;
