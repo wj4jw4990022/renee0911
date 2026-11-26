@@ -122,3 +122,12 @@
 - **角色換裝（Kenney）、走路動畫 walk3**：開發者確認沒問題
 - **裝備圖示定案**：劍、弓維持原樣；杖改成斜桿＋正圓水晶球；匕首改成微彎小刀（輕巧、沒有護手）；防具改成布衣、皮背心（套在布衣外）、鎖子甲、全身甲（含護臂）
 - 檔案格式、動畫影格與每格秒數見 `final/README.md`；`assets/class-equipment/` 是舊版，以 `final/equipment/` 為準
+
+## 十、怪物（2026-11-26 定案，圖檔在 `monsters/`）
+
+- 總表：`monsters/_怪物總表_v3.png`；說明與待討論清單：`monsters/README.md`
+- 風格：照 Kenney Tiny Dungeon 小人（16×16、深棕粗外框、兩三階平塗）；**A 圓滾可愛＋B 正統奇幻混用**，每區 2 隻雜魚＋2 隻強敵
+- 七區（草原、森林、荒地、礦坑、海岸、雪山、魔王城）各 4 隻；強敵 B 各有菁英版（調暗＋紅眼＋小金冠）
+- 魔王 24×24：骸骨魔王（荒地盡頭）、深淵魔王（魔王城）
+- 產生程式：`tools/monsters.py`、`tools/monsters2.py`、`tools/monsters3.py`（`python3 design/tools/monsters3.py design/assets/kenney-tiny-dungeon/tiles 輸出資料夾`）
+- 待討論：第 4 隻強敵要不要做菁英版（開發者：之後討論）、黑騎士菁英辨識度、怪物動畫
