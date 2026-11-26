@@ -50,6 +50,7 @@ ITEMS = {
  'office_1': lambda: B.office('地方'), 'office_2': lambda: B.office('王都'), 'office_3': lambda: B.office('王國'), 'office_4': lambda: B.office('大陸'), 'office_dark': lambda: B.office('地下'),
  'home_0': lambda: B.home('租屋'), 'home_1': lambda: B.home('買房'), 'home_2': lambda: B.home('結婚'), 'home_3': lambda: B.home('有小孩'),
 }
+ITEMS.update({'cap_castle': lambda: B.castle(), 'cap_house_0': lambda: B.cap_house('r'), 'cap_house_1': lambda: B.cap_house('bl'), 'cap_station': lambda: B.cap_station()})
 ITEMS.update({'post': lambda: B.gate_post(), 'post_sign': lambda: B.gate_post(True), 'p_lamp': lambda: B.prop_lamp(), 'p_crate': lambda: B.prop_crate(),
  'p_barrel': lambda: B.prop_barrel(), 'p_bench': lambda: B.prop_bench(), 'p_flowers': lambda: B.prop_flowers()})
 if hasattr(B, 'coach_iso'): ITEMS['coach'] = lambda: B.coach_iso()
