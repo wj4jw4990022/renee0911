@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#161b27">
-<title>孤勇者 v17.22.1</title>
+<title>孤勇者 v17.23</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -164,6 +164,7 @@
   .subs { display:flex; gap:6px; padding:0 14px 8px; overflow-x:auto; flex:none; scrollbar-width:none; }
   .subs::-webkit-scrollbar { display:none; }
   .subs button { flex:none; font-size:13px; padding:6px 14px; min-height:36px; border-radius:999px; background:#262e40; border:1px solid #3a4359; color:var(--muted); position:relative; }
+  .subs button { padding:6px 12px; }
   .subs button.on { background:#3c6e4f; border-color:#4f8a63; color:#fff; }
   .subs button i { position:absolute; top:2px; right:4px; width:7px; height:7px; border-radius:4px; background:var(--red); }
   .alerts { display:flex; gap:6px; padding:0 12px 6px; overflow-x:auto; flex:none; scrollbar-width:none; }
@@ -4910,7 +4911,7 @@ function renderTop(){
   $('gold').textContent = fmt(S.gold); $('fame').textContent = fmt(Math.round(S.fame));
   $('bars').innerHTML = [[h.sta, '#6fcf97'], [h.mood, '#f2c14e'], [h.stress, '#ff7b7b']].map(([v, c]) => `<i><b style="width:${clamp(v, 0, 100)}%;background:${c}"></b></i>`).join('');
   $('date').textContent = `${ym(S.day)} · ${clockTxt(hourOf())}${{ rain:' · 雨', snow:' · 雪', storm:' · 颱風' }[S.weather] || ''}`;
-  $('bSpeed').textContent = 'x' + S.speed; $('bPause').textContent = S.paused ? '▶' : '⏸';
+  const mk0 = menuMul(); $('bSpeed').textContent = !S.paused && mk0 < 1 ? (mk0 ? '慢' : '停') : 'x' + S.speed; $('bPause').textContent = S.paused ? '▶' : '⏸';
   $('hname').textContent = h.name;
   $('hsub').textContent = `${jobName(h)} Lv${h.lv} · ${Math.floor(h.age)} 歲`;
   $('chips').innerHTML = chipsOf(h).slice(0, 4).map(([k, t]) => `<span class="chip ${k}">${t}</span>`).join('');
@@ -4932,7 +4933,9 @@ function renderFeed(){
   $('ff').querySelectorAll('[data-ff]').forEach(b => b.onclick = () => { S.feedF = b.dataset.ff; renderFeed(); f.scrollTop = f.scrollHeight; });
   const h = H(), col = CLS[h.cls].col, ini = esc(h.name.slice(0, 1)), list = S.msgs.filter(ffOk).slice(-50);
   let askI = -1; if (S.q) for (let i = list.length - 1; i >= 0; i--) if (list[i].t === S.q.text) { askI = i; break; }
+  const qDup = askI >= 0 && !$('app').classList.contains('chatx');   // v17.23：下方提問框已經寫了同一句，收合時對話裡就不再重複
   f.innerHTML = list.map((m, i) => {
+    if (qDup && i === askI) return '';
     if (m.k === 'hero') return `<div class="mrow"><span class="mav">${pimg(h)}</span><div class="m${i === askI ? ' ask' : ''}">${esc(m.t)}</div></div>`;
     if (m.k === 'me') return `<div class="m me">${esc(m.t)}</div>`;
     if (m.k === 'arep') { const op = arepOpen.has(m.d); return `<div class="m arep" data-arp="${m.d}" role="button" aria-expanded="${op}"><div class="ah2"><b style="font-weight:500">${esc(m.t)}</b><span>${op ? '收合' : '展開 ›'}</span></div>${op ? `<div class="ar2">${(m.L || []).map(esc).join('<br>')}</div>` : `<div style="color:#c9cfdb;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((m.L || [])[0] || '')}</div>`}</div>`; }
@@ -5087,9 +5090,11 @@ function updBadges(h){
   const set = (t, v, c) => { const e = $('bd_' + t); if (!e) return; const on = v != null && v !== 0 && v !== ''; const key = on ? v + c : ''; if (e._k === key) return; e._k = key; e.textContent = on ? v : ''; e.className = 'bdg' + (on ? ' on' : '') + (c ? ' ' + c : ''); };
   const due = S.agTasks.filter(o => o.until - S.day <= 2).length + S.queue.filter(it => it.until && it.until - S.day <= 1).length;
   set('quest', due || ($('dQuest').classList.contains('on') ? '新' : 0), due ? '' : 'y');
-  const nw = h.wpn + 1, na = h.arm + 1, aff = (nw < 4 && S.gold >= quote(WPN.price[nw], 'agent').p ? 1 : 0) + (na < 4 && S.gold >= quote(ARM.price[na], 'agent').p ? 1 : 0) + (S.mt && S.mt.caravan ? 1 : 0);
+  // v17.23：「買得起」要扣掉 3 個月開銷的預備金才算；第一代頭兩個月先不提醒買東西，讓新手先專心接任務
+  const fresh = S.gen === 1 && S.day < 2, ok$ = p => !fresh && S.gold - p >= upkeep() * 3;
+  const nw = h.wpn + 1, na = h.arm + 1, aff = (nw < 4 && ok$(quote(WPN.price[nw], 'agent').p) ? 1 : 0) + (na < 4 && ok$(quote(ARM.price[na], 'agent').p) ? 1 : 0) + (S.mt && S.mt.caravan ? 1 : 0);
   set('gear', aff, 'g');
-  const up = Object.keys(OFFICE).filter(k => (S.office[k] || 0) < officeMax() && S.gold >= officeCost(k, S.office[k] || 0)).length + ($('dOffice').classList.contains('on') ? 1 : 0) + (S.q && /^rv/.test(S.q.key) ? 1 : 0);
+  const up = Object.keys(OFFICE).filter(k => (S.office[k] || 0) < officeMax() && ok$(officeCost(k, S.office[k] || 0))).length + ($('dOffice').classList.contains('on') ? 1 : 0) + (S.q && /^rv/.test(S.q.key) ? 1 : 0);
   set('office', up, up && $('dOffice').classList.contains('on') ? 'y' : 'g');
   const cr = typeof cloud !== 'undefined' && cloud.remote, newer = cr && (cr.at || 0) > (S.lastSave || 0) + 5 * 60000 && (cr.gen !== S.gen || cr.day !== S.day);
   set('set', newer ? '!' : 0, '');
@@ -5642,7 +5647,7 @@ function evPage(){
 let sheetT = null, hexSel = null;
 const SUBS = {
   hero:[['state', '狀態'], ['mind', '個性'], ['life', '生平'], ['charm', '寶物']],
-  people:[['ppl', '身邊的人'], ['team', '事務所內'], ['wall', '歷代'], ['news', '村子近況'], ['ledger', '人情帳']],
+  people:[['ppl', '身邊'], ['team', '事務所'], ['wall', '歷代'], ['news', '近況'], ['ledger', '人情帳']],   // v17.23：標籤縮短，手機上五個都放得下
   quest:[['queue', '排程'], ['take', '接任務']],
   gear:[['gear', '裝備'], ['care', '照顧'], ['caravan', '商隊'], ['own', '他自己買的']],
   office:[['main', '概況'], ['art', '旗下'], ['comp', '競爭'], ['fac', '設施']],
@@ -5983,6 +5988,7 @@ function renderSheet(){
     html += `<div class="stHead"><div class="av">🛡️</div><div style="min-width:0;flex:1"><div class="nm">第 ${S.gen} 代 · ${esc(h.name)}</div><div class="k">${rankName()} · ${ym(S.day)}${alive ? '' : ' · 這一代已結束'}</div><span class="stCloud ${cst[0]}"><i></i>${cst[1]}</span></div></div>`;
     html += `<div class="sec">遊戲</div><div class="grp">
       <div class="li"><div class="tx"><b>時間速度</b><small>x1：約現實 60 秒＝1 個月（睡覺時加快）</small></div><div class="segc">${[1, 3, 10].map(v => `<button data-spd="${v}" class="${S.speed === v ? 'on' : ''}">x${v}</button>`).join('')}</div></div>
+      <div class="li"><div class="tx"><b>看選單時</b><small>打開下方選單時，時間${['照常走', '放慢成 1/4', '先停住'][pref.sl ?? 1]}</small></div><div class="segc">${[[0, '照常'], [1, '放慢'], [2, '暫停']].map(([v, n]) => `<button data-sl="${v}" class="${(pref.sl ?? 1) === v ? 'on' : ''}">${n}</button>`).join('')}</div></div>
       <div class="li"><div class="tx"><b>暫停</b><small>暫停時${pron(h)}不會過日子</small></div><button class="tgl ${S.paused ? 'on' : ''}" data-pz="1" aria-label="暫停"></button></div>
       <div class="li"><div class="tx"><b>離線時</b><small>每 4 分鐘＝1 個月，最多 15 個月。只發生平安或好的事，不扣配額、不會負債</small></div></div></div>`;
     html += `<div class="sec">顯示</div><div class="grp">
@@ -5999,7 +6005,7 @@ function renderSheet(){
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">怎麼玩</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div></details></div>
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">信任與提示</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div></details></div></div>`;
     html += `<div class="sec" style="color:#ff9a9a">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
-    html += `<div class="stFoot">孤勇者 v14.5 · 只有你一個人在測試</div>`;
+    html += `<div class="stFoot">孤勇者 v17.23 · 只有你一個人在測試</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
@@ -6045,6 +6051,7 @@ function renderSheet(){
   B.querySelectorAll('[data-spd]').forEach(b => b.onclick = () => { S.speed = +b.dataset.spd; renderTop(); renderSheet(); });
   B.querySelectorAll('[data-pz]').forEach(b => b.onclick = () => { S.paused = !S.paused; renderTop(); renderSheet(); });
   B.querySelectorAll('[data-fz]').forEach(b => b.onclick = () => { prefSet('fz', +b.dataset.fz); renderSheet(); });
+  B.querySelectorAll('[data-sl]').forEach(b => b.onclick = () => { prefSet('sl', +b.dataset.sl); renderSheet(); renderTop(); });
   B.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => { prefSet('fx', pref.fx ? 0 : 1); renderSheet(); });
   if ($('bSaveNow')) $('bSaveNow').onclick = () => { save(); cloudSave(JSON.stringify(S), true); toast('存好了'); };
   if ($('bResetNo')) $('bResetNo').onclick = () => { resetArm = false; renderSheet(); };
@@ -6066,7 +6073,9 @@ function renderSheet(){
 let resetArm = false;
 // v14.5：顯示偏好（存在這台裝置，跟遊戲進度分開，重新開始不會清掉）
 const PREF_KEY = 'guyongzhe_pref';
-const pref = (() => { try { return Object.assign({ fz:0, fx:1 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch (e) { return { fz:0, fx:1 }; } })();
+const pref = (() => { try { return Object.assign({ fz:0, fx:1, sl:1 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch (e) { return { fz:0, fx:1, sl:1 }; } })();
+const MENU_MUL = [1, .25, 0];   // v17.23：看選單時 照常／放慢／暫停
+const menuMul = () => sheetT ? MENU_MUL[pref.sl ?? 1] : 1;
 function prefSet(k, v){ pref[k] = v; try { localStorage.setItem(PREF_KEY, JSON.stringify(pref)); } catch (e) {} applyPref(); }
 function applyPref(){ $('app').classList.toggle('fz1', pref.fz === 1); }
 applyPref();
@@ -6248,7 +6257,8 @@ function simulate(dt){
 function frame(now){
   const dt = Math.min(.1, (now - last) / 1000); last = now;
   const busy = $('mission').classList.contains('on') || $('end').classList.contains('on') || $('dying').classList.contains('on') || $('evp').classList.contains('on');
-  if (!busy) { const n = S.speed * (isAsleep() ? 3 : 1); for (let i = 0; i < n; i++) simulate(dt); }   // v17.16：睡著時約 3 倍速
+  const mk = menuMul();   // v17.23：看選單時時間放慢（或暫停），不會一抬頭就錯過事
+  if (!busy && mk > 0) { const n = (mk < 1 ? 1 : S.speed) * (isAsleep() ? 3 : 1); for (let i = 0; i < n; i++) simulate(dt * mk); }   // v17.16：睡著時約 3 倍速
   drawMap(now);
   if (Math.floor(now / 500) !== Math.floor((now - dt * 1000) / 500)) renderTop();
   requestAnimationFrame(frame);
