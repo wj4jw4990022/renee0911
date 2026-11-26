@@ -1,6 +1,6 @@
 # 產生 js/art.js：把定案圖檔（Kenney 角色、表情泡泡、裝備圖示）轉成文字資料，遊戲載入時不用另外讀圖
 # 用法：python3 tools/build_art.py <design 資料夾>   （design-wip 分支的 design/）
-import sys, json, glob, os, base64, io
+import sys, json, glob, os, base64, io, subprocess, tempfile
 from PIL import Image
 D = sys.argv[1]
 KT = D + '/assets/kenney-tiny-dungeon/tiles/'
@@ -38,7 +38,24 @@ for f in sorted(glob.glob(D + '/final/equipment/*.png')):
     eq[nm] = enc(im.resize((16,16), Image.NEAREST))
     b = io.BytesIO(); im.save(b, 'PNG', optimize=True); equrl[nm] = 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()
 assert len(pal) < len(CH), len(pal)
-out = '// 自動產生（tools/build_art.py），不要手改。圖檔來源：design-wip 分支 design/final、Kenney Tiny Dungeon（CC0）\n'
-out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl}, ensure_ascii=False, separators=(',',':')) + ';\n'
+# 斜角建築（村子）：design/buildings/tools/game_export.py 輸出 PNG＋meta。建築用自己的色盤 bpal，
+# 窗戶像素記成 'W'（玻璃）、'Wh'（反光），遊戲裡依白天／晚上上色
+bld = {}; bpal = ['W', 'Wh']
+TMP = tempfile.mkdtemp()
+subprocess.run([sys.executable, D + '/buildings/tools/game_export.py', TMP], check=True, stdout=subprocess.DEVNULL)
+BM = json.load(open(TMP + '/meta.json'))
+for nm, m in BM.items():
+    im = Image.open(TMP + '/' + nm + '.png').convert('RGBA'); wn = {(x, y): hl for x, y, hl in m['win']}; s = []
+    for y in range(im.height):
+        for x in range(im.width):
+            r,g,b,a = im.getpixel((x,y))
+            if a < 128: s.append(' '); continue
+            hx = 'Wh' if wn.get((x, y)) == 1 else 'W' if (x, y) in wn else '#%02x%02x%02x' % (r,g,b)
+            if hx not in bpal: bpal.append(hx)
+            s.append(CH[bpal.index(hx)])
+    bld[nm] = {'w':m['w'], 'h':m['h'], 'ax':m['ax'], 'ay':m['ay'], 'door':m['door'], 'dy':m['dy'], 'dw':m['dw'], 'px':''.join(s)}
+assert len(bpal) < len(CH), len(bpal)
+out = '// 自動產生（tools/build_art.py），不要手改。圖檔來源：design-wip 分支 design/final、design/buildings、Kenney Tiny Dungeon（CC0）\n'
+out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl, 'bch':''.join(CH[:len(bpal)]), 'bpal':bpal, 'bld':bld}, ensure_ascii=False, separators=(',',':')) + ';\n'
 open(os.path.dirname(os.path.abspath(__file__)) + '/../js/art.js', 'w').write(out)
 print('pal', len(pal), 'bytes', len(out))

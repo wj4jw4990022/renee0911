@@ -18,11 +18,10 @@ const MAPN = { vil:'村子', out:'周邊', far:'遠方' };
 // ================= v17.5：村子＝一條橫向街道（建築全排在上方，鏡頭跟著勇者左右捲動） =================
 // 勇者在模擬裡的座標（h.x / h.y）不動，村子裡另外有一個「街上的位置」V.x / V.y，
 // 依照他正在做的事走到對應建築的門口；要進屋的事（睡覺、看病、在家耍廢……）走到門口就進去。
-const VH = 170, V_BASE = 118, V_WALK = 144, V_DOOR = 128, V_GAP = 12;
+const VH = 170, V_BASE = 118, V_WALK = 144, V_DOOR = 122, V_GAP = 6;
 // 依勇者一天的動線排：村口 → 出門前會經過的鐵匠、公會 → 中間的事務所 → 休閒、休息、看病 → 住宅區
 const VSLOTS = [   // v17.17：家和民宅搬到村口旁；交通設施在家和村口之間；商店和事務所往左
   { k:'gate',    n:'村口',       w:44, h:58 },
-  { k:'telepad', n:'傳送陣',     w:40, h:30 },
   { k:'station', n:'驛馬車站',   w:46, h:54 },
   { k:'stable',  n:'馬廄',       w:52, h:50 },
   { k:'home',    n:'勇者的家',   w:50, h:52 },
@@ -42,8 +41,19 @@ const VSLOTS = [   // v17.17：家和民宅搬到村口旁；交通設施在家�
   { k:'mayor',   n:'村長家',     w:56, h:66 },
 ];
 VSLOTS.reverse();   // v17.11：村口在右端，接著野外
-let VW = 116; VSLOTS.forEach(b => { b.x = VW; b.r = [VW, V_BASE - b.h, b.w, b.h]; b.door = VW + Math.round(b.w / 2); VW += b.w + V_GAP; }); VW += 18;
-const VD = {}; VSLOTS.forEach(b => { if (b.k !== 'house') VD[b.k] = b.door; });
+// v17.32：建築換成斜 45 度圖（ART.bld，design/buildings）。每格的寬度取所有造型裡最寬的，升級時整條街不會位移
+const V_GROUND = V_BASE - 3, V_ROAD = 124, V_ROAD_B = 150, VD = {};   // V_ROAD～V_ROAD_B：車道（人行道在上面 V_BASE～V_ROAD）   // 建築地基最前面那個角對齊這條線
+const ISO_VAR = { office:['office_1', 'office_2', 'office_3', 'office_4', 'office_dark'], home:['home_0', 'home_1', 'home_2', 'home_3'], station:['station'], gate:['post'] };   // v17.32：村口只是道路上下兩根木樁；傳送陣不放在村子裡
+const isoVars = b => b.k === 'house' ? ['house_' + b.i, 'shop_' + b.i] : ISO_VAR[b.k] || [b.k];
+VSLOTS.forEach(b => { b.w = Math.max(...isoVars(b).map(n => ART.bld[n].w)) + (b.k === 'station' ? 30 : b.k === 'gate' ? 12 : 0); b.h = Math.max(...isoVars(b).map(n => ART.bld[n].h)); });
+let VW = 116; VSLOTS.forEach(b => { b.x = VW; VW += b.w + V_GAP; isoPlace(b, isoVars(b)[0]); }); VW += 18;
+// 把某個造型擺進這一格：圖置中、地基角放在 V_GROUND，整張圖（含門口的木桶、花圃）都不壓到人行道；算出點擊範圍 b.r、門口 b.door（門前小路接到人行道的位置）
+function isoPlace(b, name){ const B = ART.bld[name], cx = b.x + (b.k === 'station' ? (b.w - 30) / 2 : b.w / 2), wx = Math.round(cx - B.w / 2 + B.ax), gy = Math.min(V_GROUND, V_BASE - 2 - (B.h - 1 - B.ay));
+  b.iso = name; b.ax = wx; b.gy = gy; b.r = [wx - B.ax, gy - B.ay, B.w, B.h];
+  b.dx = wx - B.ax + B.door; b.dy = gy - B.ay + B.dy; b.dw = B.dw;   // 門口（牆腳）在世界座標的位置
+  b.path = ['gate', 'stage', 'telepad'].includes(b.k) || B.door === B.ax ? 0 : Math.max(0, V_BASE - b.dy);   // 門前小路往右下延伸到人行道
+  b.door = Math.round(b.dx + b.path * 2); if (b.k !== 'house') VD[b.k] = b.door; }
+VSLOTS.forEach(b => { if (b.k !== 'house') VD[b.k] = b.door; });
 // ================= v17.11：一條長路（村子在最左邊，村口在右端直接接著野外） =================
 // 村子和野外共用同一條橫軸。勇者「在村子裡」時，模擬座標就停在村口（GX, GY）；x 超過村口就是在野外。
 const GX = VD.gate, GY = V_WALK;
@@ -134,12 +144,16 @@ function drawVillage(now){
   ctx.drawImage(vilStreet(), 0, 0, VW, VH);
   vilHits = [];
   const shops = S.npcs.filter(n => n.alive && n.shop).slice(0, 4), homeO = { own:h.house ? 1 : 0, mar:h.married ? 1 : 0, kid:h.child ? 1 : 0 };
-  VSLOTS.forEach(b => { const [x, y, w, hh] = b.r; if (x > cam.x + hw + 10 || x + w < cam.x - hw - 10) { if (b.k !== 'house') vilHits.push({ r:b.r, k:b.k }); return; }
-    const sh = b.k === 'house' ? shops[b.i] : null;
-    drawBld(ctx, b.k === 'telepad' && !teleOpen() ? 'lot' : b.k, x, y, w, hh, b.k === 'home' && heroMap(h) !== 'vil' ? 'day' : bm, b.k === 'office' ? { stage:stageOf(), dark:(S.infamy || 0) >= 60 } : b.k === 'home' ? homeO : b.k === 'house' ? (sh ? { shop:['#d28a3a', '#3f8ac0', '#c0563f', '#5a9a5a'][b.i] } : null) : null);
-    if (b.k === 'smith') for (let i = 0; i < 3; i++) { const t = (now / 900 + i / 3) % 1; ctx.fillStyle = `rgba(210,210,210,${.55 - t * .55})`; ctx.fillRect(x + w - 11 + Math.sin(t * 6) * 3, y - 3 - t * 22, 5 + t * 3, 5 + t * 3); }
-    if (b.k === 'stable' && h.horse && heroMap(h) === 'vil' && !(h.leg && h.leg.mode === 'horse')) drawBld(ctx, 'horse', x + 4, y + hh - 4, 28, 19, 'day');
-    if (b.k === 'station') drawBld(ctx, 'coach', x + w - 12, y + hh - 2, 48, 28, 'day');
+  VSLOTS.forEach(b => { const sh = b.k === 'house' ? shops[b.i] : null, st = stageOf();
+    const nm = b.k === 'telepad' ? (teleOpen() ? 'telepad' : 'lot') : b.k === 'office' ? ((S.infamy || 0) >= 60 ? 'office_dark' : 'office_' + Math.max(1, Math.min(4, st))) : b.k === 'home' ? 'home_' + (homeO.kid ? 3 : homeO.mar ? 2 : homeO.own ? 1 : 0) : b.k === 'house' ? (sh ? 'shop_' : 'house_') + b.i : b.k;
+    if (b.iso !== nm) isoPlace(b, nm);
+    const [x, y, w, hh] = b.r; if (x > cam.x + hw + 30 || x + w < cam.x - hw - 30) { if (b.k !== 'house') vilHits.push({ r:b.r, k:b.k }); return; }
+    if (b.k === 'gate') { drawIso(ctx, 'post', b.ax, V_ROAD + 1, 'day'); nameTag(ctx, b.n, b.ax, V_ROAD - 26, 'npc'); vilHits.push({ r:b.r, k:b.k }); return; }
+    if (b.path) isoPath(b.dx, b.dy, b.path, b.dw);
+    if (b.k === 'station') drawIso(ctx, 'coach', b.ax + 40, V_BASE - 3, 'day');
+    drawIso(ctx, nm, b.ax, b.gy, b.k === 'home' && heroMap(h) !== 'vil' ? 'day' : bm);
+    if (b.k === 'smith') for (let i = 0; i < 3; i++) { const t = (now / 900 + i / 3) % 1; ctx.fillStyle = `rgba(210,210,210,${.55 - t * .55})`; ctx.fillRect(x + 13 + Math.sin(t * 6) * 2, y + 6 - t * 20, 3 + t * 3, 3 + t * 3); }
+    if (b.k === 'stable' && h.horse && heroMap(h) === 'vil' && !(h.leg && h.leg.mode === 'horse')) drawIso(ctx, 'horse', b.ax + 22, V_BASE - 3, 'day');
     const label = b.k === 'telepad' && !teleOpen() ? '傳送陣預定地' : b.k === 'home' ? `${h.name}${h.married ? '家' : '的家'}` : sh ? sh.shop.slice(0, 4) : b.k === 'house' ? '' : b.n;
     if (label) nameTag(ctx, label, x + w / 2, y - 3, b.k === 'office' || b.k === 'home' ? 'hero' : 'npc');
     if (sh) vilHits.push({ r:b.r, k:'npc', id:sh.id }); else if (b.k !== 'house') vilHits.push({ r:b.r, k:b.k }); });
@@ -153,7 +167,7 @@ function drawVillage(now){
   vis.forEach((n, i) => {
     if (gIds.includes(n.id)) return;   // 在村口迎接、來道謝的村民另外畫
     let p = vilPos.get(n.id); const home = VD[WORK[n.role]] ?? VSLOTS.filter(b => b.k === 'house')[i % 4].door;
-    if (!p || p.v !== 175) { p = { v:175, x:home + rand(-20, 20), tx:home, y:134 + (i * 7) % 22, w:0 }; vilPos.set(n.id, p); }
+    if (!p || p.v !== 176) { p = { v:176, x:home + rand(-20, 20), tx:home, y:130 + (i * 7) % 18, w:0 }; vilPos.set(n.id, p); }
     if (night) p.tx = VD.tavern - 12 + i * 8;
     if (Math.abs(p.tx - p.x) < 2) { if ((p.w -= 1 / 60) <= 0) { p.w = rand(3, 9); p.tx = Math.random() < .6 ? home + rand(-16, 16) : pick(VSLOTS).door + rand(-8, 8); } } else p.x += Math.sign(p.tx - p.x) * .35;
     const x = Math.round(p.x), y = Math.round(p.y); if (x < cam.x - hw - 20 || x > cam.x + hw + 20) return;
@@ -165,12 +179,12 @@ function drawVillage(now){
     vilHits.push({ r:[x - 9, y - 24, 18, 26], k:'npc', id:n.id }); });
 }
 // 前景（畫在人物前面）：路燈、木箱、花圃
-const VPROPS = []; for (let x = 124, i = 0; x < VW - 20; x += 46 + (i * 29) % 30, i++) VPROPS.push([x, i % 3 === 0 ? 'lamp' : ['crate', 'flowers', 'barrel', 'bench', 'flowers'][i % 5]]);
+const VPROPS = []; for (let x = 124, i = 0; x < VW - 40; x += 46 + (i * 29) % 30, i++) VPROPS.push([x, i % 3 === 0 ? 'lamp' : ['crate', 'flowers', 'barrel', 'bench', 'flowers'][i % 5]]);
 function drawVilFront(now){
   const hr = hourOf(), bm = hr >= 23 || hr < 6 ? 'late' : hr >= 18.5 ? 'night' : 'day', hw = 180 / cam.z;
   VPROPS.forEach(([x, k]) => { if (x < cam.x - hw - 30 || x > cam.x + hw + 30) return;
-    const S0 = { lamp:[10, 40], crate:[14, 12], flowers:[22, 10], barrel:[12, 14], bench:[24, 12] }[k];
-    drawBld(ctx, k, x - S0[0] / 2, VH - 4 - S0[1], S0[0], S0[1], k === 'lamp' ? bm : 'day'); });
+    drawIso(ctx, 'p_' + k, x, VH - 4, k === 'lamp' ? bm : 'day'); });
+  const g = VSLOTS.find(b => b.k === 'gate'); if (g && Math.abs(g.ax - cam.x) < hw + 30) drawIso(ctx, 'post', g.ax, V_ROAD_B + 3, 'day');   // 村口前面那根木樁（蓋在人物前面）
 }
 // 小地圖：畫面最上方一條細長條，標出每棟建築、勇者位置和目前看到的範圍；點一下跳過去
 const MINI = { x0:120, x1:352, y:3, h:6 };
@@ -1172,6 +1186,36 @@ function bldCanvas(kind, gw, gh, mode = 'day', opt){
     if (any) cv.lit = L; }
   BLD_CACHE.set(key, cv); return cv;
 }
+// v17.32：斜角建築圖（ART.bld）。'W'／'Wh' 是窗戶，依白天／晚上／深夜上色；晚上另外做燈光層
+const ISO_CACHE = new Map();
+function isoCanvas(name, mode){ const key = name + '|' + mode; let cv = ISO_CACHE.get(key); if (cv) return cv;
+  const B = ART.bld[name], wc = WIN_C[mode] || WIN_C.day, isW = (x, y) => x >= 0 && y >= 0 && x < B.w && y < B.h && (B.px[y * B.w + x] === ART.bch[0] || B.px[y * B.w + x] === ART.bch[1]);
+  cv = document.createElement('canvas'); cv.width = B.w; cv.height = B.h; const g = cv.getContext('2d');
+  for (let i = 0; i < B.px.length; i++) { const ch = B.px[i]; if (ch === ' ') continue; const c = ART.bpal[ART.bch.indexOf(ch)]; g.fillStyle = c === 'W' ? wc[0] : c === 'Wh' ? wc[1] : c; g.fillRect(i % B.w, Math.floor(i / B.w), 1, 1); }
+  if (mode !== 'day') { const L = document.createElement('canvas'); L.width = B.w; L.height = B.h; const lg = L.getContext('2d'); let any = 0;
+    lg.fillStyle = mode === 'late' ? 'rgba(255,190,100,.12)' : 'rgba(255,200,110,.22)';
+    for (let y = 0; y < B.h; y++) for (let x = 0; x < B.w; x++) if (!isW(x, y) && [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2], [1, 1], [-1, 1], [1, -1], [-1, -1]].some(([a, b]) => isW(x + a, y + b))) lg.fillRect(x, y, 1, 1);
+    for (let y = 0; y < B.h; y++) for (let x = 0; x < B.w; x++) if (isW(x, y)) { any = 1; lg.fillStyle = B.px[y * B.w + x] === ART.bch[1] ? wc[1] : wc[0]; lg.fillRect(x, y, 1, 1); }
+    if (any) cv.lit = L; }
+  ISO_CACHE.set(key, cv); return cv; }
+// 地基角（ax, ay）放在世界座標 (wx, wy)；和人物一樣 1 格＝1 世界單位、螢幕上整數倍放大
+function drawIso(c, name, wx, wy, mode){ const B = ART.bld[name], cv = isoCanvas(name, mode), t = c.getTransform(), p = Math.max(1, Math.round(t.a));
+  const sx = Math.round(t.a * wx + t.e) - B.ax * p, sy = Math.round(t.d * wy + t.f) - B.ay * p;
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false; c.drawImage(cv, sx, sy, B.w * p, B.h * p); c.restore();
+  if (cv.lit) BLD_LIT.push([cv.lit, sx, sy, B.w * p, B.h * p]); }
+// 門前的石板小路：從門口往右下（斜角的正前方，建築正面朝右）延伸到人行道，寬度和門一樣
+// 門口沿牆的方向是 (+1, -½)，往前的方向是 (+1, +½)；len＝門口到人行道的高度差
+const PATH_CACHE = new Map();
+function pathCanvas(w, len){ const key = w + '|' + len; let cv = PATH_CACHE.get(key); if (cv) return cv;
+  const x0 = -Math.ceil(w / 2) - 1, x1 = Math.ceil(w / 2) + len * 2 + 2, y0 = -Math.ceil(w / 4) - 1;
+  cv = document.createElement('canvas'); cv.width = x1 - x0; cv.height = len - y0 + 1; cv.ox = -x0; cv.oy = -y0; const g = cv.getContext('2d');
+  for (let y = y0; y <= len; y++) for (let x = x0; x < x1; x++) { const t = (x + 2 * y) / 2, u = (x - 2 * y) / 2;
+    if (u < -w / 2 || u >= w / 2 || t < 0) continue;
+    g.fillStyle = u < -w / 2 + 1 || u >= w / 2 - 1 ? '#a8987a' : (Math.floor(t / 3) % 2 ? '#d4c6a6' : '#c8b898'); g.fillRect(x - x0, y - y0, 1, 1); }
+  PATH_CACHE.set(key, cv); return cv; }
+function isoPath(x, y, len, w){ const cv = pathCanvas(Math.max(3, w || 5), Math.round(len)), t = ctx.getTransform(), p = Math.max(1, Math.round(t.a));
+  const sx = Math.round(t.a * x + t.e) - cv.ox * p, sy = Math.round(t.d * y + t.f) - cv.oy * p;
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(cv, sx, sy, cv.width * p, cv.height * p); ctx.restore(); }
 // 把造型畫進世界座標的矩形 [x, y, w, h]：底邊置中對齊，像素對齊（和人物同一個放大倍數）
 function drawBld(c, kind, x, y, w, h, mode, opt){
   // 建築要照地圖上的實際大小（不像人物取整數倍），否則相鄰的房子會疊在一起；邊緣對齊到螢幕像素
@@ -1241,13 +1285,19 @@ function vilHills(k){ if (VHILL[k]) return VHILL[k]; const f = k === 'far' ? .72
 // 街道地面：後面的草地、人行道、石板路、前面的草邊
 let VSTREET = null;
 function vilStreet(){ if (VSTREET) return VSTREET; const c = document.createElement('canvas'); c.width = VW; c.height = VH; const g = c.getContext('2d');
+  // v17.32：斜角版。後面草地、人行道（小菱形磚）、路緣石、車道（大菱形石板）、前面路緣與草地
   g.fillStyle = '#6f9a48'; g.fillRect(0, 92, VW, 26); speckle(g, 0, 92, VW, 26, ['#7eab52', '#5f8a3e'], VW / 2, 11);
-  g.fillStyle = '#cfc2a8'; g.fillRect(0, 118, VW, 8); g.fillStyle = '#b8a888'; for (let x = 0; x < VW; x += 8) g.fillRect(x, 118, 1, 8); g.fillRect(0, 125, VW, 1);   // 人行道
-  g.fillStyle = '#b89a6e'; g.fillRect(0, 126, VW, 32);
-  for (let y = 127, r = 0; y < 156; y += 6, r++) for (let x = (r % 2) * 5; x < VW; x += 10) { g.fillStyle = (x + y) % 3 ? '#c4a77a' : '#bfa274'; g.fillRect(x + 1, y + 1, 8, 4); }
-  speckle(g, 0, 126, VW, 32, ['#9a7c54', '#d2b68a'], VW / 2, 7);
-  g.fillStyle = '#a3865c'; g.fillRect(0, 157, VW, 1); g.fillStyle = '#6f9a48'; g.fillRect(0, 158, VW, 12); speckle(g, 0, 158, VW, 12, ['#7eab52', '#5f8a3e', '#86b65a'], VW / 3, 13);
-  VSLOTS.forEach(b => { g.fillStyle = '#c8b898'; g.fillRect(b.door - 5, 118, 10, 8); });   // 門口的石階
+  const hash = (a, b) => { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5; return n - Math.floor(n); };
+  // 菱形格：u、v 是兩條斜角軸（往右下、往右上），T 是格子大小；格線畫深色，每格隨機深淺
+  const iso = (y0, y1, T, cols, line, ox) => { for (let y = y0; y < y1; y++) for (let x = 0; x < VW; x++) { const u = (x + ox) / 2 + y, v = (x + ox) / 2 - y, fu = ((u % T) + T) % T, fv = ((v % T) + T) % T;
+    g.fillStyle = fu < 1 || fv < 1 ? line : cols[Math.floor(hash(Math.floor(u / T), Math.floor(v / T)) * cols.length)]; g.fillRect(x, y, 1, 1); } };
+  iso(V_BASE, V_ROAD - 2, 6, ['#d8ccb0', '#d2c5a8', '#dcd2b8'], '#b8a888', 0);
+  g.fillStyle = '#e6dcc4'; g.fillRect(0, V_BASE, VW, 1);   // 人行道後緣
+  g.fillStyle = '#c8bca0'; g.fillRect(0, V_ROAD - 2, VW, 1); g.fillStyle = '#9a8c70'; g.fillRect(0, V_ROAD - 1, VW, 1);   // 路緣石：頂面＋側面（厚度）
+  iso(V_ROAD, V_ROAD_B, 10, ['#c4a77a', '#bfa274', '#c9ad82', '#b89a6e'], '#9a7c54', 3);
+  speckle(g, 0, V_ROAD, VW, V_ROAD_B - V_ROAD, ['#a8895e', '#d2b68a'], VW / 3, 7);
+  g.fillStyle = '#d2c5a8'; g.fillRect(0, V_ROAD_B - 1, VW, 1); g.fillStyle = '#8a7a5e'; g.fillRect(0, V_ROAD_B, VW, 2);   // 前面的路緣
+  g.fillStyle = '#6f9a48'; g.fillRect(0, V_ROAD_B + 2, VW, VH - V_ROAD_B - 2); speckle(g, 0, V_ROAD_B + 2, VW, VH - V_ROAD_B - 2, ['#7eab52', '#5f8a3e', '#86b65a'], VW / 3, 13);
   return VSTREET = c; }
 // ================= v17.7：任務作息 =================
 // 委託分成「通勤」（每天回家）和「出差」（在外紮營）；村子裡的事務所任務只在固定時段工作。
@@ -1414,7 +1464,7 @@ function tourTxt(){ const T = S.tourShow, k = tourRound(), hr = hourOf(), mm = T
 function drawTourShow(now){
   try {
     const k = tourRound(); if (k < 0) return; const T = S.tourShow, bx = VD.arena, hr = hourOf(), mm = T.pl.my[k], cols = ['#c0563f', '#3f6ea0', '#5a9a5a', '#c87aa0', '#d8a02e', '#7a6ac0'];
-    for (let i = 0; i < 14; i++) pxPerson(bx - 42 + (i % 7) * 13 + (i >= 7 ? 6 : 0), 155 + (i >= 7 ? 7 : 0), cols[i % 6], i, now);
+    for (let i = 0; i < 14; i++) pxPerson(bx - 42 + (i % 7) * 13 + (i >= 7 ? 6 : 0), 148 + (i >= 7 ? 6 : 0), cols[i % 6], i, now);
     nameTag(ctx, '武鬥大會・' + TRN[k], bx, 52, 'hero');
     const fight = hr >= tR(k) && hr < tR(k) + 2, ox = (V.x ?? bx) + 16;
     if (mm && fight) { const hit = Math.floor(now / 450) % 3 === 0; pxPerson(ox + (hit ? 2 : 0), 146, '#6a3a3a', 3, now); if (hit) { ctx.fillStyle = '#fff6a0'; ctx.fillRect(ox - 7, 136, 3, 3); } }
