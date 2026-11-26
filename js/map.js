@@ -1864,7 +1864,7 @@ function scnTick(dt, now){
     // 打倒：勇者貼著目標、而且進度到了才倒
     const tg = alive.filter(m => !m.boss).sort((a, b) => Math.hypot(a.x - hx, a.y - hy) - Math.hypot(b.x - hx, b.y - hy))[0];
     s.tg = s.t === 'boss' ? s.mobs[0] : tg || null;
-    if (tg && s.kills < want && Math.hypot(tg.x - hx, tg.y - hy) < 18 && !s.down) { tg.dead = now; s.kills++; }
+    if (tg && s.kills < want && Math.hypot(tg.x - hx, tg.y - hy) < monHalf(s.mob) + 20 && !s.down) { tg.dead = now; s.kills++; }
     // 搜尋／調查：一個點一個點找
     if (s.t === 'search' || s.t === 'probe') s.found = Math.min(s.pts.length, Math.floor(Math.min(f, lose ? .7 : 1) * s.pts.length + (f >= .97 && !lose ? 1 : 0)));
   } catch (e) { if (!scnErr++) console.error(e); SCN = null; }
@@ -1873,7 +1873,7 @@ function scnTick(dt, now){
 function scnGoal(h){
   const s = SCN; if (!s || s.off || !scnOn(h)) return null; if (s.down) return [h.x, h.y, 0];
   const tg = s.tg && !s.tg.dead ? s.tg : null;
-  if (tg) return [tg.x - (tg.boss ? 22 : 10), tg.y + 1, Math.hypot(tg.x - h.x, tg.y - h.y) < (tg.boss ? 28 : 20)];
+  if (tg) { const gap = monHalf(s.mob) + 13, sd = h.x > tg.x ? 1 : -1; return [tg.x + sd * gap, tg.y + 4, Math.hypot(tg.x - h.x, tg.y - h.y) < gap + 8]; }   // v17.34：和怪物保持距離，不重疊
   if (s.t === 'escort') return [s.cart[0] + 14, s.cart[1] + 2, 0];
   if (s.t === 'rescue') return s.phase ? [s.vic[0] - 10, s.vic[1], 0] : [s.sx - 12, s.sy, 0];
   if (s.t === 'guard') return [s.sx, s.sy + 2, 0];

@@ -113,7 +113,7 @@ function simulate(dt){
     if (V.exiting && performance.now() < V.exiting) { /* 畫面上還在村子裡走向村口，先不出發 */ }
     else if (d > 1) { const L = h.leg, s2 = L ? Math.max(sp, L.spd * dt) : sp; h.x += dx / d * Math.min(d, s2); h.y += dy / d * Math.min(d, s2); }
     else if ((h.act === 'idle' || h.act === 'rest' || h.act === 'train') && !sleeping()) { if (Math.random() < dt * .4) { h.tx = clamp(h.x + rand(-30, 30), GX - 300, GX); h.ty = GY; } }
-    if (h.act === 'hunt' && h.target) { h.tx = h.target.x - 6 - monHalf(zoneMon(h.target.z)); h.ty = h.target.y + 4; }
+    if (h.act === 'hunt' && h.target) { const sd = h.x > h.target.x ? 1 : -1; h.tx = h.target.x + sd * (monHalf(zoneMon(h.target.z)) + 13); h.ty = h.target.y + 4; }   // v17.34：站在怪物靠勇者的那一側，中間留一點空，不重疊（不會穿過怪物）
     if (h.act === 'mission' && h.mission && !heroHidden(h)) {
       const m = h.mission, sp0 = MSPOT[m.ag], ph = mPhase(h);
       if (['prep', 'back', 'home', 'free', 'nout'].includes(ph)) { h.tx = GX; h.ty = GY; }   // v17.7：在村子／收工回村
