@@ -48,10 +48,10 @@ VSLOTS.reverse();   // v17.11：村口在右端，接著野外
 const V_GROUND = V_BASE - 3, V_ROAD = 124, V_ROAD_B = 150, VD = {};   // V_ROAD～V_ROAD_B：車道（人行道在上面 V_BASE～V_ROAD）   // 建築地基最前面那個角對齊這條線
 const ISO_VAR = { office:['office_1', 'office_2', 'office_3', 'office_4', 'office_dark'], home:['home_0', 'home_1', 'home_2', 'home_3'], station:['station'], gate:['post'] };   // v17.32：村口只是道路上下兩根木樁；傳送陣不放在村子裡
 const isoVars = b => b.k === 'house' ? ['house_' + b.i, 'shop_' + b.i] : ISO_VAR[b.k] || [b.k];
-VSLOTS.forEach(b => { b.w = Math.max(...isoVars(b).map(n => ART.bld[n].w)) + (b.k === 'station' ? 30 : b.k === 'gate' ? 12 : 0); b.h = Math.max(...isoVars(b).map(n => ART.bld[n].h)); });
+VSLOTS.forEach(b => { b.w = Math.max(...isoVars(b).map(n => ART.bld[n].w)) + (b.k === 'station' ? 62 : b.k === 'gate' ? 12 : 0); b.h = Math.max(...isoVars(b).map(n => ART.bld[n].h)); });
 let VW = 116; VSLOTS.forEach(b => { b.x = VW; VW += b.w + V_GAP; isoPlace(b, isoVars(b)[0]); }); VW += 18;
 // 把某個造型擺進這一格：圖置中、地基角放在 V_GROUND，整張圖（含門口的木桶、花圃）都不壓到人行道；算出點擊範圍 b.r、門口 b.door（門前小路接到人行道的位置）
-function isoPlace(b, name){ const B = ART.bld[name], cx = b.x + (b.k === 'station' ? (b.w - 30) / 2 : b.w / 2), wx = Math.round(cx - B.w / 2 + B.ax), gy = Math.min(V_GROUND, V_BASE - 2 - (B.h - 1 - B.ay));
+function isoPlace(b, name){ const B = ART.bld[name], cx = b.x + (b.k === 'station' ? (b.w - 62) / 2 : b.w / 2), wx = Math.round(cx - B.w / 2 + B.ax), gy = Math.min(V_GROUND, V_BASE - 2 - (B.h - 1 - B.ay));
   b.iso = name; b.ax = wx; b.gy = gy; b.r = [wx - B.ax, gy - B.ay, B.w, B.h];
   b.dx = wx - B.ax + B.door; b.dy = gy - B.ay + B.dy; b.dw = B.dw;   // 門口（牆腳）在世界座標的位置
   b.path = ['gate', 'stage', 'telepad'].includes(b.k) || B.door === B.ax ? 0 : Math.max(0, V_BASE - b.dy);   // 門前小路往右下延伸到人行道
@@ -174,10 +174,10 @@ function drawVillage(now){
     const [x, y, w, hh] = b.r; if (x > cam.x + hw + 30 || x + w < cam.x - hw - 30) { if (b.k !== 'house') vilHits.push({ r:b.r, k:b.k }); return; }
     if (b.k === 'gate') { drawIso(ctx, 'post', b.ax, V_ROAD + 1, 'day'); nameTag(ctx, b.n, b.ax, V_ROAD - 26, 'npc'); vilHits.push({ r:b.r, k:b.k }); return; }
     if (b.path) isoPath(b.dx, b.dy, b.path, b.dw);
-    if (b.k === 'station') drawIso(ctx, 'coach', b.ax + 40, V_BASE - 3, 'day');
     drawIso(ctx, nm, b.ax, b.gy, b.k === 'home' && heroMap(h) !== 'vil' ? 'day' : bm);
     if (b.k === 'smith') for (let i = 0; i < 3; i++) { const t = (now / 900 + i / 3) % 1; ctx.fillStyle = `rgba(210,210,210,${.55 - t * .55})`; ctx.fillRect(x + 13 + Math.sin(t * 6) * 2, y + 6 - t * 20, 3 + t * 3, 3 + t * 3); }
-    if (b.k === 'stable' && h.horse && heroMap(h) === 'vil' && !(h.leg && h.leg.mode === 'horse')) drawIso(ctx, 'horse', b.ax + 22, V_BASE - 3, 'day');
+    if (b.k === 'stable' && h.horse && heroMap(h) === 'vil' && !(h.leg && h.leg.mode === 'horse')) drawRideSpr(ctx, 'horse_stand', b.ax + 26, V_BASE - 2, false);   // v17.39：勇者的馬
+    if (b.k === 'station') { const B = ART.bld[nm]; drawRideSpr(ctx, 'coach_0', b.ax - B.ax + B.w + 4 + 31, V_BASE - 2, false); }   // v17.39：馬車停在站房旁邊，留一段空
     const label = b.k === 'telepad' && !teleOpen() ? '傳送陣預定地' : b.k === 'home' ? `${h.name}${h.married ? '家' : '的家'}` : sh ? sh.shop.slice(0, 4) : b.k === 'house' ? '' : b.n;
     if (label) nameTag(ctx, label, x + w / 2, y - 3, b.k === 'office' || b.k === 'home' ? 'hero' : 'npc');
     if (sh) vilHits.push({ r:b.r, k:'npc', id:sh.id }); else if (b.k !== 'house') vilHits.push({ r:b.r, k:b.k }); });
@@ -360,10 +360,11 @@ function drawMap(now){
       const lying = view === 'vil' ? h.act === 'dying' || vCarry() : h.act === 'bed' || h.act === 'slack' || h.act === 'dying' || sleeping() || !!(SCN && !SCN.off && SCN.down) || (mPhase(h) === 'camp' && (hourOf() >= 22.5 || hourOf() < 6.5));
       if (!lying) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(hx0, hy0 + 1, 8, 2.6, 0, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(242,193,78,' + (.55 + .25 * Math.sin(now / 400)) + ')'; ctx.lineWidth = .8; ctx.beginPath(); ctx.ellipse(hx0, hy0 + 1, 9.5, 3.2, 0, 0, 7); ctx.stroke(); }   // v17.1：主力腳下光圈
       if (view === 'vil' && vCarry()) drawCarry(now, Math.round(hx0), Math.round(hy0));
-      const ride = view === 'vil' ? 0 : drawRide(now, h, Math.round(hx0), Math.round(hy0));   // v17.12：馬、驛馬車、傳送陣
+      RIDE_FRONT = null; RIDE_HA = 1; const ride = view === 'vil' ? 0 : drawRide(now, h, Math.round(hx0), Math.round(hy0));   // v17.12：馬、驛馬車、傳送陣
+      ctx.globalAlpha = h.alpha * vfa * RIDE_HA;
       if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') { const fx = hfxOn(h, now) || scnFxOn(h, now), foe = h.target || (fx && (fx.ghost || fx.tg)) || scnFoe(h, now), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
         if (fx) { const p = Math.max(0, now - fx.t) / 1000; if (p > .1 && p < .4) ox = d * 2; if (fx.hurt && !fx.kill && p > .72 && p < .95) { ox = -d * 2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * .35; } }   // 出手往前踏、被打到往後退＋閃
-        drawHero(ctx, Math.round(hx0 + ox), Math.round(hy0) - (ride || 0), lying, now); ctx.globalAlpha = h.alpha * vfa;
+        drawHero(ctx, Math.round(hx0 + ox), Math.round(hy0) - (ride || 0), lying, now); if (RIDE_FRONT) drawRideSpr(ctx, RIDE_FRONT[0], RIDE_FRONT[1], RIDE_FRONT[2], RIDE_FRONT[3], RIDE_AX); ctx.globalAlpha = h.alpha * vfa;
         if (fx && foe) { const p = Math.max(0, now - fx.t) / 1000; if (p > .22 && p < .42) { const k = (p - .22) / .2, cx = hx0 + d * 10, cy = hy0 - 8; ctx.strokeStyle = `rgba(255,255,255,${1 - k * .7})`; ctx.lineWidth = 1.6; ctx.beginPath();   // 揮砍弧線
           if (d > 0) ctx.arc(cx, cy, 9, -1.3, -1.3 + 2.4 * Math.min(1, k * 1.6)); else ctx.arc(cx, cy, 9, Math.PI + 1.3 - 2.4 * Math.min(1, k * 1.6), Math.PI + 1.3); ctx.stroke(); } } }
       if (h.act === 'hunt') { const fx = hfxOn(h, now), hp = fx && fx.hurt && Math.max(0, now - fx.t) < 720 ? fx.hp0 : h.hp;   // 血條等怪物打到才掉
@@ -1577,10 +1578,27 @@ function drawRide(now, h, x, y){
     if (L.enc === 'mon') { const z = ZONES.findIndex(Z => x >= Z.rect[0] && x <= Z.rect[2] + 14); drawMonster(ctx, zoneMon(Math.max(0, z)), ex, y + 4, Math.floor(now / 200) % 2 ? 'hurt' : 'idle', Math.floor(now / 200) % 2, false, ex > x, L.encSeed ??= Math.random()); }
     else { pxPerson(ex, y, L.enc === 'merc' ? '#8a5a3a' : '#59a8ff', 2, now); if (L.enc === 'merc') drawBld(ctx, 'cart', ex + 6, y - 14, 20, 15, 'day'); } }
   const left = L.toX < L.fromX;
-  if (L.mode === 'coach' && h.x >= COACH_A() - 2 && h.x <= COACH_B() + 2) { drawBld(ctx, left ? 'coachL' : 'coach', x - 24, y - 26, 48, 28, 'day'); return 'hide'; }
-  if (L.mode === 'horse' || (L.mode === 'coach' && h.horse)) { drawBld(ctx, left ? 'horseL' : 'horse', x - 14, y - 16, 28, 19, 'day'); return 8; }
+  // v17.39：驛馬車（灰白馬走路、輪子轉）；進出驛馬車路段時勇者和馬車交叉淡入淡出
+  if (L.mode === 'coach' && h.x >= COACH_A() - 2 && h.x <= COACH_B() + 2) {
+    const k = clamp(Math.min(h.x - (COACH_A() - 2), COACH_B() + 2 - h.x) / 10, 0, 1);
+    const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * k; drawRideSpr(ctx, 'coach_' + (Math.floor(now / 170) % 4), x, y + 1, left); ctx.globalAlpha = a0;
+    if (k >= 1) return 'hide'; RIDE_HA = 1 - k; return 0; }
+  // v17.39：勇者騎馬（棕馬跳躍式跑法）：先畫馬，勇者坐上去，再把馬背以下和馬頭蓋在勇者前面
+  if (L.mode === 'horse' || (L.mode === 'coach' && h.horse)) { const f = Math.floor(now / 90) % 4;
+    drawRideSpr(ctx, 'horse_run_' + f, x, y + 1, left, RIDE_AX); RIDE_FRONT = ['horse_runF_' + f, x, y + 1, left]; return 10 - RIDE_LIFT[f]; }
   return 0;
 }
+// v17.39：側面 Q 版的馬、馬車（design/rides）。x 是對齊點（騎馬＝勇者的位置，其他＝圖的中間），y 是腳底；left＝朝左（左右翻轉）
+const RIDE_CACHE = new Map(), RIDE_AX = 11, RIDE_LIFT = [1, 1, 0, 1];
+let RIDE_FRONT = null, RIDE_HA = 1;
+function rideCanvas(name){ let cv = RIDE_CACHE.get(name); if (cv) return cv; const R = ART.ride[name];
+  cv = document.createElement('canvas'); cv.width = R.w; cv.height = R.h; const g = cv.getContext('2d');
+  for (let i = 0; i < R.px.length; i++) { const ch = R.px[i]; if (ch === ' ') continue; g.fillStyle = R.pal[ART.mch.indexOf(ch)]; g.fillRect(i % R.w, Math.floor(i / R.w), 1, 1); }
+  RIDE_CACHE.set(name, cv); return cv; }
+function drawRideSpr(c, name, x, y, left, ax){ if (!ART.ride || !ART.ride[name]) return; const cv = rideCanvas(name), t = c.getTransform(), p = Math.max(1, Math.round(t.a)), w = cv.width * p, hh = cv.height * p;
+  const a = (ax ?? cv.width / 2) * p, sx = Math.round(t.a * x + t.e), sy = Math.round(t.d * y + t.f);
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
+  if (left) { c.translate(sx, 0); c.scale(-1, 1); } c.drawImage(cv, left ? -Math.round(a) : sx - Math.round(a), sy - hh, w, hh); c.restore(); }
 // 每個月：養馬的飼料費；錢夠了就自己去買匹馬（照個性）
 function travelMonthly(h){
   if (!h || ['dead', 'retired', 'left'].includes(h.act)) return;
@@ -1590,20 +1608,10 @@ function travelMonthly(h){
   if (want && chance(.25)) { h.wallet -= HORSE_PRICE; trPay(h, HORSE_PRICE); h.horse = { since:S.day }; ev('good', '買馬', `${h.name}用自己的錢買了一匹馬（${HORSE_PRICE} 金），以後出門快多了`); if (!offline) say(pickS(['我買馬了！以後通勤快好多', '存了好久，終於有自己的馬了'])); }
 }
 function trLine(){ const h = H(); if (!h || !(h.trSpent > 0)) return ''; return `<div class="k" style="font-size:12px;margin-top:6px">${h.name}自己付的交通費（車資、養馬）：這個月 ${fmt(h.trM || 0)} 金，累計 ${fmt(h.trSpent)} 金${h.horse ? ' · 有一匹馬' : ''}</div>`; }
-// 造型：馬、驛馬車（左右兩個方向）、站牌、傳送陣
+// 造型：站牌、傳送陣（馬、驛馬車 v17.39 改用 ART.ride）
 Object.assign(BLD_ART, {
-  horse(P){ const { W, H } = P, b = '#8a5a3a', d = '#6a4428';
-    P.ell(W * .45, H * .42, W * .32, H * .2, b); P.rect(W * .7, H * .12, W * .82, H * .42, b); P.ell(W * .86, H * .14, W * .1, H * .1, b);   // 身體、脖子、頭
-    P.rect(W * .74, H * .02, W * .78, H * .3, d); P.rect(W * .12, H * .3, W * .18, H * .6, d);   // 鬃毛、尾巴
-    [.22, .34, .58, .68].forEach(k => P.rect(W * k, H * .58, W * k + 1, H - 1, d)); P.rect(W * .35, H * .2, W * .55, H * .3, '#c0563f'); P.set(W * .9, H * .12, '#262230'); },
-  coach(P){ const { W, H } = P;
-    P.rect(2, 3, W * .62, H * .7, '#3f6ea0'); P.rect(2, 2, W * .62, 4, '#2f4f78'); P.rect(6, 8, 13, 14, 'W'); P.rect(17, 8, 24, 14, 'W'); P.rect(2, H * .7, W * .62, H * .7 + 1, '#f2c14e');
-    P.ell(9, H - 4, 3.5, 3.5, '#3a2a1e'); P.ell(W * .52, H - 4, 3.5, 3.5, '#3a2a1e'); P.set(9, H - 4, '#c8b090'); P.set(W * .52, H - 4, '#c8b090');
-    const hx = W * .68; P.ell(hx + 8, H * .5, 7, 4, '#8a5a3a'); P.rect(hx + 13, H * .25, hx + 15, H * .5, '#8a5a3a'); P.ell(hx + 16, H * .26, 2.5, 2, '#8a5a3a'); [2, 5, 10, 13].forEach(k => P.rect(hx + k, H * .6, hx + k, H - 2, '#6a4428')); P.line(W * .62, H * .5, hx + 2, H * .5, '#5a4a3a'); },
   stop(P){ const { W, H } = P; P.rect(W / 2 - 1, 6, W / 2, H - 1, '#5a4a3a'); P.rect(1, 0, W - 2, 8, '#f2e2b0'); P.ell(W / 2 - .5, 4, 2.5, 2, '#3f6ea0'); },
 });
-BLD_ART.horseL = P => { BLD_ART.horse(P); P.G.forEach(r => r.reverse()); };
-BLD_ART.coachL = P => { BLD_ART.coach(P); P.G.forEach(r => r.reverse()); };
 
 // ================= v17.14：急報（所有整頁大事件）現實 20 秒沒回覆，勇者自己決定 =================
 const URGENT_MS = 20000;

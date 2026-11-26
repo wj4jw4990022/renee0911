@@ -73,7 +73,20 @@ for f in sorted(glob.glob(D + '/monsters/*.png')):
     if nm.startswith('_'): continue
     if nm.startswith('BOSS_'): mon['boneking' if '骸骨' in nm else 'abyss'] = menc(f); continue
     t, zn, _ = nm.split('_', 2); mon['z%d%s' % (ZN.index(zn), t.lower())] = menc(f)
+# 馬、驛馬車（design/rides，v17.39）：側面 Q 版，每張各自一個小色盤；不裁切，最後一列就是腳底
+ride = {}
+RT = tempfile.mkdtemp(); subprocess.run([sys.executable, D + '/rides/rides.py', RT], check=True, stdout=subprocess.DEVNULL)
+for f in sorted(glob.glob(RT + '/*.png')):
+    im = Image.open(f).convert('RGBA'); s = []; rpal = []
+    for y in range(im.height):
+        for x in range(im.width):
+            r,g,b,a = im.getpixel((x,y))
+            if a < 128: s.append(' '); continue
+            hx = '#%02x%02x%02x' % (r,g,b)
+            if hx not in rpal: rpal.append(hx)
+            s.append(CH[rpal.index(hx)])
+    ride[os.path.basename(f)[:-4]] = {'w':im.width, 'h':im.height, 'pal':rpal, 'px':''.join(s)}
 out = '// 自動產生（tools/build_art.py），不要手改。圖檔來源：design-wip 分支 design/final、design/buildings、design/monsters、Kenney Tiny Dungeon（CC0）\n'
-out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl, 'bch':''.join(CH[:len(bpal)]), 'bpal':bpal, 'bld':bld, 'mch':''.join(CH), 'mon':mon}, ensure_ascii=False, separators=(',',':')) + ';\n'
+out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl, 'bch':''.join(CH[:len(bpal)]), 'bpal':bpal, 'bld':bld, 'mch':''.join(CH), 'mon':mon, 'ride':ride}, ensure_ascii=False, separators=(',',':')) + ';\n'
 open(os.path.dirname(os.path.abspath(__file__)) + '/../js/art.js', 'w').write(out)
 print('pal', len(pal), 'bytes', len(out))
