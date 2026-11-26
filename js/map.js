@@ -1447,40 +1447,67 @@ function wildGround(){ if (WGROUND) return WGROUND; const W0 = Math.ceil(WW - VW
     g.fillStyle = monMix(road, '#000000', .08); for (let x = a; x < a + w; x++) if ((x * 7 + k) % 11 > 2) { g.fillRect(x, V_ROAD + 9, 1, 1); g.fillRect(x, V_ROAD_B - 9, 1, 1); } };
   seg(VW, ZONES[0].rect[0], '#6f9a48', '#b89a6e', '#6f9a48', 1);
   ZONES.forEach((Z, z) => seg(Z.rect[0], Z.rect[2], Z.c, ZROAD[z], z === 4 ? '#e0cc98' : z === 5 ? '#eef3f8' : z === 6 ? '#2e2238' : monMix(Z.c, '#000000', .1), z * 11 + 2));
-  seg(CAP.x0, CAP.x1, '#8a9a6a', '#c4a77a', '#6f9a48', 99);
-  paveIso(g, Math.round(CAP.x0 - VW) - 4, Math.round(CAP.x1 - VW) + 18, CAP.x0 - VW);   // 王都：和村子一樣的菱形石板路
+  seg(CAP.x0 - CAPMIX, CAP.x1 + 14 + CAPMIX, '#8a9a6a', '#c4a77a', '#6f9a48', 99);   // v17.44：往兩邊多鋪 CAPMIX，交界淡出時露出來
+  paveIso(g, Math.round(CAP.x0 - VW) - CAPMIX, Math.round(CAP.x1 - VW) + 14 + CAPMIX, CAP.x0 - VW);   // 王都：和村子一樣的菱形石板路
   return WGROUND = c; }
 // v17.40：草原、森林、荒地改成正面 Kenney Q 版（ART.wild，design-wip 的 design/wild/wild.py）。每區預先拼成一條長畫布：
 // 後方地面＋背景物（腳底對齊 V_BASE 附近）、土路（V_ROAD～V_ROAD_B）、路下方的草邊和小東西
-const WSTRIP = {};
+// v17.44：區域交界不再一刀切：草原↔森林在交界前後各 60 混色、兩邊背景物交錯；森林／荒地靠王都那一側，地面用格子交錯慢慢讓給王都的石板路
+const WSTRIP = {}, ZMIX = 60, CAPMIX = 72;
+const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const ZKIT = z => z === 2 ? { g:['s0', 's0', 's0', 's1'], rT:'sT', rM:'sM', rB:'sB' } : z === 1 ? { g:['fg0', 'fg0', 'fg0', 'fg1'], rT:'frT', rM:'frM', rB:'frB' } : { g:['g0', 'g0', 'g0', 'g0', 'g0', 'g1', 'g1', 'g2'], rT:'rT', rM:'rM', rB:'rB' };
+// 一區的地面：[後方（V_ROAD 以上）, 路＋路下方]
+function zoneGround(z, W, rnd){
+  const T = n => rideCanvas(n, 'wild'), K = ZKIT(z), mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = VH; return c; };
+  const back = mk(), front = mk(), gb = back.getContext('2d'), gf = front.getContext('2d');
+  const row = (g, y, n) => { for (let x = 0; x < W; x += 16) g.drawImage(T(n || K.g[Math.floor(rnd() * K.g.length)]), x, y); };
+  for (let y = 92; y < V_ROAD; y += 16) row(gb, y);
+  row(gf, V_ROAD - 6, K.rT); row(gf, V_ROAD + 6, K.rM); row(gf, V_ROAD + 18, K.rM); row(gf, V_ROAD_B - 8, K.rB);
+  for (let y = V_ROAD_B + 8; y < VH; y += 16) row(gf, y);
+  return [back, front]; }
+// 疊上另一區的地面，每一欄照 f(x) 的比例混色
+function mixCols(dst, src, f){ const g = dst.getContext('2d'); for (let x = 0; x < dst.width; x++) { const t = f(x); if (t <= .01) continue; g.globalAlpha = Math.min(1, t); g.drawImage(src, x, 0, 1, VH, x, 0, 1, VH); } g.globalAlpha = 1; }
+// 格子交錯淡出（2 像素一格的 Bayer 點陣）：keep(x) 越小，挖掉的格子越多
+function ditherOut(cv, keep){ const g = cv.getContext('2d'), d = g.getImageData(0, 0, cv.width, VH), px = d.data;
+  for (let x = 0; x < cv.width; x++) { const k = keep(x); if (k >= .999) continue;
+    for (let y = 0; y < VH; y++) if (k * 16 <= BAYER[((y >> 1) & 3) * 4 + ((x >> 1) & 3)]) px[(y * cv.width + x) * 4 + 3] = 0; }
+  g.putImageData(d, 0, 0); }
 function zoneStrip(z){
   if (WSTRIP[z]) return WSTRIP[z];
   const [x0, , x1] = ZONES[z].rect, W = Math.round(x1 - x0) + 14, c = document.createElement('canvas'); c.width = W; c.height = VH; const g = c.getContext('2d');
   let sd = 1234 + z * 97; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647, pk = a => a[Math.floor(rnd() * a.length)];
   const T = n => rideCanvas(n, 'wild'), put = (n, x, b) => { const cv = T(n); g.drawImage(cv, Math.round(x), Math.round(b) - cv.height); };
-  const tiles = (rowY, names) => { for (let x = 0; x < W; x += 16) g.drawImage(T(typeof names === 'function' ? names() : names), x, rowY); };
-  const K = z === 2 ? { g:() => pk(['s0', 's0', 's0', 's1']), rT:'sT', rM:'sM', rB:'sB' } : z === 1 ? { g:() => pk(['fg0', 'fg0', 'fg0', 'fg1']), rT:'frT', rM:'frM', rB:'frB' } : { g:() => pk(['g0', 'g0', 'g0', 'g0', 'g0', 'g1', 'g1', 'g2']), rT:'rT', rM:'rM', rB:'rB' };
-  for (let y = 92; y < V_ROAD; y += 16) tiles(y, K.g);
+  // 森林味（0＝草原、1＝森林）：草原尾端和森林開頭照它混；keep：靠王都那一側慢慢讓出來
+  const B0 = z === 0 ? W - 7 : -7, fo = z === 2 ? () => 0 : x => sstep(B0 - ZMIX, B0 + ZMIX, x);
+  const keep = z === 1 ? x => 1 - sstep(W - CAPMIX, W, x) : z === 2 ? x => sstep(0, CAPMIX, x) : () => 1;
+  const [back, front] = zoneGround(z, W, rnd);
+  if (z <= 1) { const [b2, f2] = zoneGround(1 - z, W, rnd), m = z === 0 ? fo : x => 1 - fo(x); mixCols(back, b2, m); mixCols(front, f2, m); }
+  if (z >= 1) { ditherOut(back, keep); ditherOut(front, keep); }
+  g.drawImage(back, 0, 0);
   const items = [];   // [名稱, x, 腳底 y]，最後照腳底排序再畫（後面的先畫）
-  if (z === 0) {
-    items.push(['farm', W * .12, V_BASE + 2], ['field', W * .42, V_BASE - 6], ['hay', W * .42 + 84, V_BASE - 2], ['hay', W * .42 + 96, V_BASE + 2], ['fence', W * .72, V_BASE + 8], ['fence', 2, V_BASE + 8]);
-    for (let x = 6; x < W - 16; x += 18 + rnd() * 22) { if (Math.abs(x - W * .12 - 24) < 34 || (x > W * .42 - 14 && x < W * .42 + 110)) continue; items.push([pk(['tree', 'tree', 'stree', 'bush', 'atree']), x, V_BASE + 1 + rnd() * 4]); }
-  } else if (z === 1) {
-    for (let i = 0, x = -6; x < W; x += 13, i++) items.push([['treeD', 'treeD', 'atreeD', 'treeD', 'streeD'][i % 5], x, 92 + (i * 5) % 7]);
-    for (let i = 0, x = 4; x < W; x += 17, i++) items.push([['treeM', 'streeM', 'treeM', 'atreeM', 'treeM', 'satreeM'][i % 6], x, 104 + (i * 3) % 5]);
-    for (let x = 4; x < W - 16; x += 16 + rnd() * 20) items.push([pk(['tree', 'tree', 'stree', 'bush', 'mush', 'atree', 'log', 'stump', 'bush']), x, V_BASE + 1 + rnd() * 3]);
+  const FRONT0 = ['tree', 'tree', 'stree', 'bush', 'atree'], FRONT1 = ['tree', 'tree', 'stree', 'bush', 'mush', 'atree', 'log', 'stump', 'bush'];
+  if (z <= 1) {
+    if (z === 0) items.push(['farm', W * .12, V_BASE + 2], ['field', W * .42, V_BASE - 6], ['hay', W * .42 + 84, V_BASE - 2], ['hay', W * .42 + 96, V_BASE + 2], ['fence', W * .72, V_BASE + 8], ['fence', 2, V_BASE + 8]);
+    // 森林後排兩層：越接近森林越密（草原尾端只零星幾棵）
+    for (let i = 0, x = -6; x < W; x += 13, i++) { const p = Math.pow(fo(x + 20), 1.3) * keep(x); if (rnd() < p) items.push([['treeD', 'treeD', 'atreeD', 'treeD', 'streeD'][i % 5], x, 92 + (i * 5) % 7]); }
+    for (let i = 0, x = 4; x < W; x += 17, i++) { const p = fo(x + 10) * keep(x); if (rnd() < p) items.push([['treeM', 'streeM', 'treeM', 'atreeM', 'treeM', 'satreeM'][i % 6], x, 104 + (i * 3) % 5]); }
+    // 前排：兩邊的東西交錯
+    for (let x = 4; x < W - 16; x += 16 + rnd() * 20) { const f = fo(x);
+      if (z === 0 && f < .02 && (Math.abs(x - W * .12 - 24) < 34 || (x > W * .42 - 14 && x < W * .42 + 110))) continue;
+      if (rnd() > keep(x)) continue;
+      items.push([pk(rnd() < f ? FRONT1 : FRONT0), x, V_BASE + 1 + rnd() * (f < .5 ? 4 : 3)]); }
   } else {
-    for (let x = 6; x < W - 16; x += 22 + rnd() * 30) items.push([pk(['pillar', 'pillar2', 'cactus', 'cactus', 'rock', 'skull', 'pillar']), x, V_BASE - 8 + rnd() * 11]);
+    for (let x = 6; x < W - 16; x += 22 + rnd() * 30) { if (rnd() > keep(x)) continue; items.push([pk(['pillar', 'pillar2', 'cactus', 'cactus', 'rock', 'skull', 'pillar']), x, V_BASE - 8 + rnd() * 11]); }
   }
   items.sort((a, b) => a[2] - b[2]).forEach(([n, x, b]) => put(n, x, b));
-  tiles(V_ROAD - 6, K.rT); tiles(V_ROAD + 6, K.rM); tiles(V_ROAD + 18, K.rM); tiles(V_ROAD_B - 8, K.rB);
-  for (let y = V_ROAD_B + 8; y < VH; y += 16) tiles(y, K.g);
-  for (let x = 10; x < W - 16; x += 40 + rnd() * 50) put(z === 2 ? pk(['rock', 'cactus', 'skull']) : z === 1 ? pk(['mush', 'bush', 'tree', 'sprout']) : pk(['mush', 'bush', 'sprout']), x, VH + 2 + rnd() * 4);
+  g.drawImage(front, 0, 0);
+  for (let x = 10; x < W - 16; x += 40 + rnd() * 50) { if (rnd() > keep(x)) continue; const f = fo(x); put(z === 2 ? pk(['rock', 'cactus', 'skull']) : rnd() < f ? pk(['mush', 'bush', 'tree', 'sprout']) : pk(['mush', 'bush', 'sprout']), x, VH + 2 + rnd() * 4); }
   return WSTRIP[z] = c; }
 // 每區的遠景
 function drawZoneBack(z, x0, x1, bm){
   const w = x1 - x0, at = k => x0 + w * k;
-  if (z <= 2 && ART.wild) { if (z === 2) { ctx.fillStyle = 'rgba(240,190,120,.3)'; ctx.fillRect(x0, 0, w + 14, 92); } ctx.drawImage(zoneStrip(z), x0, 0); return; }   // v17.40
+  if (z <= 2 && ART.wild) { if (z === 2) { const gr = ctx.createLinearGradient(x0 - 14, 0, x0 + CAPMIX, 0); gr.addColorStop(0, 'rgba(240,190,120,0)'); gr.addColorStop(1, 'rgba(240,190,120,.3)'); ctx.fillStyle = gr; ctx.fillRect(x0 - 14, 0, w + 28, 92); } ctx.drawImage(zoneStrip(z), x0, 0); return; }   // v17.40
   if (z === 0) { drawBld(ctx, 'field', at(.2), 88, 44, 30, 'day'); drawBld(ctx, 'field', at(.62), 90, 40, 28, 'day'); drawBld(ctx, 'cottage', at(.42), 92, 26, 24, bm, { roof:'#c0563f' }); }
   else if (z === 1) for (let x = x0 + 4, i = 0; x < x1 - 10; x += 19, i++) drawBld(ctx, 'tree', x, 78 + (i % 3) * 6, 22, 34, 'day');
   else if (z === 2) { drawBld(ctx, 'ruins', at(.3), 88, 44, 30, 'day'); drawBld(ctx, 'rock', at(.6), 106, 16, 12, 'day'); drawBld(ctx, 'rock', at(.8), 104, 20, 14, 'day'); ctx.fillStyle = '#a08a60'; ctx.fillRect(at(.05), 70, 50, 48); ctx.fillStyle = '#8a7650'; ctx.fillRect(at(.05), 70, 50, 4); }
@@ -1500,16 +1527,20 @@ function drawWild(now){
     nameTag(ctx, '王都', ct[0], ct[1] - 2, 'hero'); nameTag(ctx, '驛站', st[0], st[1] - 2, 'npc'); }
   ZONES.forEach((Z, z) => { const [x0, , x1] = Z.rect; if (x1 < L || x0 > R) return;
     drawZoneBack(z, x0, x1, bm);
-    // 路標
-    ctx.fillStyle = '#6a4428'; ctx.fillRect(x0 + 6, 104, 2, 16); nameTag(ctx, Z.n, x0 + 7, 102, 'npc');
+    // 路標（還沒開放的區域：名字寫在柵欄上方，不立路標）
+    const open = zoneOpen(z);
+    if (open) { ctx.fillStyle = '#6a4428'; ctx.fillRect(x0 + 6, 104, 2, 16); nameTag(ctx, Z.n, x0 + 7, 102, 'npc'); }
     // 魔王在區域盡頭（任務演出中會另外畫）
     const bossScn = SCN && !SCN.off && SCN.t === 'boss' && SCN.z === z;
     if (z === 2 && !h.bossKill && !bossScn) drawMonster(ctx, 'boneking', x1 - 34, 146, 'idle', Math.floor(now / 260) % 4, false, true);
     if (z === 6 && zoneOpen(6) && !S.boss2Done && !bossScn) drawMonster(ctx, 'abyss', x1 - 44, 147, 'idle', Math.floor(now / 260) % 4, false, true);
-    // 還沒開放：柵欄、守衛、暗下來
-    if (!zoneOpen(z)) { ctx.fillStyle = 'rgba(10,12,20,.45)'; ctx.fillRect(x0, 0, x1 - x0 + 14, VH);
-      ctx.fillStyle = '#8a5a3a'; for (let y = RY0 - 8; y < RY1 + 4; y += 7) ctx.fillRect(x0 + 2, y, 3, 5); ctx.fillRect(x0 + 1, RY0 - 6, 5, 2); ctx.fillRect(x0 + 1, RY1 - 2, 5, 2);
-      pxPerson(x0 - 8, 146, '#3f6ea0', 2, now); nameTag(ctx, '未開放', x0 + 4, RY0 - 12, 'npc'); }
+    // v17.44：還沒開放：Kenney 木柵欄兩排擋路、紅叉木牌、盔甲守衛；柵欄後面漸層變暗
+    if (!open) { const FX = x0 + 4, gr = ctx.createLinearGradient(FX - 2, 0, FX + 12, 0);
+      gr.addColorStop(0, 'rgba(10,12,20,0)'); gr.addColorStop(1, 'rgba(10,12,20,.45)'); ctx.fillStyle = gr; ctx.fillRect(FX - 2, 0, 14, VH);
+      ctx.fillStyle = 'rgba(10,12,20,.45)'; ctx.fillRect(FX + 12, 0, x1 + 14 - FX - 12, VH);
+      if (ART.wild && ART.wild.fcol) { const sp = (n, x, b) => { const cv = rideCanvas(n, 'wild'); ctx.drawImage(cv, Math.round(x), Math.round(b) - cv.height); };
+        sp('fcol', FX - 6, V_ROAD_B + 6); sp('fcol', FX + 2, V_ROAD_B + 2); sp('xsign', FX - 30, V_ROAD - 1); sp('guard', FX - 28, 146); }
+      nameTag(ctx, Z.n, FX + 2, 89, 'npc'); }
   });
 }
 // 小地圖：整條路（村子＋野外），白框是目前看到的範圍，紅點是勇者（MINI 沿用村子模組的設定）
