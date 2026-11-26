@@ -135,8 +135,12 @@ def office(stage='地方'):
     if stage=='地方':
         F,R=s.box(0,0,22,14,0,13,mat='wood',c='w')
         s.door(F,3,5,8); s.window(F,13,5,5,4); s.window(R,5,5)
-        s.gable_x(0,0,22,14,13,8,c='br')
-        signbox(s,F,11,10,'coin',c='wl',w=9,h=6) if False else None
+        s.gable_x(0,0,22,14,13,8,c='au')   # v17.41：黃色屋頂，和酒館、民宅分得出來
+        # 門口旁邊立一塊金黃看板：兩根木柱、左邊金幣、右邊兩道「字」
+        for x in (-12,-3): s.box(x,15,x+1,16,0,10,c='wd',tex=False,top='w')
+        G=('L',16,-14,0); s.fbox(G,0,8,14,17,'au'); s.frect(G,1,9,13,9,'ad')
+        icon(s,G,2,10,'coin')
+        for u0 in (8,11): s.frect(G,u0,11,u0+1,15,'wd')
         hang_sign(s,22,14,10,'coin')
     elif stage=='王都':
         F,R=s.box(0,0,26,16,0,4,mat='stone',c='s')
