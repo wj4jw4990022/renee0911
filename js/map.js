@@ -38,7 +38,7 @@ const VSLOTS = [   // v17.17：家和民宅搬到村口旁；交通設施在家�
   { k:'office',  n:'你的事務所', w:66, h:74 },
   { k:'stage',   n:'廣場',       w:56, h:46 },
   { k:'inn',     n:'旅館',       w:50, h:66 },
-  { k:'clinic',  n:'藥局',       w:44, h:58 },
+  { k:'clinic',  n:'診所',       w:44, h:58 },
   { k:'temple',  n:'神殿',       w:62, h:88 },
   { k:'arena',   n:'鬥技場',     w:60, h:58 },
   { k:'mayor',   n:'村長家',     w:56, h:66 },
@@ -86,7 +86,7 @@ const villagePos = h => [V.x ?? VD.office, V.y];
 // 這件事要去哪棟、要不要進屋
 function vilGoal(h){
   const hr = hourOf();
-  if (vCarry()) return ['clinic', 1];   // v17.9：失敗受傷，被擡去藥局
+  if (vCarry()) return ['clinic', 1];   // v17.9：失敗受傷，被擡去診所
   if (tourRound() >= 0) return ['arena', 0];   // 武鬥大會
   if (sleeping()) return h.act === 'drink' ? ['tavern', 1] : ['home', 1];
   if (h.act === 'bed') return ['clinic', 1];
@@ -146,7 +146,7 @@ function vilTick(dt, now){
 }
 // 狀態字：要進屋的事（睡覺、喝酒、看病）在勇者還沒進門前寫「回家中」「走去酒館」
 function vWalkTxt(h){ if (offline || heroMap(h) !== 'vil' || V.x == null || V.exiting) return ''; const g = vilGoal(h); if (!g || !g[1] || V.inside === g[0]) return '';
-  return { home:'回家中', tavern:'走去酒館', clinic:'走去藥局' }[g[0]] || '走去' + ((VSLOTS.find(b => b.k === g[0]) || {}).n || ''); }
+  return { home:'回家中', tavern:'走去酒館', clinic:'走去診所' }[g[0]] || '走去' + ((VSLOTS.find(b => b.k === g[0]) || {}).n || ''); }
 // 鏡頭：村子永遠讓整條街的高度剛好塞滿畫面，左右跟著勇者（或玩家滑到的地方）
 function vilCam(h, hm, now){
   const z = SH / VH, panning = V.drag || (V.pan != null && now - V.panT < 3500);
@@ -1370,7 +1370,7 @@ function drawResBanner(now){
     ctx.fillStyle = '#a3abbd'; ctx.fillText(t3, 180 - ctx.measureText(t3).width / 2, y + 48); ctx.globalAlpha = 1;
   } catch (e) { if (!scnErr++) console.error(e); }
 }
-// 擡擔架：失敗受傷的那天，從村口擡到藥局
+// 擡擔架：失敗受傷的那天，從村口擡到診所
 const vCarry = () => !!(S.carry && S.carry.day === S.day && !S.carry.done && heroMap(H()) === 'vil');
 function drawCarry(now, x, y){ ctx.fillStyle = '#8a5a3a'; ctx.fillRect(x - 16, y - 3, 32, 2); pxPerson(x - 15, y + 4, '#5a8a5a', 1, now); pxPerson(x + 15, y + 4, '#3f6ea0', 2, now); }
 // 狀態列的進度
@@ -1907,7 +1907,7 @@ function pipCap(h, c){ const n = h.name, p = h.married && h.partner && npc(h.par
     case 'sleep': return pipHurt(h) ? `${n}帶著傷睡著了` : pipTired(h) ? `${n}累壞了，額頭敷著冰毛巾` : mood === 0 ? `${n}翻來覆去睡不著` : mood === 2 ? `${n}睡得很甜，好像在做好夢` : p && p.alive ? `${n}和${p.name}睡著了` : `${n}睡得很熟`;
     case 'home': return h.act === 'slack' ? `${n}在家耍廢` : `${n}在家休息`;
     case 'tavern': return mood === 0 ? `${n}一個人在酒館喝悶酒` : `${n}在酒館喝一杯`;
-    case 'clinic': return `${n}躺在藥局的病床上`;
+    case 'clinic': return `${n}躺在診所的病床上`;
     case 'trial': return `新藥試驗中……${n}有點緊張`;
     case 'office': return `${n}在事務所`;
     case 'camp': return `${n}在野外紮營過夜`;
