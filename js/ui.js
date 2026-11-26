@@ -1142,11 +1142,15 @@ function renderSheet(){
         <div class="grid2" style="margin-top:8px"><button class="btn" id="bExp">匯出</button><button class="btn" id="bImpShow">匯入</button></div>
         <textarea id="saveTxt" rows="4" style="width:100%;margin-top:8px;background:#161b27;color:var(--text);border:1px solid #3a4359;border-radius:10px;padding:8px;font-size:12px;display:none" aria-label="存檔文字"></textarea>
         <div class="grid2" id="saveBtns" style="margin-top:6px;display:none"><button class="btn" id="bCopy">複製</button><button class="btn pri" id="bImp">確定匯入</button></div></div></div>`;
+    { const inApp = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || navigator.standalone);   // v17.28：從主畫面打開
+      html += `<div class="sec">App</div><div class="grp">
+      <div class="li"><div class="tx"><b>${inApp ? '正在用 App 模式玩' : '加到主畫面'}</b><small>${inApp ? '有網路時每次打開都會拿最新版；沒網路也能打開上次的版本' : 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」或「安裝應用程式」'}</small></div></div>
+      <div class="li"><div class="tx"><b>重新載入最新版</b><small>改完遊戲推上去後，按這裡立刻換新版（會先存檔）</small></div><button class="btn sm2" id="bReload">重新載入</button></div></div>`; }
     html += `<div class="sec">說明</div><div class="grp">
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">怎麼玩</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div></details></div>
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">信任與提示</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div></details></div></div>`;
     html += `<div class="sec" style="color:#ff9a9a">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
-    html += `<div class="stFoot">孤勇者 v17.27 · 只有你一個人在測試</div>`;
+    html += `<div class="stFoot">孤勇者 v17.28 · 只有你一個人在測試</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
@@ -1195,6 +1199,7 @@ function renderSheet(){
   B.querySelectorAll('[data-fz]').forEach(b => b.onclick = () => { prefSet('fz', +b.dataset.fz); renderSheet(); });
   B.querySelectorAll('[data-sl]').forEach(b => b.onclick = () => { prefSet('sl', +b.dataset.sl); renderSheet(); renderTop(); });
   B.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => { prefSet('fx', pref.fx ? 0 : 1); renderSheet(); });
+  if ($('bReload')) $('bReload').onclick = async () => { save(); try { const r = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (e) {} location.reload(); };
   if ($('bSaveNow')) $('bSaveNow').onclick = () => { save(); cloudSave(JSON.stringify(S), true); toast('存好了'); };
   if ($('bResetNo')) $('bResetNo').onclick = () => { resetArm = false; renderSheet(); };
   B.querySelectorAll('[data-uwq]').forEach(b => b.onclick = () => { if (!quitUnderworld()) toast('現在不行，先回覆其他事'); renderAll(); });
