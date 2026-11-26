@@ -348,3 +348,72 @@ def cap_station():
         s.set(x,y,'au')
     return s.crop()
 VILLAGE={'村長家':mayor,'鬥技場':arena,'神殿':temple,'藥局':clinic,'旅館':inn,'廣場':plaza,'事務所':office,'酒館':tavern,'冒險者公會':guild,'鐵匠鋪':smith,'民宅':house,'勇者的家':home,'馬廄':stable,'驛馬車站':station,'傳送陣':telepad,'村口':gate}
+# ================= 遊戲用小物（斜角） =================
+def horse_iso(c='br'):
+    s=new()
+    # 身體沿 x（朝右下走），四條腿、頭在右前
+    for (x,y) in ((1,3),(1,5),(8,3),(8,5)): s.box(x,y,x+1,y+1,0,5,c='brd',tex=False,top='brd')
+    s.box(0,2,10,6,5,10,c=c,tex=False,top='brl')
+    s.box(9,3,12,5,9,15,c=c,tex=False,top='brl')     # 脖子
+    s.box(11,3,15,5,13,16,c=c,tex=False,top='brl')   # 頭
+    p=s.P(13,5,15); s.set(round(p[0]),int(p[1]),'bk')
+    for k in range(4): p=s.P(9-k,3,10+k//2); s.set(round(p[0]),int(p[1]),'bk')   # 鬃毛
+    p=s.P(0,4,9); s.set(round(p[0])-1,int(p[1]),'bk'); s.set(round(p[0])-2,int(p[1])+1,'bk')   # 尾巴
+    return s.crop()
+def coach_iso():
+    s=new()
+    # 車廂
+    s.box(0,0,14,8,3,13,c='r',tex=False,top='rl')
+    F=('L',8,0,14); s.window(F,4,7,5,4)
+    s.box(-1,-1,15,9,13,14,c='rd',tex=False,top='rd')
+    s.box(14,1,18,7,3,7,c='w',tex=False,top='wl')   # 駕駛座
+    for xx in (2,11):
+        p=s.P(xx,8,3); x,y=round(p[0]),int(p[1])
+        for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1),(1,1),(-1,-1),(1,-1),(-1,1)): s.set(x+dx,y+dy,'out')
+        s.set(x,y,'au')
+    # 前面的馬
+    for (x,y) in ((21,3),(21,5),(27,3),(27,5)): s.box(x,y,x+1,y+1,0,5,c='brd',tex=False,top='brd')
+    s.box(20,2,29,6,5,10,c='w',tex=False,top='wl')
+    s.box(28,3,31,5,9,15,c='w',tex=False,top='wl'); s.box(30,3,34,5,13,16,c='w',tex=False,top='wl')
+    p=s.P(32,5,15); s.set(round(p[0]),int(p[1]),'bk')
+    s.line(s.P(18,4,6),s.P(21,4,8),'out')
+    return s.crop()
+# ================= 村口木樁、街邊小物（斜角，遊戲用） =================
+def gate_post(sign=False):
+    s=new()
+    s.box(0,0,3,3,0,18,mat='wood',c='w',top='wl')
+    p=s.P(1.5,1.5,21); x,y=round(p[0]),int(p[1])   # 削尖的頂
+    for k in range(3):
+        for i in range(-2+k,3-k): s.set(x+i,y+k,'wl' if i<0 else 'w')
+    s.box(-1,2,4,3,13,14,c='wd',tex=False,top='w')   # 綁繩
+    if sign:
+        F=('L',3,-6,9); s.fbox(F,0,6,14,11,'wl'); s.frect(F,2,8,12,8,'w')
+    return s.crop()
+def prop_lamp():
+    s=new()
+    s.box(0,0,2,2,0,1,c='bk',tex=False,top='sd')
+    s.box(0.5,0.5,1.5,1.5,1,20,c='bk',tex=False,top='bk')
+    F,R=s.box(-1,-1,3,3,20,25,c='bk',tex=False,top='bk')
+    s.window(F,1,21,2,3); s.window(R,1,21,2,3)
+    s.pyramid(-1,-1,3,3,25,3,c='bk')
+    return s.crop()
+def prop_crate():
+    s=new(); s.box(0,0,6,6,0,6,c='wl',tex=False,top=(252,210,150))
+    F=('L',6,0,6); R=('R',6,0,6)
+    for f in (F,R): s.line(s.fpt(f,0,0),s.fpt(f,6,6),'wd'); s.line(s.fpt(f,0,6),s.fpt(f,6,0),'wd')
+    return s.crop()
+def prop_barrel():
+    s=new(); s.box(0,0,5,5,0,7,c='w',mat='wood',top='wl')
+    for v in (1,5): s.frect(('L',5,0,5),0,v,5,v,'sd'); s.frect(('R',5,0,5),0,v,5,v,'sd')
+    return s.crop()
+def prop_bench():
+    s=new()
+    for x in (1,9): s.box(x,0,x+1,3,0,3,c='wd',tex=False,top='wd')
+    s.box(0,0,11,3,3,4,c='w',tex=False,top='wl')
+    s.box(0,0,11,1,4,8,c='w',tex=False,top='wl')
+    return s.crop()
+def prop_flowers():
+    s=new(); s.box(0,0,10,4,0,3,c='w',tex=False,top='grd')
+    for (x,y,c) in ((1,1,'r'),(3,2,'au'),(5,1,'pul'),(7,2,'rl'),(9,1,'au'),(2,3,'gr'),(6,3,'r'),(8,3,'gr'),(4,1,'gr')):
+        p=s.P(x,y,3); s.set(round(p[0]),int(p[1]),c); s.set(round(p[0]),int(p[1])-1,c if c!='gr' else 'grl')
+    return s.crop()
