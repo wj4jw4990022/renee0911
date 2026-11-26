@@ -53,8 +53,7 @@ ITEMS = {
 ITEMS.update({'cap_castle': lambda: B.castle(), 'cap_house_0': lambda: B.cap_house('r'), 'cap_house_1': lambda: B.cap_house('bl'), 'cap_station': lambda: B.cap_station()})
 ITEMS.update({'post': lambda: B.gate_post(), 'post_sign': lambda: B.gate_post(True), 'p_lamp': lambda: B.prop_lamp(), 'p_crate': lambda: B.prop_crate(),
  'p_barrel': lambda: B.prop_barrel(), 'p_bench': lambda: B.prop_bench(), 'p_flowers': lambda: B.prop_flowers()})
-if hasattr(B, 'coach_iso'): ITEMS['coach'] = lambda: B.coach_iso()
-if hasattr(B, 'horse_iso'): ITEMS['horse'] = lambda: B.horse_iso()
+# v17.39：馬和馬車改成側面 Q 版（design/rides），不再用斜角版
 
 if __name__ == '__main__':
     out = sys.argv[1]; os.makedirs(out, exist_ok=True); meta = {}

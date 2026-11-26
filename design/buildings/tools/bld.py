@@ -228,21 +228,14 @@ def stable():
     icon(s,('L',14,0,28),20,9,'horse') if False else None
     return s.crop()
 def station():
+    # v17.39：拿掉候車棚和長椅（像桌子、和馬車擠在一起），留站房＋站牌；馬車在遊戲裡另外畫在旁邊
     s=new()
     F,R=s.box(0,0,18,12,0,12,mat='wood',c='w')
     s.door(F,3,5,8); s.window(F,11,5,4,4); s.window(R,4,5)
     s.gable_x(0,0,18,12,12,7,c='bl')
-    # 候車棚
-    for x in (21,32):
-        p0=s.P(x,16,0); p1=s.P(x,16,10); s.line(p0,p1,'wd')
-    s.box(19,8,34,18,10,11,c='bl',tex=False,top='bll')
-    # 長椅
-    s.box(23,13,31,15,2,3,c='w',tex=False,top='wl')
-    # 站牌
-    p=s.P(-3,14,0); x,y=round(p[0]),int(p[1])
-    for k in range(10): s.set(x,y-k,'out')
-    for j in range(4):
-        for i in range(-3,4): s.set(x+i,y-10-j,'au' if 0<j<3 and -3<i<3 else 'out')
+    s.box(-5,13,-4,14,0,17,c='wd',tex=False,top='w')   # 站牌木柱
+    G=('L',14,-9,0); s.fbox(G,0,12,8,18,'bl')            # 藍底牌子，上面一台小馬車
+    for u,v in ((2,14),(3,14),(4,14),(5,14),(2,15),(3,15),(4,15),(5,15),(6,15),(2,16),(5,16)): s.fset(G,u,v,'cr')
     return s.crop()
 def telepad(open_=True):
     s=new()
