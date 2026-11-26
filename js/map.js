@@ -6,7 +6,7 @@ const cv = $('cv'), ctx = cv.getContext('2d');
 cv.addEventListener('click', e => { $('alerts').classList.remove('open'); $('bell').classList.remove('open'); const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * 360, sy = (e.clientY - r.top) / r.height * SH;
   if (performance.now() - V.noClick < 350) return; if (pipHit()) return; if (vilMiniHit(sx, sy)) return; mapClick(cam.x + (sx - 180) / cam.z, cam.y + (sy - SH / 2) / cam.z); });
 let mons = [];
-function respawn(m){ const R = ZONES[m.z].rect; m.x = rand(R[0] + 14, R[2] - 14); m.y = rand(R[1] + 14, R[3] - 14); m.ph = Math.random() * 6; }
+function respawn(m, fade){ const R = ZONES[m.z].rect; m.x = rand(R[0] + 14, R[2] - 14); m.y = rand(R[1] + 14, R[3] - 14); m.ph = Math.random() * 6; m.wx = m.x; m.born = fade ? performance.now() : 0; }   // fade：剛重生的怪先藏起來再淡入
 function initMons(){ mons = []; ZONES.forEach((Z, z) => { for (let i = 0; i < 5; i++) { const m = { z }; respawn(m); mons.push(m); } }); }
 const TREES = [[22,40],[70,96],[30,160],[118,30],[112,180],[60,20],[20,110],[95,140],[130,120],[45,70]];
 const ROCKS = [[180,30],[250,55],[320,25],[210,70],[300,70]];
@@ -235,12 +235,33 @@ function drawOut(now){
   if (!h.bossKill) drawMonster(ctx, 'boneking', 173, 44, 'idle', Math.floor(now / 260) % 4, false, false);
   const hr = hourOf();
 }
+// v17.35：打怪演出。每回合照 HFX 的結果演約 1 秒：0.3 秒命中（怪物閃白、被擊退）→ 打倒的話倒下淡出；勇者有被打到的話 0.65 秒怪物衝過來
+// 沒在打的怪會慢慢走動；被鎖定的那隻會往勇者走過來
+let MON_T = 0;
+const hfxOn = (h, now, dur = 1.2) => HFX && h && h.act === 'hunt' && now - HFX.t < dur * 1000 ? HFX : null;
 function drawMons(now, view){
-  const h = H(), tg = h && h.act === 'hunt' ? h.target : null;
-  mons.forEach(m => { if (ZONES[m.z].map !== view || !zoneOpen(m.z) || (SCN && !SCN.off && SCN.z === m.z)) return; const type = zoneMon(m.z);
-    let kind = 'idle', f = Math.floor(now / 240 + m.ph) % 4, left = m.ph > 3;
-    if (m === tg && h.fighting) { left = h.x < m.x; if (h.flash > .55) { kind = 'hurt'; f = Math.floor(now / 120) % 2; } else if (h.flash > 0) { kind = 'attack'; f = Math.min(2, Math.floor((.55 - h.flash) / .18)); } }
-    drawMonster(ctx, type, m.x, m.y + 4, kind, f, false, left, m.ph); });
+  const h = H(), tg = h && h.act === 'hunt' ? h.target : null, fx = hfxOn(h, now), dt = Math.min(.1, (now - (MON_T || now)) / 1000);
+  if (view === 'wild') MON_T = now;
+  mons.forEach(m => { if (ZONES[m.z].map !== view || !zoneOpen(m.z) || (SCN && !SCN.off && SCN.z === m.z)) return; const type = zoneMon(m.z), R = ZONES[m.z].rect;
+    let a = 1; if (m.born) { const q = (now - m.born) / 1000; if (q < .9) return; a = Math.min(1, (q - .9) / .6); if (a >= 1) m.born = 0; }
+    let kind = 'idle', f = Math.floor(now / 240 + m.ph) % 4, left = m.ph > 3, dx = 0;
+    if (m === tg && h.fighting) {
+      left = h.x < m.x; const gap = monHalf(type) + 13;
+      if (Math.abs(h.x - m.x) > gap + 4 && !S.paused) { m.x += Math.sign(h.x - m.x) * 8 * dt; kind = 'idle'; }   // 迎上來
+      if (fx && fx.tg === m) { const p = Math.max(0, now - fx.t) / 1000;
+        if (p > .3 && p < .55) { kind = 'hurt'; f = p < .42 ? 1 : 0; dx = (left ? 1 : -1) * 2; }
+        else if (fx.hurt && !fx.kill && p > .65 && p < .9) { kind = 'attack'; f = Math.min(2, Math.floor((p - .65) / .08)); } } }
+    else if (!S.paused) {   // 閒晃
+      if (m.wx == null) m.wx = m.x;
+      if (h && h.act === 'hunt' && h.zone === m.z && Math.abs(m.x - h.x) < 22 && Math.abs(m.wx - m.x) < .5) m.wx = clamp(m.x + (m.x >= h.x ? 26 : -26), R[0] + 14, R[2] - 14);   // 別擋在勇者身上
+      if (Math.abs(m.wx - m.x) < .5) { if (Math.random() < dt * .25) { const w = clamp(m.x + rand(-24, 24), R[0] + 14, R[2] - 14); if (!(h && h.act === 'hunt' && h.zone === m.z && Math.abs(w - h.x) < 22)) m.wx = w; } }
+      else { m.x += Math.sign(m.wx - m.x) * Math.min(Math.abs(m.wx - m.x), 5 * dt); left = m.wx < m.x; } }
+    ctx.globalAlpha = a; drawMonster(ctx, type, m.x + dx, m.y + 4, kind, f, false, left, m.ph); ctx.globalAlpha = 1; });
+  // 剛被打倒的那隻：原地被擊退、壓扁、淡出
+  if (fx && fx.kill && fx.ghost && ZONES[fx.ghost.z] && ZONES[fx.ghost.z].map === view) { const g = fx.ghost, p = Math.max(0, now - fx.t) / 1000, left = h.x < g.x, d = left ? 1 : -1;
+    if (p < 1.1) { let kind = 'idle', f = 0, dx = 0, a = 1;
+      if (p > .3 && p < .45) { kind = 'hurt'; f = 1; dx = d * 2; } else if (p >= .45) { kind = 'down'; dx = d * 3; a = Math.max(0, 1 - (p - .45) / .65); }
+      ctx.globalAlpha = a; drawMonster(ctx, zoneMon(g.z), g.x + dx, g.y + 4, kind, f, false, left, g.ph); ctx.globalAlpha = 1; } }
 }
 // 地圖上的東西：寶箱、精英怪、迷路的旅人、商隊
 function drawThings(now, view){
@@ -301,9 +322,14 @@ function drawMap(now){
       if (!lying) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(hx0, hy0 + 1, 8, 2.6, 0, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(242,193,78,' + (.55 + .25 * Math.sin(now / 400)) + ')'; ctx.lineWidth = .8; ctx.beginPath(); ctx.ellipse(hx0, hy0 + 1, 9.5, 3.2, 0, 0, 7); ctx.stroke(); }   // v17.1：主力腳下光圈
       if (view === 'vil' && vCarry()) drawCarry(now, Math.round(hx0), Math.round(hy0));
       const ride = view === 'vil' ? 0 : drawRide(now, h, Math.round(hx0), Math.round(hy0));   // v17.12：馬、驛馬車、傳送陣
-      if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') drawHero(ctx, Math.round(hx0), Math.round(hy0) - (ride || 0), lying, now);
-      if (h.flash > 0 && (h.act === 'hunt' || (h.act === 'mission' && h.mission && !MSPOT[h.mission.ag])) && Math.floor(now / 120) % 2) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(hx0 + 8, hy0 - 16); ctx.lineTo(hx0 + 16, hy0 - 6); ctx.stroke(); }
-      if (h.act === 'hunt') { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(hx0 - 12, hy0 + 4, 24, 3); ctx.fillStyle = h.hp > .5 ? '#6fcf97' : h.hp > .25 ? '#ffb347' : '#ff7b7b'; ctx.fillRect(hx0 - 12, hy0 + 4, 24 * clamp(h.hp, 0, 1), 3); }
+      if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') { const fx = hfxOn(h, now), foe = h.target || (fx && fx.ghost), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
+        if (fx) { const p = Math.max(0, now - fx.t) / 1000; if (p > .1 && p < .4) ox = d * 2; if (fx.hurt && !fx.kill && p > .72 && p < .95) { ox = -d * 2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * .35; } }   // 出手往前踏、被打到往後退＋閃
+        drawHero(ctx, Math.round(hx0 + ox), Math.round(hy0) - (ride || 0), lying, now); ctx.globalAlpha = h.alpha;
+        if (fx && foe) { const p = Math.max(0, now - fx.t) / 1000; if (p > .22 && p < .42) { const k = (p - .22) / .2, cx = hx0 + d * 10, cy = hy0 - 8; ctx.strokeStyle = `rgba(255,255,255,${1 - k * .7})`; ctx.lineWidth = 1.6; ctx.beginPath();   // 揮砍弧線
+          if (d > 0) ctx.arc(cx, cy, 9, -1.3, -1.3 + 2.4 * Math.min(1, k * 1.6)); else ctx.arc(cx, cy, 9, Math.PI + 1.3 - 2.4 * Math.min(1, k * 1.6), Math.PI + 1.3); ctx.stroke(); } } }
+      if (h.flash > 0 && ((h.act === 'mission' && h.mission && !MSPOT[h.mission.ag])) && Math.floor(now / 120) % 2) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(hx0 + 8, hy0 - 16); ctx.lineTo(hx0 + 16, hy0 - 6); ctx.stroke(); }
+      if (h.act === 'hunt') { const fx = hfxOn(h, now), hp = fx && fx.hurt && Math.max(0, now - fx.t) < 720 ? fx.hp0 : h.hp;   // 血條等怪物打到才掉
+        ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(hx0 - 12, hy0 + 4, 24, 3); ctx.fillStyle = hp > .5 ? '#6fcf97' : hp > .25 ? '#ffb347' : '#ff7b7b'; ctx.fillRect(hx0 - 12, hy0 + 4, 24 * clamp(hp, 0, 1), 3); }
       if (SCN && view !== 'vil') drawScnHero(now, hx0, hy0);
       if (h.mission && h.mission.comp && npc(h.mission.comp) && h.act === 'mission' && !MSPOT[h.mission.ag]) { ctx.fillStyle = '#c8b0ff'; ctx.fillRect(hx0 - 18, hy0 - 12, 7, 8); ctx.fillStyle = '#e8b98a'; ctx.fillRect(hx0 - 17, hy0 - 17, 5, 5); }
       ctx.globalAlpha = 1;
@@ -762,9 +788,11 @@ function nameTag(c, t, x, y, kind){ c.font = fz(8) + 'px Cubic11, sans-serif'; c
 function drawSprite(c, h, x, y, lying, now, opt){
   let kind = 'idle', f = 0;
   const moving = opt ? opt.moving : Math.abs((h.tx ?? h.x) - h.x) > .6 || Math.abs((h.ty ?? h.y) - h.y) > .6;
-  const left = opt ? opt.left : moving && (h.tx ?? h.x) < h.x - .6;
+  const foe = !opt && h.act === 'hunt' && h.fighting ? (h.target || (HFX && HFX.ghost)) : null;   // 打怪時一律面向怪物（調整站位時也是）
+  const left = opt ? opt.left : foe ? foe.x < h.x : moving && (h.tx ?? h.x) < h.x - .6;
   if (lying) kind = 'down';
   else if (opt && opt.atk) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
+  else if (h.act === 'hunt' && !opt && hfxOn(h, now) && Math.max(0, now - HFX.t) < 600) { kind = 'attack'; f = Math.min(5, Math.floor(Math.max(0, now - HFX.t) / 100)); }   // v17.35：每回合揮一次
   else if ((h.act === 'hunt' || (h.act === 'mission' && h.mission && !MSPOT[h.mission.ag])) && h.flash > 0) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
   else if (moving) { kind = 'walk'; f = Math.floor(now / 140) % 4; }
   const expr = opt && opt.expr || exprOf(h), cv = kenCanvas(h, kind, f, expr), sc = opt && opt.scale || KEN_SCALE;

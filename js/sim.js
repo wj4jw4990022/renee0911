@@ -222,13 +222,16 @@ function startHunt(z){
 }
 
 // ================= 戰鬥（每 2 遊戲秒） =================
+// v17.35：HFX 記下這一回合的結果給畫面演（打倒了沒、勇者有沒有被打到），只影響畫面
+let HFX = null;
 function step(){
   const h = H();
   if (h.act !== 'hunt') return;
   if (Math.hypot(h.tx - h.x, h.ty - h.y) > 8 && !h.fighting) return;   // 還在路上
   const Z = ZONES[h.zone], r = ratio(h, Z.D);
-  if (!h.target) { h.target = mons.filter(m => m.z === h.zone).sort((a, b) => Math.hypot(a.x - h.x, a.y - h.y) - Math.hypot(b.x - h.x, b.y - h.y))[0] || null; if (h.target) { h.tx = h.target.x; h.ty = h.target.y; } h.fighting = true; return; }
+  if (!h.target) { h.target = mons.filter(m => m.z === h.zone && !(m.born && performance.now() - m.born < 1500)).sort((a, b) => Math.hypot(a.x - h.x, a.y - h.y) - Math.hypot(b.x - h.x, b.y - h.y))[0] || null; if (h.target) { h.tx = h.target.x; h.ty = h.target.y; } h.fighting = true; return; }
   h.flash = 1;
+  const fx = { t:performance.now(), tg:h.target, kill:0, hurt:0, hp0:h.hp }; if (!offline) HFX = fx;
   // 打
   if (chance(clamp(.3 + .4 * r - (h.burn || 0) / 400, .1, .95))) {
     h.kills++; h.huntKills++;
@@ -236,7 +239,7 @@ function step(){
     const g = Z.gold * rand(.7, 1.3) * rm, e = Z.exp * (r > 2 ? .5 : 1) * rm;
     if (chance([.001, .008, .025][danger(r).i])) findTreasure(h.zone);
     earn(g); gainExp(e);
-    if (h.target) { respawn(h.target); h.target = null; }
+    if (h.target) { fx.kill = 1; fx.ghost = { x:h.target.x, y:h.target.y, z:h.target.z, ph:h.target.ph }; respawn(h.target, !offline); h.target = null; }   // 畫面上原地倒下，過一下才在別處冒出來
     if (h.wish && h.wish.k === 'zone' && h.zone === h.wish.z) h.wish.p++;
     if (huntThings(h)) return;
   }
@@ -247,7 +250,7 @@ function step(){
     dmg *= 1 - ch(h, 'guard');
     if (h.carefulNext) dmg *= .8;
     if (CLS[h.cls].heal) dmg *= .85;
-    h.hp -= dmg;
+    h.hp -= dmg; fx.hurt = 1;
     if (h.hp < .35 && h.pots > 0) { h.pots--; h.hp = Math.min(1, h.hp + .4); }
     // 意外：被重擊
     if (dmg > .12 && chance(.25)) { injure(dmg > .2 ? 'heavy' : 'light', `在${Z.n}被${Z.mon}重擊`); if (H().act !== 'hunt') return; }
