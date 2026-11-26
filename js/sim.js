@@ -227,6 +227,8 @@ let HFX = null;
 function step(){
   const h = H();
   if (h.act !== 'hunt') return;
+  if (typeof ELX !== 'undefined' && ELX) return;   // v17.45：正在和精英怪對戰（演出中），先不打別的
+  if (h.target && h.target.elite) { h.target = null; h.fighting = false; }   // 讀檔時留下的精英怪目標
   if (Math.hypot(h.tx - h.x, h.ty - h.y) > 8 && !h.fighting) return;   // 還在路上
   const Z = ZONES[h.zone], r = ratio(h, Z.D);
   if (!h.target) { h.target = mons.filter(m => m.z === h.zone && !(m.born && performance.now() - m.born < 1500)).sort((a, b) => Math.hypot(a.x - h.x, a.y - h.y) - Math.hypot(b.x - h.x, b.y - h.y))[0] || null; if (h.target) { h.tx = h.target.x; h.ty = h.target.y; } h.fighting = true; return; }

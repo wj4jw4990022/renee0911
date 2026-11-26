@@ -111,6 +111,7 @@ function simulate(dt){
     else if (h.act === 'hunt' && hourOf() < 7) { h.x = GX; h.y = GY; }
     legTick(h, d);   // v17.12：遠路照交通工具的速度走
     if (V.exiting && performance.now() < V.exiting) { /* 畫面上還在村子裡走向村口，先不出發 */ }
+    else if (h.leg && h.leg.stop > performance.now()) { /* v17.45：路上被偷襲，停下打一回合 */ }
     else if (d > 1) { const L = h.leg, s2 = L ? Math.max(sp, L.spd * dt) : sp; h.x += dx / d * Math.min(d, s2); h.y += dy / d * Math.min(d, s2); }
     else if ((h.act === 'idle' || h.act === 'rest' || h.act === 'train') && !sleeping()) { if (Math.random() < dt * .4) { h.tx = clamp(h.x + rand(-30, 30), GX - 300, GX); h.ty = GY; } }
     if (h.act === 'hunt' && h.target) { const sd = h.x > h.target.x ? 1 : -1; h.tx = h.target.x + sd * (monHalf(zoneMon(h.target.z)) + 13); h.ty = h.target.y + 4; }   // v17.34：站在怪物靠勇者的那一側，中間留一點空，不重疊（不會穿過怪物）
