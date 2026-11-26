@@ -6,8 +6,11 @@ const cv = $('cv'), ctx = cv.getContext('2d');
 cv.addEventListener('click', e => { $('alerts').classList.remove('open'); $('bell').classList.remove('open'); const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * 360, sy = (e.clientY - r.top) / r.height * SH;
   if (performance.now() - V.noClick < 350) return; if (pipHit()) return; if (vilMiniHit(sx, sy)) return; mapClick(cam.x + (sx - 180) / cam.z, cam.y + (sy - SH / 2) / cam.z); });
 let mons = [];
-function respawn(m, fade){ const R = ZONES[m.z].rect; m.x = rand(R[0] + 14, R[2] - 14); m.y = rand(R[1] + 14, R[3] - 14); m.ph = Math.random() * 6; m.wx = m.x; m.born = fade ? performance.now() : 0; }   // fade：剛重生的怪先藏起來再淡入
-function initMons(){ mons = []; ZONES.forEach((Z, z) => { for (let i = 0; i < 5; i++) { const m = { z }; respawn(m); mons.push(m); } }); }
+// v17.36：每區 4 隻，區域橫切成 4 格、一隻一格，不會擠在一起（打倒的那隻重生前看不到，所以畫面上通常 3～4 隻）
+const MON_N = 4;
+const monSlot = m => { const R = ZONES[m.z].rect, end = R[2] - 14 - (m.z === 2 || m.z === 6 ? 56 : 0), w = (end - R[0] - 14) / MON_N, i = (m.s ?? 0) % MON_N; return [R[0] + 14 + w * i + 9, R[0] + 14 + w * (i + 1) - 9]; };   // 每格左右各留 9，相鄰兩隻至少隔 18；荒地、魔王城右邊留給魔王
+function respawn(m, fade){ const R = ZONES[m.z].rect, [a, b] = monSlot(m); m.x = rand(a, b); m.y = rand(R[1] + 14, R[3] - 14); m.ph = Math.random() * 6; m.wx = m.x; m.born = fade ? performance.now() : 0; }   // fade：剛重生的怪先藏起來再淡入
+function initMons(){ mons = []; ZONES.forEach((Z, z) => { for (let i = 0; i < MON_N; i++) { const m = { z, s:i }; respawn(m); mons.push(m); } }); }
 const TREES = [[22,40],[70,96],[30,160],[118,30],[112,180],[60,20],[20,110],[95,140],[130,120],[45,70]];
 const ROCKS = [[180,30],[250,55],[320,25],[210,70],[300,70]];
 const fz = n => +(n / Math.sqrt(Math.max(1, cam.z))).toFixed(1);
@@ -253,8 +256,8 @@ function drawMons(now, view){
         else if (fx.hurt && !fx.kill && p > .65 && p < .9) { kind = 'attack'; f = Math.min(2, Math.floor((p - .65) / .08)); } } }
     else if (!S.paused) {   // 閒晃
       if (m.wx == null) m.wx = m.x;
-      if (h && h.act === 'hunt' && h.zone === m.z && Math.abs(m.x - h.x) < 22 && Math.abs(m.wx - m.x) < .5) m.wx = clamp(m.x + (m.x >= h.x ? 26 : -26), R[0] + 14, R[2] - 14);   // 別擋在勇者身上
-      if (Math.abs(m.wx - m.x) < .5) { if (Math.random() < dt * .25) { const w = clamp(m.x + rand(-24, 24), R[0] + 14, R[2] - 14); if (!(h && h.act === 'hunt' && h.zone === m.z && Math.abs(w - h.x) < 22)) m.wx = w; } }
+      if (h && h.act === 'hunt' && h.zone === m.z && Math.abs(m.x - h.x) < 22 && Math.abs(m.wx - m.x) < .5) { const [a, b] = monSlot(m); m.wx = clamp(m.x + (m.x >= h.x ? 26 : -26), a, b); }   // 別擋在勇者身上（在自己那一格裡讓開）
+      if (Math.abs(m.wx - m.x) < .5) { if (Math.random() < dt * .25) { const [sa, sb] = monSlot(m), w = clamp(m.x + rand(-18, 18), sa, sb); if (!(h && h.act === 'hunt' && h.zone === m.z && Math.abs(w - h.x) < 22)) m.wx = w; } }
       else { m.x += Math.sign(m.wx - m.x) * Math.min(Math.abs(m.wx - m.x), 5 * dt); left = m.wx < m.x; } }
     ctx.globalAlpha = a; drawMonster(ctx, type, m.x + dx, m.y + 4, kind, f, false, left, m.ph); ctx.globalAlpha = 1; });
   // 剛被打倒的那隻：原地被擊退、壓扁、淡出
