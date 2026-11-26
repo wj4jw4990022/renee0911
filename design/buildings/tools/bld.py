@@ -147,6 +147,12 @@ def plaza():
     # 前排：花圃、路燈
     plaza_flowers(s,22,19)
     return s.crop()
+def office_tower(s,t):
+    # v17.43：大陸事務所的塔樓（石牆紋理、金色腰帶、小窗、藍色尖頂）
+    TF,TR=s.box(t[0],t[1],t[0]+8,t[1]+8,0,30,mat='stone',c='cr')
+    s.frect(TF,0,0,8,3,'au'); s.frect(TR,0,0,8,3,'ad'); s.frect(TF,0,22,8,23,'au'); s.frect(TR,0,22,8,23,'ad')
+    s.window(TF,3,13,3,5); s.window(TR,3,13,3,5)
+    s.pyramid(t[0],t[1],t[0]+8,t[1]+8,30,10,c='bl')
 def office(stage='地方'):
     s=new()
     if stage=='地方':
@@ -170,7 +176,7 @@ def office(stage='地方'):
     elif stage=='王國':
         F,R=s.box(0,0,30,18,0,24,mat='stone',c='cr')
         s.frect(F,0,0,30,3,'crd'); s.frect(R,0,0,18,3,'crx')
-        s.door(F,12,7,11,c='wd'); s.window(F,4,6,4,6); s.window(F,23,6,4,6); s.window(F,4,15,4,5); s.window(F,23,15,4,5); s.window(R,7,10,4,6)
+        s.door(F,12,7,11,c='wd'); s.window(F,4,8,4,7); s.window(F,23,8,4,7); s.window(R,7,10,4,6)   # v17.43：正面只留兩扇
         for u in range(0,31,3): s.fset(F,u,24,'au')
         s.gable_x(0,0,30,18,24,10,c='bl')
         s.box(24,-2,32,6,24,34,mat='plaster',c='cr')
@@ -178,6 +184,7 @@ def office(stage='地方'):
         icon(s,F,13,19,'coin')
         flag(s,28,2,44,8,'au')
     elif stage=='大陸':
+        office_tower(s,(-7,16))   # v17.43：後面那座先畫，被主建築擋住一點、稍微凸出
         F,R=s.box(0,0,36,20,0,26,mat='stone',c='cr')
         s.frect(F,0,0,36,3,'au'); s.frect(R,0,0,20,3,'ad')
         for u in (6,15,21,30): s.frect(F,u,4,u+1,22,'crd')
@@ -185,9 +192,7 @@ def office(stage='地方'):
         s.frect(F,0,24,36,26,'au')
         s.gable_y(0,0,36,20,26,12,c='bl',wallc='cr')
         icon(s,F,16,28,'coin')
-        for t in ((-4,16),(34,16)):
-            s.box(t[0],t[1],t[0]+6,t[1]+6,0,32,c='cr',mat='plaster')
-            s.pyramid(t[0],t[1],t[0]+6,t[1]+6,32,9,c='au')
+        office_tower(s,(34,14))
         flag(s,18,10,44,9,'bl')
     elif stage=='地下':
         F,R=s.box(0,0,24,16,0,13,mat='stone',c='sx')
