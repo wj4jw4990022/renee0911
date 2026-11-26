@@ -121,7 +121,7 @@ function simulate(dt){
       else if (ph === 'camp') { const c = campPos(m.z); h.tx = c[0] + 9; h.ty = c[1] + 1; }
       else if (sp0) { if (Math.hypot(h.tx - sp0[0], h.ty - sp0[1]) > 14 || Math.random() < dt * .3) { h.tx = sp0[0] + rand(-8, 8); h.ty = sp0[1] + rand(-2, 2); } }
       else if (m.z >= 0) { const g = scnGoal(h);   // v17.6：照任務演出走位、出手
-        if (g) { h.tx = g[0]; h.ty = g[1]; if (g[2] && Math.random() < dt * 2.2) h.flash = .6; }
+        if (g) { h.tx = g[0]; h.ty = g[1]; }   // v17.37：出手照演出的回合，不再亂閃
         else { const RZ = ZONES[m.z].rect; if (Math.hypot(h.tx - h.x, h.ty - h.y) < 3 && Math.random() < dt * .6) { h.tx = rand(RZ[0] + 20, RZ[2] - 20); h.ty = rand(RZ[1] + 20, RZ[3] - 20); } if (Math.random() < dt * .8) h.flash = .6; } }
     }
     if (heroHidden(h)) h.alpha = Math.max(0, h.alpha - dt);

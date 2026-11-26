@@ -325,12 +325,11 @@ function drawMap(now){
       if (!lying) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(hx0, hy0 + 1, 8, 2.6, 0, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(242,193,78,' + (.55 + .25 * Math.sin(now / 400)) + ')'; ctx.lineWidth = .8; ctx.beginPath(); ctx.ellipse(hx0, hy0 + 1, 9.5, 3.2, 0, 0, 7); ctx.stroke(); }   // v17.1：主力腳下光圈
       if (view === 'vil' && vCarry()) drawCarry(now, Math.round(hx0), Math.round(hy0));
       const ride = view === 'vil' ? 0 : drawRide(now, h, Math.round(hx0), Math.round(hy0));   // v17.12：馬、驛馬車、傳送陣
-      if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') { const fx = hfxOn(h, now), foe = h.target || (fx && fx.ghost), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
+      if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') { const fx = hfxOn(h, now) || scnFxOn(h, now), foe = h.target || (fx && (fx.ghost || fx.tg)) || scnFoe(h, now), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
         if (fx) { const p = Math.max(0, now - fx.t) / 1000; if (p > .1 && p < .4) ox = d * 2; if (fx.hurt && !fx.kill && p > .72 && p < .95) { ox = -d * 2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * .35; } }   // 出手往前踏、被打到往後退＋閃
         drawHero(ctx, Math.round(hx0 + ox), Math.round(hy0) - (ride || 0), lying, now); ctx.globalAlpha = h.alpha;
         if (fx && foe) { const p = Math.max(0, now - fx.t) / 1000; if (p > .22 && p < .42) { const k = (p - .22) / .2, cx = hx0 + d * 10, cy = hy0 - 8; ctx.strokeStyle = `rgba(255,255,255,${1 - k * .7})`; ctx.lineWidth = 1.6; ctx.beginPath();   // 揮砍弧線
           if (d > 0) ctx.arc(cx, cy, 9, -1.3, -1.3 + 2.4 * Math.min(1, k * 1.6)); else ctx.arc(cx, cy, 9, Math.PI + 1.3 - 2.4 * Math.min(1, k * 1.6), Math.PI + 1.3); ctx.stroke(); } } }
-      if (h.flash > 0 && ((h.act === 'mission' && h.mission && !MSPOT[h.mission.ag])) && Math.floor(now / 120) % 2) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(hx0 + 8, hy0 - 16); ctx.lineTo(hx0 + 16, hy0 - 6); ctx.stroke(); }
       if (h.act === 'hunt') { const fx = hfxOn(h, now), hp = fx && fx.hurt && Math.max(0, now - fx.t) < 720 ? fx.hp0 : h.hp;   // 血條等怪物打到才掉
         ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(hx0 - 12, hy0 + 4, 24, 3); ctx.fillStyle = hp > .5 ? '#6fcf97' : hp > .25 ? '#ffb347' : '#ff7b7b'; ctx.fillRect(hx0 - 12, hy0 + 4, 24 * clamp(hp, 0, 1), 3); }
       if (SCN && view !== 'vil') drawScnHero(now, hx0, hy0);
@@ -791,12 +790,12 @@ function nameTag(c, t, x, y, kind){ c.font = fz(8) + 'px Cubic11, sans-serif'; c
 function drawSprite(c, h, x, y, lying, now, opt){
   let kind = 'idle', f = 0;
   const moving = opt ? opt.moving : Math.abs((h.tx ?? h.x) - h.x) > .6 || Math.abs((h.ty ?? h.y) - h.y) > .6;
-  const foe = !opt && h.act === 'hunt' && h.fighting ? (h.target || (HFX && HFX.ghost)) : null;   // 打怪時一律面向怪物（調整站位時也是）
+  const foe = opt ? null : h.act === 'hunt' && h.fighting ? (h.target || (HFX && HFX.ghost)) : scnFoe(h, now);   // v17.37：任務演出也一樣   // 打怪時一律面向怪物（調整站位時也是）
   const left = opt ? opt.left : foe ? foe.x < h.x : moving && (h.tx ?? h.x) < h.x - .6;
   if (lying) kind = 'down';
   else if (opt && opt.atk) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
-  else if (h.act === 'hunt' && !opt && hfxOn(h, now) && Math.max(0, now - HFX.t) < 600) { kind = 'attack'; f = Math.min(5, Math.floor(Math.max(0, now - HFX.t) / 100)); }   // v17.35：每回合揮一次
-  else if ((h.act === 'hunt' || (h.act === 'mission' && h.mission && !MSPOT[h.mission.ag])) && h.flash > 0) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
+  else if (!opt && (hfxOn(h, now) || scnFxOn(h, now)) && Math.max(0, now - (hfxOn(h, now) || scnFxOn(h, now)).t) < 600) { const t0 = (hfxOn(h, now) || scnFxOn(h, now)).t; kind = 'attack'; f = Math.min(5, Math.floor(Math.max(0, now - t0) / 100)); }   // v17.35：每回合揮一次
+  else if ((h.act === 'hunt' || (h.act === 'mission' && h.mission && !MSPOT[h.mission.ag] && !(SCN && !SCN.off))) && h.flash > 0) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
   else if (moving) { kind = 'walk'; f = Math.floor(now / 140) % 4; }
   const expr = opt && opt.expr || exprOf(h), cv = kenCanvas(h, kind, f, expr), sc = opt && opt.scale || KEN_SCALE;
   // 像素對齊：在螢幕座標用整數倍放大，每個像素一樣大
@@ -1303,7 +1302,7 @@ function scnCnt(){ const s = SCN; if (!s) return ''; const pct = v => Math.round
   if (s.t === 'search' || s.t === 'probe') return `找到 ${s.found}/${s.pts.length}`;
   if (s.t === 'boss') return `${s.elite ? '精英' + ZONES[s.z].mon : '魔王'}剩 ${pct(s.bossHp)}`;
   if (s.t === 'escort') return `路程 ${pct(Math.min(s.f || 0, H().mission && H().mission.win === 0 ? .75 : 1))}`;
-  return `${ZONES[s.z].mon} ${s.kills}/${s.total}`; }
+  return `${s.only ? MON_FULL[+s.only[1]]['acbd'.indexOf(s.only[2])] : s.trash ? '打倒' : ZONES[s.z].mon} ${s.kills}/${s.total}`; }
 // ---- 武鬥大會：先把整個賽程算好，再在鬥技場一場一場演，打完才公布 ----
 const TRN = ['八強', '四強', '決賽'];
 function tourPlan(st){
@@ -1855,13 +1854,24 @@ const hash01 = s => { let x = 7; for (const ch of String(s)) x = (x * 31 + ch.ch
 function scnFrac(h){ return mFrac(h); }
 const scnHas = h => h.act === 'mission' && h.mission && !h.mission.ug && h.mission.z >= 0 && !MSPOT[h.mission.ag] && !heroHidden(h) && ZONES[h.mission.z];
 function scnOn(h){ return scnHas(h) && (!mKind(h.mission) || mPhase(h) === 'work'); }
+// v17.37：任務演出改用和野外打怪同一套：踏步揮擊→命中閃白擊退→倒下壓扁淡出；
+// 怪物只站在路面上、互相間隔一格，最多 3 隻，從畫面外走進來；任務名稱有怪名就只出那種，護送、救援出該區雜魚
+const MON_NAMES = [['史萊姆', '蜜蜂', '野豬', '稻草人'], ['蘑菇怪', '樹樁怪', '哥布林', '毒蜘蛛'], ['仙人掌怪', '沙蟲', '木乃伊', '禿鷹'], ['石頭精', '蝙蝠', '骷髏礦工', '石魔像'],
+  ['章魚', '海星', '魚人', '螃蟹'], ['雪球怪', '冰狼', '雪怪', '冰晶'], ['小惡魔', '惡魔之眼', '黑騎士', '暗黑法師']];   // 照 a、c、b、d 的順序
+function scnOnly(o){ const n = o.n || '', L = 'acbd'; let best = null;
+  MON_NAMES.forEach((row, z) => row.forEach((w, i) => { if (n.includes(w) && (!best || w.length > best[0].length)) best = [w, 'z' + z + L[i]]; }));
+  return best && ART.mon[best[1]] ? best[1] : null; }
+const MON_FULL = [['史萊姆', '蜜蜂', '野豬', '稻草人'], ['蘑菇怪', '樹樁怪', '哥布林', '毒蜘蛛'], ['仙人掌怪', '沙蟲', '木乃伊', '禿鷹'], ['水晶石頭精', '洞窟蝙蝠', '骷髏礦工', '石魔像'],
+  ['章魚寶寶', '海星', '魚人', '大螃蟹'], ['雪球怪', '冰狼', '雪怪', '冰晶元素'], ['小惡魔', '惡魔之眼', '黑騎士', '暗黑法師']];   // 狀態列顯示用的全名
+const SCN_Y0 = 127, SCN_Y1 = 133;   // 怪物腳底的範圍（路面中間，和野外打怪一樣）
 function scnMake(h){
   const o = h.mission, z = o.z, [x0, y0, x1, y1] = ZONES[z].rect, t = scnType(o), a = hash01(o.n), b = hash01(o.n + 'y');
-  const sx = x0 + (x1 - x0) * (.3 + .4 * a), sy = y0 + (y1 - y0) * (.35 + .35 * b), d = Math.max(1, o.days || 1);
-  const s = { key:(o.id || 0) + '|' + o.n, t, z, sx, sy, mob:o.boss ? 'boneking' : o.boss2 ? 'abyss' : zoneMon(z), mobs:[], kills:0, found:0, pts:[], R:[x0, y0, x1, y1] };
+  const sx = x0 + (x1 - x0) * (.3 + .4 * a), sy = SCN_Y0 + (SCN_Y1 - SCN_Y0) * b, d = Math.max(1, o.days || 1);
+  const s = { key:(o.id || 0) + '|' + o.n, t, z, sx, sy, mob:o.boss ? 'boneking' : o.boss2 ? 'abyss' : zoneMon(z), mobs:[], kills:0, found:0, pts:[], R:[x0, y0, x1, y1], side:1, rt:0 };
+  s.only = t === 'boss' ? null : scnOnly(o); s.trash = !s.only && (t === 'escort' || t === 'rescue');
   s.total = { slay:Math.min(14, 3 * d + 2), guard:Math.min(16, 3 * d + 3), escort:2 * d, rescue:3, probe:d, search:0, boss:1 }[t];
-  if (t === 'search' || t === 'probe') { const k = t === 'search' ? 2 * d + 1 : d + 1; for (let i = 0; i < k; i++) s.pts.push([clamp(sx + Math.cos(i * 2.3 + a * 6) * (18 + i * 6), x0 + 10, x1 - 10), clamp(sy + Math.sin(i * 2.3 + a * 6) * (14 + i * 4), y0 + 12, y1 - 8)]); }
-  if (t === 'escort') { s.p0 = [x0 + 14, sy]; s.p1 = [x1 - 14, sy]; }
+  if (t === 'search' || t === 'probe') { const k = t === 'search' ? 2 * d + 1 : d + 1; for (let i = 0; i < k; i++) s.pts.push([clamp(sx + Math.cos(i * 2.3 + a * 6) * (18 + i * 6), x0 + 10, x1 - 10), clamp(sy + Math.sin(i * 2.3 + a * 6) * 6, 124, 140)]); }
+  if (t === 'escort') { s.p0 = [x0 + 14, sy + 6]; s.p1 = [x1 - 14, sy + 6]; }
   s.elite = s.examiner = o.ag === 'exam'; s.fav = o.favor || null;
   if (o.boss || o.boss2) s.sx = x1 - 70;   // v17.11：魔王在區域盡頭
   s.prop = /田|農/.test(o.n) ? 'field' : /遺跡|調查|偵察/.test(o.n) ? 'ruins' : /沉船/.test(o.n) ? 'wreck' : /礦/.test(o.n) ? 'mine' : null;
@@ -1869,53 +1879,70 @@ function scnMake(h){
 }
 // 進度：照時間走；會失敗的最多做到七成
 function scnWant(s, h, total){ const f = scnFrac(h), lose = h.mission.win === 0; return Math.floor(Math.min(f, lose ? .7 : 1) * total + (lose ? 0 : f >= .97 ? 1 : 0)); }
-function scnSpawn(s, from){ const [x0, y0, x1, y1] = s.R; let x, y;
-  if (from === 'edge') { const e = Math.random() < .5; x = e ? (Math.random() < .5 ? x0 + 6 : x1 - 6) : rand(x0 + 10, x1 - 10); y = e ? rand(y0 + 10, y1 - 6) : (Math.random() < .5 ? y0 + 10 : y1 - 6); }
-  else { const c = from || [s.sx, s.sy], a = Math.random() * 6.28; x = clamp(c[0] + Math.cos(a) * rand(14, 24), x0 + 8, x1 - 8); y = clamp(c[1] + Math.sin(a) * rand(8, 14), y0 + 12, y1 - 4); }
-  s.mobs.push({ x, y, dead:0, ph:Math.random() * 6 }); }
+// 補怪：從畫面外（勇者左右約 100 格）走進來；守衛兩側輪流、護送從前面、其他多半從前面
+function scnSpawn(s, h, now){ const [x0, , x1] = s.R, hx = h.x; let d;
+  if (s.t === 'guard') d = s.side = -s.side;
+  else if (s.t === 'escort') d = 1;
+  else if (s.t === 'probe') { const p = s.pts[Math.min(s.found, s.pts.length - 1)]; d = p[0] >= hx ? 1 : -1; }
+  else d = Math.random() < .65 ? 1 : -1;
+  let x = hx + d * rand(92, 104); if (x > x1 - 8 || x < x0 + 8) { d = -d; x = hx + d * rand(92, 104); } x = clamp(x, x0 + 8, x1 - 8);
+  const type = s.only || (s.trash ? zoneMon(s.z) + (Math.random() < .57 ? 'a' : 'c') : zoneMon(s.z));
+  s.mobs.push({ x, y:rand(SCN_Y0, SCN_Y1), born:now, ph:Math.random() * 6, type, vx:0 }); }
+const scnGap = s => monHalf(s.mob) + 13;   // 勇者和怪物中間留的距離（v17.34）
 function scnTick(dt, now){
   try {
     const h = H(); if (!scnHas(h)) { SCN = null; return; }
     const o = h.mission, key = (o.id || 0) + '|' + o.n; if (!SCN || SCN.key !== key) SCN = scnMake(h);
     if (!scnOn(h)) { SCN.off = 1; return; } SCN.off = 0;   // v17.7：收工、紮營時演出暫停
-    const s = SCN, f = scnFrac(h), lose = o.win === 0; s.f = f; s.down = lose && f > .86;
-    s.mobs = s.mobs.filter(m => !m.dead || now - m.dead < 700);
-    const alive = s.mobs.filter(m => !m.dead), hx = h.x, hy = h.y;
+    const s = SCN, f = scnFrac(h), lose = o.win === 0, run = !S.paused; s.f = f; s.down = lose && f > .86;
+    s.mobs = s.mobs.filter(m => !m.kt || now - m.kt < 1150);
+    const alive = s.mobs.filter(m => !m.kt), hx = h.x, hy = h.y, gap = scnGap(s);
     // 護送：貨車照進度往前走
     if (s.t === 'escort') s.cart = [s.p0[0] + (s.p1[0] - s.p0[0]) * Math.min(f, lose ? .75 : 1), s.p0[1]];
     // 救援：前半段打倒看守的怪，後半段帶人走回入口
-    if (s.t === 'rescue') { s.phase = f < .5 ? 0 : 1; if (s.phase) { const k = Math.min(1, (f - .5) * 2), e = [s.R[0] + 12, s.R[1] + 14]; s.vic = [s.sx + (e[0] - s.sx) * k - 8, s.sy + (e[1] - s.sy) * k]; } else s.vic = [s.sx, s.sy]; }
+    if (s.t === 'rescue') { s.phase = f < .5 ? 0 : 1; if (s.phase) { const k = Math.min(1, (f - .5) * 2), e = [s.R[0] + 12, s.sy]; s.vic = [s.sx + (e[0] - s.sx) * k - 14, s.sy]; } else s.vic = [s.sx + 30, s.sy]; }
     // 怪物：需要的時候補上，最多同時 3 隻
     const want = s.t === 'search' ? 0 : s.t === 'boss' ? 1 : scnWant(s, h, s.total), cap = s.t === 'boss' ? 1 : 3;
-    if (s.t === 'boss') { if (!s.mobs.length) s.mobs.push({ x:s.sx + 14, y:s.sy, dead:0, ph:0, boss:1 }); s.bossHp = lose ? 1 - Math.min(f, .86) * .75 : 1 - f; if (!lose && f >= .99 && !s.mobs[0].dead) { s.mobs[0].dead = now; s.kills = 1; } }
-    else if (s.t !== 'search' && s.kills + alive.length < s.total && alive.length < cap && (s.kills < want || alive.length === 0) && !(s.t === 'rescue' && s.phase)) {
-      scnSpawn(s, s.t === 'guard' ? 'edge' : s.t === 'escort' ? [s.cart[0] + 26, s.cart[1]] : s.t === 'probe' ? s.pts[Math.min(s.found, s.pts.length - 1)] : null); }
-    // 守衛：怪從邊緣慢慢走向守的地方
-    if (s.t === 'guard') alive.forEach(m => { const d = Math.hypot(s.sx - m.x, s.sy - m.y); if (d > 14) { m.x += (s.sx - m.x) / d * 6 * dt; m.y += (s.sy - m.y) / d * 6 * dt; } });
-    // 打倒：勇者貼著目標、而且進度到了才倒
-    const tg = alive.filter(m => !m.boss).sort((a, b) => Math.hypot(a.x - hx, a.y - hy) - Math.hypot(b.x - hx, b.y - hy))[0];
-    s.tg = s.t === 'boss' ? s.mobs[0] : tg || null;
-    if (tg && s.kills < want && Math.hypot(tg.x - hx, tg.y - hy) < monHalf(s.mob) + 20 && !s.down) { tg.dead = now; s.kills++; }
+    if (s.t === 'boss') { if (!s.mobs.length && !s.kills) s.mobs.push({ x:s.sx + 14, y:s.sy, ph:0, boss:1, type:s.mob, vx:0 }); s.bossHp = lose ? 1 - Math.min(f, .86) * .75 : 1 - f; }
+    else if (s.t !== 'search' && run && s.kills + alive.length < s.total && alive.length < cap && (s.kills < want || alive.length === 0) && !(s.t === 'rescue' && s.phase) && now - (s.spT || 0) > 700) { scnSpawn(s, h, now); s.spT = now; }
+    // 站位：勇者兩側各排一列，最靠近的那隻走到勇者面前，後面的每隻再隔 24 排隊，不會疊在一起
+    if (s.t !== 'boss') [-1, 1].forEach(d => { s.mobs.filter(m => !m.kt && (m.x >= hx ? 1 : -1) === d).sort((a, b) => Math.abs(a.x - hx) - Math.abs(b.x - hx)).forEach((m, k) => {
+      const w = clamp(hx + d * (gap + 24 * k), s.R[0] + 8, s.R[2] - 8), dx = w - m.x, sp = (now - (m.born || 0) < 2500 ? 16 : 10) * (run ? dt : 0);
+      m.vx = Math.abs(dx) > .6 ? Math.sign(dx) : 0; if (m.vx) m.x += Math.sign(dx) * Math.min(Math.abs(dx), sp); }); });
+    // 鎖定最近的一隻
+    const live = s.mobs.filter(m => !m.kt), tg = live.sort((a, b) => Math.abs(a.x - hx) - Math.abs(b.x - hx))[0] || null;
+    s.tg = tg;
+    // 每回合（約 1 秒）：勇者揮一次；進度到了這一下就打倒；越危險越常被反擊
+    const reach = tg && Math.abs(Math.abs(hx - tg.x) - gap) < 6 && Math.abs(hy - (tg.y + 4)) < 6 && !(tg.born && now - tg.born < 500);
+    const di = danger(ratio(h, o.D || 1) * compMul(o.comp)).i, rate = Math.min(.85, [.15, .45, .9][di] + (lose ? .4 : 0));
+    if (reach && run && !s.down && now - s.rt > (s.kills < want - 1 ? 900 : 1150)) { s.rt = now;
+      const kill = s.t === 'boss' ? !lose && f >= .99 : s.kills < want, hurt = !kill && Math.random() < rate;
+      s.fx = { t:now, tg, kill, hurt, dmg:di + 1 + (lose ? 1 : 0) }; if (kill) { tg.kt = now; s.kills++; } }
     // 搜尋／調查：一個點一個點找
     if (s.t === 'search' || s.t === 'probe') s.found = Math.min(s.pts.length, Math.floor(Math.min(f, lose ? .7 : 1) * s.pts.length + (f >= .97 && !lose ? 1 : 0)));
   } catch (e) { if (!scnErr++) console.error(e); SCN = null; }
 }
-// 給模擬用：勇者現在要往哪走、要不要出手（只影響畫面上的位置）
+const scnFxOn = (h, now, dur = 1.2) => SCN && !SCN.off && SCN.fx && h && h.act === 'mission' && now - SCN.fx.t < dur * 1000 ? SCN.fx : null;
+// 任務中勇者要面向哪隻怪
+function scnFoe(h, now){ const s = SCN; if (!s || s.off || !h || h.act !== 'mission') return null; const fx = scnFxOn(h, now); if (fx) return fx.tg;
+  return s.tg && !s.tg.kt && Math.abs(s.tg.x - h.x) < 40 ? s.tg : null; }
+// 給模擬用：勇者現在要往哪走（只影響畫面上的位置）
 function scnGoal(h){
   const s = SCN; if (!s || s.off || !scnOn(h)) return null; if (s.down) return [h.x, h.y, 0];
-  const tg = s.tg && !s.tg.dead ? s.tg : null;
-  if (tg) { const gap = monHalf(s.mob) + 13, sd = h.x > tg.x ? 1 : -1; return [tg.x + sd * gap, tg.y + 4, Math.hypot(tg.x - h.x, tg.y - h.y) < gap + 8]; }   // v17.34：和怪物保持距離，不重疊
-  if (s.t === 'escort') return [s.cart[0] + 14, s.cart[1] + 2, 0];
-  if (s.t === 'rescue') return s.phase ? [s.vic[0] - 10, s.vic[1], 0] : [s.sx - 12, s.sy, 0];
-  if (s.t === 'guard') return [s.sx, s.sy + 2, 0];
+  const tg = s.tg && !s.tg.kt && !(s.tg.born && performance.now() - s.tg.born < 400) ? s.tg : null, fx = scnFxOn(h, performance.now(), 1.1);
+  if (fx && fx.kill) return [h.x, h.y, 0];   // 打倒的那隻倒下時先站著
+  if (tg && Math.abs(tg.x - h.x) < 70) { const sd = h.x > tg.x ? 1 : -1; return [tg.x + sd * scnGap(s), tg.y + 4, 1]; }   // v17.34：和怪物保持距離，不重疊
+  if (s.t === 'escort') return [s.cart[0] + 16, s.cart[1], 0];
+  if (s.t === 'rescue') return s.phase ? [s.vic[0] - 12, s.vic[1] + 4, 0] : [s.sx, s.sy + 4, 0];
+  if (s.t === 'guard') return [s.sx, s.sy + 4, 0];
   if ((s.t === 'search' || s.t === 'probe') && s.found < s.pts.length) { const p = s.pts[s.found]; return [p[0] - 6, p[1] + 2, 0]; }
-  return [s.sx, s.sy, 0];
+  return [s.sx, s.sy + 4, 0];
 }
 // 在地圖上畫演出（勇者以外的部分）
 function drawScene(now, view){
   try {
     const s = SCN; if (!s || s.off || ZONES[s.z].map !== view) return;
-    if (s.prop) drawBld(ctx, s.prop, s.sx - 22, s.sy - 26, 44, 30, 'day');
+    if (s.prop) drawBld(ctx, s.prop, s.sx - 22, V_ROAD - 31, 44, 30, 'day');   // 田、遺跡等放在路邊，不擋路
     if (s.t === 'search' || s.t === 'probe') s.pts.forEach((p, i) => { if (i < s.found) { ctx.fillStyle = 'rgba(111,207,151,.9)'; ctx.fillRect(p[0] - 1, p[1] - 3, 3, 3); return; }
       const a = .5 + .5 * Math.sin(now / 220 + i); ctx.fillStyle = s.t === 'probe' ? `rgba(159,208,255,${a})` : `rgba(255,240,170,${a})`;
       ctx.fillRect(p[0] - 1, p[1] - 5, 2, 6); ctx.fillRect(p[0] - 3, p[1] - 3, 6, 2);
@@ -1926,27 +1953,29 @@ function drawScene(now, view){
     if (s.t === 'rescue' && s.vic) { const [x, y] = s.vic; ctx.fillStyle = '#59a8ff'; ctx.fillRect(x - 3, y - 10, 6, 7); ctx.fillStyle = '#e8b98a'; ctx.fillRect(x - 2, y - 14, 5, 4); ctx.fillStyle = '#4a2a1a'; ctx.fillRect(x - 2, y - 15, 5, 1);
       if (!s.phase && Math.floor(now / 400) % 2) { ctx.fillStyle = '#fff'; ctx.font = fz(9) + 'px sans-serif'; ctx.fillText('!', x + 4, y - 14); } }
     if (s.t === 'guard') { ctx.fillStyle = '#5a4a3a'; ctx.fillRect(s.sx + 10, s.sy - 18, 1, 18); ctx.fillStyle = '#f2c14e'; ctx.fillRect(s.sx + 11, s.sy - 18, 6, 4); }
-    const h = H();
-    s.mobs.forEach(m => { const isT = m === s.tg && !m.dead; let kind = 'idle', f = Math.floor(now / 240 + m.ph) % 4;
-      if (m.dead) { kind = 'down'; f = 0; } else if (isT && h.flash > .55) { kind = 'hurt'; f = Math.floor(now / 120) % 2; } else if (isT && Math.hypot(m.x - h.x, m.y - h.y) < 22 && Math.floor(now / 900 + m.ph) % 3 === 0) { kind = 'attack'; f = Math.floor(now / 160) % 3; }
-      ctx.globalAlpha = m.dead ? Math.max(0, 1 - (now - m.dead) / 700) : 1;
-      drawMonster(ctx, s.mob, m.x, m.y + 4, kind, f, !!(s.elite && m.boss), h.x < m.x, m.ph); ctx.globalAlpha = 1; });
-    if (s.t === 'boss' && s.mobs[0] && !s.mobs[0].dead) { const m = s.mobs[0], w = 40, by = m.y - (monH(s.mob) + 8); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(m.x - w / 2, by, w, 4); ctx.fillStyle = '#ff7b7b'; ctx.fillRect(m.x - w / 2, by, w * clamp(s.bossHp, 0, 1), 4); }
+    const h = H(), fx = scnFxOn(h, now);
+    s.mobs.slice().sort((a, b) => a.y - b.y).forEach(m => { let kind = 'idle', f = Math.floor(now / (m.vx ? 150 : 240) + m.ph) % 4, dx = 0, a = 1;
+      const left = m.vx && !m.kt ? m.vx < 0 : h.x < m.x, d = left ? 1 : -1;   // 走路時面向前進方向，其他時候面向勇者
+      if (m.born) { a = Math.min(1, (now - m.born) / 400); if (a >= 1 && now - m.born > 2500) m.born = 0; }
+      if (m.kt) { const p = (now - m.kt) / 1000;   // 被打倒：命中閃白、擊退、壓扁淡出（和野外打怪一樣）
+        if (p > .3 && p < .45) { kind = 'hurt'; f = 1; dx = d * 2; } else if (p >= .45) { kind = 'down'; f = 0; dx = d * 3; a = Math.max(0, 1 - (p - .45) / .65); } }
+      else if (fx && fx.tg === m) { const p = Math.max(0, now - fx.t) / 1000;
+        if (p > .3 && p < .55) { kind = 'hurt'; f = p < .42 ? 1 : 0; dx = d * 2; }
+        else if (fx.hurt && p > .65 && p < .9) { kind = 'attack'; f = Math.min(2, Math.floor((p - .65) / .08)); } }
+      if (a <= 0) return;
+      ctx.globalAlpha = a; drawMonster(ctx, m.type || s.mob, m.x + dx, m.y + 4, kind, f, !!(s.elite && m.boss), left, m.ph); ctx.globalAlpha = 1; });
+    if (s.t === 'boss' && s.mobs[0] && !s.mobs[0].kt) { const m = s.mobs[0], w = Math.max(28, monHalf(s.mob) * 2 + 8), by = m.y - (monH(s.mob) + 2); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(m.x - w / 2, by, w, 3); ctx.fillStyle = '#ff7b7b'; ctx.fillRect(m.x - w / 2, by, w * clamp(s.bossHp, 0, 1), 3); }
   } catch (e) { if (!scnErr++) console.error(e); }
 }
-// 勇者頭上的進度、被打中的傷害數字、血條
+// 勇者腳下的血條、被打中的傷害數字（進度數字在下方狀態列）
 function drawScnHero(now, hx, hy){
   try {
     const s = SCN, h = H(); if (!s || s.off) return;
-    const o = h.mission, di = danger(ratio(h, o.D || 1) * compMul(o.comp)).i, lose = o.win === 0;
-    const cnt = s.t === 'search' || s.t === 'probe' ? `${s.found}/${s.pts.length}` : s.t === 'boss' ? '' : `${s.kills}/${s.total}`;
-    if (cnt) nameTag(ctx, cnt, hx, hy - 34, 'npc');
-    const hp = lose ? 1 - .9 * Math.min(s.f / .86, 1) : 1 - .35 * s.f * di / 2;
+    const lose = h.mission.win === 0, di = danger(ratio(h, h.mission.D || 1) * compMul(h.mission.comp)).i, fx = scnFxOn(h, now);
+    let hp = lose ? 1 - .9 * Math.min(s.f / .86, 1) : 1 - .35 * s.f * di / 2;
+    if (fx && fx.hurt && now - fx.t < 720) hp += .04;   // 血條等怪物打到才掉
     ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(hx - 12, hy + 4, 24, 3); ctx.fillStyle = hp > .5 ? '#6fcf97' : hp > .25 ? '#ffb347' : '#ff7b7b'; ctx.fillRect(hx - 12, hy + 4, 24 * clamp(hp, 0, 1), 3);
-    // 越危險越常被打中
-    const rate = [.15, .45, .9][di] + (lose ? .4 : 0);
-    if (s.tg && !s.tg.dead && !s.down) { if (!s.hitT || now - s.hitT > 900) { if (Math.random() < rate) s.hitT = now; else s.hitT = now - 400; }
-      const k = (now - s.hitT) / 900; if (k < .7) { ctx.globalAlpha = 1 - k; ctx.fillStyle = '#ff7b7b'; ctx.font = fz(9) + 'px Cubic11, sans-serif'; ctx.fillText('-' + (di + 1 + (lose ? 1 : 0)), hx + 6, hy - 20 - k * 10); ctx.globalAlpha = 1; } }
+    if (fx && fx.hurt) { const k = (now - fx.t - 720) / 700; if (k >= 0 && k < 1) { ctx.globalAlpha = 1 - k; ctx.fillStyle = '#ff7b7b'; ctx.font = fz(9) + 'px Cubic11, sans-serif'; ctx.fillText('-' + fx.dmg, hx + 6, hy - 20 - k * 10); ctx.globalAlpha = 1; } }
   } catch (e) { if (!scnErr++) console.error(e); }
 }
 // 地圖下方的任務小卡（螢幕座標，畫在夜色之後）
