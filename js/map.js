@@ -799,7 +799,12 @@ function kenCanvas(h, kind, f, expr){
   const B = kenGrid(h, expr), O = Array.from({ length:KEN_H }, () => Array(KEN_W).fill(null));
   const blit = (G, dx, dy) => G.forEach((row, y) => row.forEach((c, x) => { const X = x + dx, Y = y + dy; if (c && X >= 0 && X < KEN_W && Y >= 0 && Y < KEN_H) O[Y][X] = c; }));
   const fx = (x, y, c = '#ffffff') => { if (x >= 0 && x < KEN_W && y >= 0 && y < KEN_H) O[y][x] = c; };
-  if (kind === 'down') { const R = Array.from({ length:16 }, () => Array(16).fill(null)); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) R[15 - x][y] = B[y][x]; blit(R, KEN_OX, KEN_FOOT - 15); }
+  if (kind === 'down') {   // v17.47：躺著時眼睛瞇著：眼睛上半格塗成膚色、下半格改成往外多一格的橫線
+    const E = []; for (let y = 0; y < 10; y++) for (let x = 0; x < 16; x++) if (B[y][x] === KEN_COL.k) E.push([x, y]);
+    if (E.length) { const top = Math.min(...E.map(e => e[1])), xs = [...new Set(E.map(e => e[0]))].sort((a, b) => a - b), mid = (xs[0] + xs[xs.length - 1]) / 2;
+      E.forEach(([x, y]) => { B[y][x] = y === top ? (B[y][x - 1] || B[y][x + 1]) : KEN_COL['#']; });
+      xs.forEach(x => { const xx = x < mid ? x - 1 : x + 1; if (B[top + 1] && B[top + 1][xx]) B[top + 1][xx] = KEN_COL['#']; }); }
+    const R = Array.from({ length:16 }, () => Array(16).fill(null)); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) R[15 - x][y] = B[y][x]; blit(R, KEN_OX, KEN_FOOT - 15); }
   else if (kind === 'attack' && h.cls && EQ_WP[h.cls]) {
     const wp = EQ_WP[h.cls], P = KEN_ATK[wp][f % 6], dx = P.dx || 0, hx = KEN_OX + 13 + dx, hy = KEN_OY + 12 + (P.dy || 0), n = wp + clamp(h.wpn || 0, 0, 3);
     const body = kenWalk(B, 0);
@@ -1861,24 +1866,36 @@ function pRoom(h, now, sig){ const own = h.house, wall = own ? '#6a5a7a' : '#5a4
   pR(0, 0, 100, 46, wall); if (own) for (let x = 3; x < 100; x += 8) pR(x, 0, 1, 46, '#76668a'); else { pR(22, 6, 1, 8, '#3a2e24'); pR(23, 13, 1, 6, '#3a2e24'); pR(80, 30, 6, 4, '#6a5a4a'); }
   pR(0, 46, 100, 8, own ? '#6a4a30' : '#4a3628'); if (own) pR(20, 47, 40, 6, '#8a4a4a');
   pWin(68, 8, 18, 13, now); }
+// ---- v17.47：屋裡的新畫法（ART.room，design-wip 的 design/rooms/rooms.py）：Kenney Q 版、家具 2 像素粗線 ----
+const RM = (n, x, yb) => { if (!ART.room || !ART.room[n]) return; const cv = rideCanvas(n, 'room'); ctx.drawImage(cv, Math.round(x), Math.round(yb) - cv.height); };
+const rNight = () => { const hr = hourOf() % 24; return hr >= 19 || hr < 6; };
+function rWin(x, y, rent){ RM((rent ? 'winR_' : 'win_') + (rNight() ? 'n' : 'd'), x, y + 18); }
+// 家：背景、窗戶、家具（床上沒人）。租屋：破舊、漏水；自己的房子：石牆、大床、掛畫、地毯
+function rHome(h, now){
+  if (h.house) { RM('bg_house', 0, 54); rWin(74, 8); RM('pic', 34, 22); RM('bed_house', 4, 48); RM('rug', 44, 51); RM('table', 62, 48); RM('mug', 66, 38); }
+  else { RM('bg_rent', 0, 54); rWin(74, 8, 1); RM('bed_rent', 6, 48); RM('stool', 50, 48); RM('lamp', 48, 41); RM('bucket', 66, 49);
+    const d = Math.floor(now / 83) % 30; if (d < 24) pR(69, 2 + d, 1, 2, '#8cc8ec'); }   // 天花板漏水滴進水桶
+  if (h.child) RM('crib', 80, 48); }
+// 躺在床上：頭在枕頭、眼睛瞇著，被子從脖子蓋到腳（只露頭）；受傷纏繃帶、累壞了敷冰毛巾
+function rLie(h, x, now, blk){ drawSprite(ctx, h, x, 37, true, now, { moving:false, noEmo:true, expr:pipHurt(h) || pipTired(h) ? 'sick' : undefined });
+  if (pipHurt(h)) { pR(x - 7, 25, 2, 10, '#f4eee0'); pR(x - 7, 28, 1, 1, '#e84537'); } else if (pipTired(h)) pR(x - 7, 25, 2, 10, '#a8d4f0');
+  RM(blk, x + 2, x === 18 ? 43 : 42); }
+function rZ(x, y, now){ const k = Math.floor(now / 250) % 3; ctx.fillStyle = '#cfd8ff'; ctx.font = '8px Cubic11, sans-serif'; ctx.fillText('z', x, y + 8 - k); if (k) { ctx.font = '10px Cubic11, sans-serif'; ctx.fillText('Z', x + 6, y + 2 - k); } }
+function rClinic(h, now){ RM('bg_clinic', 0, 54); RM('cross', 66, 22); rWin(82, 8); RM('bed_clinic', 8, 48); rLie(h, 18, now, 'blk_clinic'); RM('iv', 46, 48); RM('doctor', 62, 48); }
 // ---- 各場景 ----
 const PIP_DRAW = {
-  sleep(h, now, c){ const mood = h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1; pRoom(h, now); pBed(h.house ? 'house' : 'rent');
-    pR(62, 38, 8, 8, '#7a5a3a'); if (pipHurt(h)) { pR(63, 35, 3, 3, '#f4f0e8'); pR(66, 34, 2, 4, '#7ab07a'); } else if (pipTired(h)) pR(63, 36, 5, 2, '#a8d4f0'); else pR(64, 34, 3, 4, '#f3c86a');
-    if (h.child) { pR(76, 36, 14, 8, '#c8a070'); pR(76, 34, 1, 10, '#8a6a4a'); pR(89, 34, 1, 10, '#8a6a4a'); pR(79, 35, 4, 3, '#f1c9a0'); }
-    const p = h.married && h.partner && npc(h.partner);
-    pLie(h, 22, 40, now, mood); if (p && p.alive) drawSprite(ctx, p, 40, 40, true, now, { moving:false });
-    if (mood === 2) pBubble(30, 4, now, 'heart'); else if (mood === 0) pBubble(30, 4, now, '…'); },
-  home(h, now){ pRoom(h, now); pBed(h.house ? 'house' : 'rent'); pR(64, 38, 18, 3, '#8a5a3a'); pR(65, 41, 2, 5, '#6a3a22'); pR(79, 41, 2, 5, '#6a3a22'); pR(68, 35, 4, 3, '#e0b060'); pR(74, 36, 3, 2, '#c05040');
-    drawSprite(ctx, h, 58, 46, false, now, { moving:false, expr:h.mood < 35 ? 'sad' : undefined }); },
-  tavern(h, now){ pR(0, 0, 100, 46, '#5a3a2a'); pR(0, 46, 100, 8, '#3a2618'); for (let x = 6; x < 100; x += 22) pR(x, 6, 10, 2, '#7a5a3a');
-    pR(0, 32, 100, 4, '#8a5a3a'); pR(0, 36, 100, 10, '#6a4228'); [[10, 28], [26, 28], [80, 28]].forEach(([x, y]) => { pR(x, y, 4, 4, '#e8c060'); pR(x, y - 1, 4, 1, '#fff'); });
-    pR(70, 10, 20, 12, '#2a1a10'); pR(72, 12, 4, 8, '#a04040'); pR(78, 12, 4, 8, '#4a8a4a'); pR(84, 12, 4, 8, '#c0a040');
-    drawSprite(ctx, h, 40, 46, false, now, { moving:false, expr:h.mood < 35 ? 'sad' : 'happy' }); pxPerson(60, 46, '#6a5a8a', 2, now);
-    const up = Math.floor(now / 700) % 2; pR(46, 28 - up * 3, 4, 4, '#e8c060'); pR(46, 27 - up * 3, 4, 1, '#fff'); if (up) { ctx.fillStyle = '#f3c86a'; ctx.font = '7px Cubic11, sans-serif'; ctx.fillText('♪', 52, 14); } },
-  clinic(h, now){ pR(0, 0, 100, 46, '#dfe6ea'); pR(0, 46, 100, 8, '#b8c2c8'); pR(70, 8, 10, 10, '#fff'); pR(74, 9, 2, 8, '#d04a4a'); pR(71, 12, 8, 2, '#d04a4a');
-    pBed('clinic'); pLie(h, 22, 38, now, h.mood < 35 ? 0 : 1); pR(62, 30, 1, 16, '#9aa4b8'); pR(60, 26, 5, 5, '#c8e0f0'); pxPerson(80, 46, '#f4f4f4', 1, now); },
-  trial(h, now){ PIP_DRAW.clinic(h, now); pR(66, 36, 8, 10, '#8a6a4a'); const b = Math.floor(now / 250) % 3; pR(68, 30, 4, 6, '#8ad06a'); pR(69 + b % 2, 28 - b, 1, 1, '#c8f0a0'); pR(70 - b % 2, 26 - b, 1, 1, '#c8f0a0'); },
+  sleep(h, now, c){ const mood = h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1, p = h.married && h.partner && npc(h.partner), blk = h.house ? 'blk_house' : 'blk_rent';
+    rHome(h, now);
+    if (p && p.alive) { drawSprite(ctx, p, 19, 34, true, now, { moving:false, noEmo:true }); RM(blk, 21, 39); }   // 另一半睡在後面
+    rLie(h, 17, now, blk); rZ(24, 12, now);
+    if (mood === 2) pBubble(40, 4, now, 'heart'); else if (mood === 0) pBubble(40, 4, now, '…'); },
+  home(h, now){ rHome(h, now); const bob = Math.floor(now / 1000) % 2;
+    drawSprite(ctx, h, h.house ? 58 : 38, 47 - bob, false, now, { moving:false, expr:h.mood < 35 ? 'sad' : undefined }); },
+  tavern(h, now){ RM('bg_tavern', 0, 54); rWin(80, 8); RM('barkeep', 22, 34); RM('counter', 2, 48); RM('mug', 10, 32); RM('mug', 44, 32); RM('stool', 70, 48); RM('stool', 86, 48);
+    const up = Math.floor(now / 1750) % 2; drawSprite(ctx, h, 74, 43, false, now, { moving:false, expr:h.mood < 35 ? 'sad' : 'happy' }); RM('mug', 78, 34 - up * 3); RM('patron', 84, 44);
+    if (up) { ctx.fillStyle = '#f3c86a'; ctx.font = '9px Cubic11, sans-serif'; ctx.fillText('♪', 62, 28); } },
+  clinic(h, now){ rClinic(h, now); },
+  trial(h, now){ rClinic(h, now); RM('stool', 82, 48); RM('flask', 83, 38); const b = Math.floor(now / 250) % 3; pR(87 + b % 2, 22 - b, 1, 1, '#c8f0a0'); pR(86 - b % 2, 20 - b * 2, 1, 1, '#c8f0a0'); },
   office(h, now){ pR(0, 0, 100, 46, '#7a6a52'); pR(0, 46, 100, 8, '#5a4a38'); pR(8, 8, 26, 14, '#3a3028'); for (let i = 0; i < 4; i++) pR(10 + i * 6, 10, 4, 10, ['#a04040', '#4a6a9a', '#c0a040', '#5a8a5a'][i]);
     pR(46, 34, 34, 4, '#8a5a3a'); pR(48, 38, 2, 8, '#6a3a22'); pR(76, 38, 2, 8, '#6a3a22'); pR(52, 31, 8, 3, '#f4f0e8'); pR(62, 30, 6, 4, '#f4f0e8'); pWin(84, 8, 12, 12, now);
     drawSprite(ctx, h, 40, 46, false, now, { moving:false }); },
@@ -1898,8 +1915,8 @@ const PIP_DRAW = {
     ctx.fillStyle = '#8a4a3a'; ctx.beginPath(); ctx.moveTo(6, 22); ctx.lineTo(30, 6); ctx.lineTo(54, 22); ctx.fill(); pR(10, 22, 40, 22, '#b89a6a'); pR(16, 28, 8, 8, '#f3e0a0'); pR(36, 32, 8, 12, '#5a3a22');
     pR(56, 38, 30, 3, '#8a5a3a'); pR(58, 41, 2, 5, '#6a3a22'); pR(82, 41, 2, 5, '#6a3a22'); pR(62, 35, 5, 3, '#f4f0e8'); pR(72, 35, 5, 3, '#f4f0e8'); pR(64, 33 - Math.floor(now / 400) % 2, 1, 2, '#ddd');
     drawSprite(ctx, h, 60, 48, false, now, { moving:false, expr:'happy' }); pxPerson(76, 48, '#7a6a5a', 0, now); pxPerson(86, 48, '#9a5a6a', 1, now); },
-  ep(h, now, c){ const room = c.room || 'home'; (room === 'home' ? (H2 => { pRoom(H2, now); pBed(H2.house ? 'house' : 'rent'); }) : PIP_DRAW[room] ? (H2 => PIP_DRAW[room](H2, now)) : (H2 => pRoom(H2, now)))(h);
-    if (room === 'home') drawSprite(ctx, h, 50, 46, false, now, { moving:false });
+  ep(h, now, c){ const room = c.room || 'home'; (room === 'home' ? (H2 => rHome(H2, now)) : PIP_DRAW[room] ? (H2 => PIP_DRAW[room](H2, now)) : (H2 => pRoom(H2, now)))(h);
+    if (room === 'home') drawSprite(ctx, h, 50, 47, false, now, { moving:false });
     const n = npc(c.npc); if (n && n.alive) { const k = Math.min(1, (now - c.t0) / 900), x = Math.round(94 - 22 * k); drawSprite(ctx, n, x, 46, false, now, { moving:k < 1, left:true }); if (k >= 1 && c.tag) { ctx.font = '6px Cubic11, sans-serif'; const w = ctx.measureText(c.tag).width + 4; pR(x - w / 2, 4, w, 8, '#f1ece0'); ctx.fillStyle = '#161b27'; ctx.fillText(c.tag, x - w / 2 + 2, 10); } } },
 };
 function pipCap(h, c){ const n = h.name, p = h.married && h.partner && npc(h.partner), mood = h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1;

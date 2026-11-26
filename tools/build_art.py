@@ -88,8 +88,8 @@ def folder(script):
         assert len(rpal) < len(CH), (f, len(rpal))
         res[os.path.basename(f)[:-4]] = {'w':im.width, 'h':im.height, 'pal':rpal, 'px':''.join(s)}
     return res
-ride = folder(D + '/rides/rides.py'); wild = folder(D + '/wild/wild.py')
+ride = folder(D + '/rides/rides.py'); wild = folder(D + '/wild/wild.py'); room = folder(D + '/rooms/rooms.py')   # v17.47：屋裡的小窗格
 out = '// 自動產生（tools/build_art.py），不要手改。圖檔來源：design-wip 分支 design/final、design/buildings、design/monsters、Kenney Tiny Dungeon（CC0）\n'
-out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl, 'bch':''.join(CH[:len(bpal)]), 'bpal':bpal, 'bld':bld, 'mch':''.join(CH), 'mon':mon, 'ride':ride, 'wild':wild}, ensure_ascii=False, separators=(',',':')) + ';\n'
+out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl, 'bch':''.join(CH[:len(bpal)]), 'bpal':bpal, 'bld':bld, 'mch':''.join(CH), 'mon':mon, 'ride':ride, 'wild':wild, 'room':room}, ensure_ascii=False, separators=(',',':')) + ';\n'
 open(os.path.dirname(os.path.abspath(__file__)) + '/../js/art.js', 'w').write(out)
 print('pal', len(pal), 'bytes', len(out))
