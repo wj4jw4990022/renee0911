@@ -70,7 +70,7 @@ WSEG.forEach(([t, z, w]) => { const x0 = WW, x1 = WW + w; if (t === 'z') { ZONES
 WW += 40;
 const CARX = CAP.x1 - 24;   // 旅行商隊停在王都出口
 const MSPOT_B = { endorse:'stage', variety:'stage', meet:'stage', arena:'arena', trial:'clinic' };   // 村子裡的事務所任務在哪棟
-const V = { x:null, y:V_WALK, mv:false, left:false, inside:null, exiting:0, wander:null, wait:0, pan:null, panT:0, drag:null, noClick:0 };
+const V = { x:null, y:V_WALK, mv:false, left:false, inside:null, pk:null, p:0, fa:1, cx:null, tagId:null, tagT:0, exiting:0, wander:null, wait:0, pan:null, panT:0, drag:null, noClick:0 };
 const vilPos = new Map();
 let vilHits = [];
 // 原本的判斷（照模擬座標）；外面包一層：勇者要出村子時，畫面上先讓他走到村口
@@ -108,24 +108,45 @@ function vilGoal(h){
 }
 const INSIDE_IC = { home:'z', tavern:'♪', clinic:'+', office:'!' };
 // 每一格畫面更新勇者在街上的位置
+// v17.38：門前小路。sx＝小路接到人行道的點（VD[k]），dx、dy＝真正的門口
+function vDoor(k){ const b = VSLOTS.find(b => b.k === k && b.door === VD[k]) || VSLOTS.find(b => b.k === k); if (!b || b.dx == null) return null;
+  return { sx:VD[k], dx:b.dx, dy:Math.min(b.dy, V_DOOR) }; }
+function vOnPath(){ const d = vDoor(V.pk); if (!d) { V.pk = null; V.p = 0; V.fa = 1; return; } V.x = d.sx + (d.dx - d.sx) * V.p; V.y = V_DOOR + (d.dy - V_DOOR) * V.p; }
+const vPathLen = k => { const d = vDoor(k); return d ? Math.max(4, Math.hypot(d.dx - d.sx, d.dy - V_DOOR)) : 4; };
+// 每一格畫面更新勇者在街上的位置
 function vilTick(dt, now){
   const h = H(), raw = heroMapRaw(h), alive = !['dead', 'retired', 'left'].includes(h.act) && !heroHidden(h);
   if (V.lastRaw === 'vil' && raw !== 'vil' && alive && V.x != null && !offline) V.exiting = now + 7000;   // 要出門：先走到村口
-  if (V.lastRaw && V.lastRaw !== 'vil' && raw === 'vil') { V.x = VD.gate; V.y = V_WALK; V.exiting = 0; }   // 回村：從村口走進來
+  if (V.lastRaw && V.lastRaw !== 'vil' && raw === 'vil') { V.x = VD.gate; V.y = V_WALK; V.exiting = 0; V.pk = null; V.p = 0; V.fa = 1; }   // 回村：從村口走進來
   V.lastRaw = raw;
-  if (raw !== 'vil' && !V.exiting) { V.inside = null; return; }
+  if (raw !== 'vil' && !V.exiting) { V.inside = null; V.pk = null; V.p = 0; V.fa = 1; return; }
   let goal = V.exiting ? ['gate', 0] : vilGoal(h), tx;
+  const inGoal = goal && goal[1] ? goal[0] : null;
+  if (V.x == null && inGoal && vDoor(inGoal)) { V.pk = inGoal; V.p = 1; V.fa = 0; vOnPath(); V.inside = inGoal; return; }   // 剛載入：直接在屋裡
+  // 在門前小路上（或屋裡），但現在要去別的地方：先在門口淡入，再沿小路走出來
+  if (V.pk && V.pk !== inGoal) { V.inside = null;
+    if (V.fa < 1) { V.fa = Math.min(1, V.fa + dt / .4); V.mv = false; vOnPath(); return; }
+    V.p = Math.max(0, V.p - dt * 26 / vPathLen(V.pk)); vOnPath(); V.mv = true; const d = vDoor(V.pk); V.left = d ? d.sx < d.dx : false;
+    if (V.p > 0) return; V.pk = null; }
+  // 正在進門：沿小路走到門口，再淡出
+  if (V.pk && V.pk === inGoal) {
+    if (V.p < 1) { V.p = Math.min(1, V.p + dt * 26 / vPathLen(V.pk)); vOnPath(); V.mv = true; const d = vDoor(V.pk); V.left = d ? d.dx < d.sx : true; V.inside = null; return; }
+    V.mv = false; V.fa = Math.max(0, V.fa - dt / .4); vOnPath(); V.inside = V.fa <= 0 ? V.pk : null;
+    if (V.inside === 'clinic' && vCarry()) S.carry.done = 1; return; }
   if (goal) { tx = VD[goal[0]]; V.wander = null; }
   else { if (!V.wander || (Math.abs(V.x - V.wander) < 2 && (V.wait -= dt) <= 0)) { V.wait = rand(2, 6); V.wander = Math.random() < .5 ? pick(VSLOTS).door + rand(-10, 10) : clamp((V.x ?? VD.office) + rand(-60, 60), 20, VW - 20); } tx = V.wander; }
-  if (V.x == null) { V.x = tx; if (goal && goal[1]) V.y = V_DOOR; }   // 剛載入：直接站好
+  if (V.x == null) { V.x = tx; }
   const d = tx - V.x, far = Math.abs(d), sp = (V.exiting ? 230 : far > 150 ? 210 : 70) * dt;   // 遠的地方用跑的：一個月只有 30 秒，晚上回家不能走太久
   V.mv = far > 1.5; if (V.mv) { V.left = d < 0; V.x += Math.sign(d) * Math.min(far, sp); }
   const atDoor = goal && far < 3, ty = atDoor && goal[1] ? V_DOOR : atDoor && goal[2] ? goal[2] : V_WALK;
   V.y += clamp(ty - V.y, -40 * dt, 40 * dt); if (Math.abs(ty - V.y) > .5) V.mv = true;
-  V.inside = atDoor && goal[1] && Math.abs(V.y - V_DOOR) < 1 ? goal[0] : null;
-  if (V.inside === 'clinic' && vCarry()) S.carry.done = 1;
+  V.inside = null;
+  if (atDoor && inGoal && Math.abs(V.y - V_DOOR) < 1) { if (vDoor(inGoal)) { V.pk = inGoal; V.p = 0; } else { V.inside = inGoal; V.fa = 1; } }   // 走到小路口：接著走小路
   if (V.exiting && Math.abs(V.x - VD.gate) < 3) V.exiting = 0;
 }
+// 狀態字：要進屋的事（睡覺、喝酒、看病）在勇者還沒進門前寫「回家中」「走去酒館」
+function vWalkTxt(h){ if (offline || heroMap(h) !== 'vil' || V.x == null || V.exiting) return ''; const g = vilGoal(h); if (!g || !g[1] || V.inside === g[0]) return '';
+  return { home:'回家中', tavern:'走去酒館', clinic:'走去藥局' }[g[0]] || '走去' + ((VSLOTS.find(b => b.k === g[0]) || {}).n || ''); }
 // 鏡頭：村子永遠讓整條街的高度剛好塞滿畫面，左右跟著勇者（或玩家滑到的地方）
 function vilCam(h, hm, now){
   const z = SH / VH, panning = V.drag || (V.pan != null && now - V.panT < 3500);
@@ -166,19 +187,34 @@ function drawVillage(now){
   const WORK = { tavern:'tavern', smith:'smith', guild:'guild', priest:'temple', mayor:'mayor', reporter:'stage', fan:'office', merc:'guild', elder:'temple' };
   const ppl = S.npcs.filter(n => n.alive && !n.dark && !['rival', 'rival2'].includes(n.role) && !((n.sick || 0) > S.day));
   const vis = hourOf() >= 24 ? [] : night ? ppl.filter(n => n.role === 'tavern' || n.aff >= 60).slice(0, 4) : ppl.slice(0, 16);
-  const gIds = guestIds();
+  const gIds = guestIds(), dt = Math.min(.1, (now - (V.vt || now)) / 1000); V.vt = now;
+  // v17.38：每人固定在自己工作的那棟門口附近，同一棟的人左右錯開；大多待在原地，偶爾去別棟晃一下；走路時互相讓開
+  const LANES = [130, 136, 142, 148], homeOf = {}, cnt = {};
+  vis.forEach((n, i) => { const k = WORK[n.role] ? VD[WORK[n.role]] : VSLOTS.filter(b => b.k === 'house')[i % 4].door; homeOf[n.id] = [k, cnt[k] = (cnt[k] || 0) + 1]; });
+  const list = [];
   vis.forEach((n, i) => {
     if (gIds.includes(n.id)) return;   // 在村口迎接、來道謝的村民另外畫
-    let p = vilPos.get(n.id); const home = VD[WORK[n.role]] ?? VSLOTS.filter(b => b.k === 'house')[i % 4].door;
-    if (!p || p.v !== 176) { p = { v:176, x:home + rand(-20, 20), tx:home, y:130 + (i * 7) % 18, w:0 }; vilPos.set(n.id, p); }
-    if (night) p.tx = VD.tavern - 12 + i * 8;
-    if (Math.abs(p.tx - p.x) < 2) { if ((p.w -= 1 / 60) <= 0) { p.w = rand(3, 9); p.tx = Math.random() < .6 ? home + rand(-16, 16) : pick(VSLOTS).door + rand(-8, 8); } } else p.x += Math.sign(p.tx - p.x) * .35;
+    const [hk, ki] = homeOf[n.id], home = hk + ((ki - 1) - (cnt[hk] - 1) / 2) * 18;
+    let p = vilPos.get(n.id);
+    if (!p || p.v !== 177) { p = { v:177, x:home + rand(-4, 4), tx:home, y:LANES[i % 4], ty:LANES[i % 4], w:rand(2, 8) }; vilPos.set(n.id, p); }
+    if (night) { const j = vis.indexOf(n); p.tx = VD.tavern - 21 + j * 14; p.ty = LANES[j % 2]; }
+    else if (Math.abs(p.tx - p.x) < 2 && (p.w -= dt) <= 0) { p.w = rand(4, 10); p.tx = Math.random() < .8 ? home + rand(-6, 6) : pick(VSLOTS).door + rand(-6, 6); }
+    list.push([n, p, i]); });
+  // 互相讓開：靠太近（左右 14、上下 5 以內）就各自往旁邊推，走路的人換一條線
+  list.forEach(([n, p]) => list.forEach(([n2, q]) => { if (n === n2) return; const dx = p.x - q.x, dy = p.y - q.y;
+    if (Math.abs(dx) < 14 && Math.abs(dy) < 5) { const push = (dx >= 0 ? 1 : -1) * 6 * dt; p.x += push; if (Math.abs(p.tx - p.x) < 4) p.tx += push; const mv = Math.abs(p.tx - p.x) > 2; if (mv && n.id > n2.id && Math.abs(p.ty - q.ty) < 5) p.ty = LANES[(LANES.indexOf(p.ty) + 1 + LANES.length) % LANES.length] ?? LANES[0]; } }));
+  // 誰的名牌要顯示：最近點到的那位，或勇者身邊最近的那位（只有一個，不會疊在一起）
+  const hv = heroMap(h) === 'vil' && !V.inside ? villagePos(h)[0] : null;
+  let near = null, nd = 30; if (hv != null) list.forEach(([n, p]) => { const d = Math.abs(p.x - hv); if (d < nd) { nd = d; near = n.id; } });
+  const tagId = V.tagId && now - V.tagT < 4000 ? V.tagId : near;
+  list.sort((a, b) => a[1].y - b[1].y).forEach(([n, p, i]) => {
+    const mv = Math.abs(p.tx - p.x) > 2; if (mv) p.x += Math.sign(p.tx - p.x) * Math.min(Math.abs(p.tx - p.x), 21 * dt);
+    p.y += clamp(p.ty - p.y, -12 * dt, 12 * dt);
     const x = Math.round(p.x), y = Math.round(p.y); if (x < cam.x - hw - 20 || x > cam.x + hw + 20) return;
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(x - 6, y, 12, 2);
-    drawSprite(ctx, n, x, y, false, now + i * 137, { moving:Math.abs(p.tx - p.x) > 2, left:p.tx < p.x, expr:(n.sick || 0) > S.day ? 'sick' : 'normal' });
-    const nearH = heroMap(h) === 'vil' ? Math.abs(villagePos(h)[0] - x) < 48 : n.aff >= 50;
-    if (nearH) nameTag(ctx, n.name.slice(0, 4), x, y - KEN_TAG, n.aff >= 50 ? 'friend' : 'npc');
-    if (heroMap(h) === 'vil' && !V.inside && Math.abs(villagePos(h)[0] - x) < 22 && !sleeping()) { const ph = Math.floor(now / 1800 + i * 3) % 6; if (ph < 2) { const em = ['…', '♪', '哈', '嗯', '!', '?'][(i + Math.floor(now / 10800)) % 6]; ctx.fillStyle = '#f1ece0'; ctx.fillRect(x + 3, y - 36, 11, 9); ctx.fillStyle = '#161b27'; ctx.font = fz(8) + 'px sans-serif'; ctx.fillText(em, x + 5, y - 29); } }
+    drawSprite(ctx, n, x, y, false, now + i * 137, { moving:mv || Math.abs(p.ty - p.y) > .5, left:mv ? p.tx < p.x : hv != null ? hv < x : false, expr:(n.sick || 0) > S.day ? 'sick' : 'normal' });
+    if (n.id === tagId) nameTag(ctx, n.name.slice(0, 4), x, y - KEN_TAG, n.aff >= 50 ? 'friend' : 'npc');
+    if (hv != null && n.id === near && !sleeping()) { const ph = Math.floor(now / 1800 + i * 3) % 6; if (ph < 2) { const em = ['…', '♪', '哈', '嗯', '!', '?'][(i + Math.floor(now / 10800)) % 6]; ctx.fillStyle = '#f1ece0'; ctx.fillRect(x + 3, y - 36, 11, 9); ctx.fillStyle = '#161b27'; ctx.font = fz(8) + 'px sans-serif'; ctx.fillText(em, x + 5, y - 29); } }
     vilHits.push({ r:[x - 9, y - 24, 18, 26], k:'npc', id:n.id }); });
 }
 // 前景（畫在人物前面）：路燈、木箱、花圃
@@ -320,14 +356,14 @@ function drawMap(now){
       for (let i = 0; i < 7; i++) { const a = i / 7 * 6.28 + now / 3000; ctx.fillStyle = cols[i % 5]; ctx.fillRect(sx + Math.cos(a) * 20 - 1, sy - 3 + Math.sin(a) * 5 + Math.sin(now / 200 + i) * 1, 3, 4); }
     }
     if (h.alpha > 0 && !heroHidden(h) && !(view === 'vil' && V.inside)) {
-      ctx.globalAlpha = h.alpha;
+      const vfa = view === 'vil' ? V.fa : 1; ctx.globalAlpha = h.alpha * vfa;
       const lying = view === 'vil' ? h.act === 'dying' || vCarry() : h.act === 'bed' || h.act === 'slack' || h.act === 'dying' || sleeping() || !!(SCN && !SCN.off && SCN.down) || (mPhase(h) === 'camp' && (hourOf() >= 22.5 || hourOf() < 6.5));
       if (!lying) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(hx0, hy0 + 1, 8, 2.6, 0, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(242,193,78,' + (.55 + .25 * Math.sin(now / 400)) + ')'; ctx.lineWidth = .8; ctx.beginPath(); ctx.ellipse(hx0, hy0 + 1, 9.5, 3.2, 0, 0, 7); ctx.stroke(); }   // v17.1：主力腳下光圈
       if (view === 'vil' && vCarry()) drawCarry(now, Math.round(hx0), Math.round(hy0));
       const ride = view === 'vil' ? 0 : drawRide(now, h, Math.round(hx0), Math.round(hy0));   // v17.12：馬、驛馬車、傳送陣
       if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') { const fx = hfxOn(h, now) || scnFxOn(h, now), foe = h.target || (fx && (fx.ghost || fx.tg)) || scnFoe(h, now), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
         if (fx) { const p = Math.max(0, now - fx.t) / 1000; if (p > .1 && p < .4) ox = d * 2; if (fx.hurt && !fx.kill && p > .72 && p < .95) { ox = -d * 2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * .35; } }   // 出手往前踏、被打到往後退＋閃
-        drawHero(ctx, Math.round(hx0 + ox), Math.round(hy0) - (ride || 0), lying, now); ctx.globalAlpha = h.alpha;
+        drawHero(ctx, Math.round(hx0 + ox), Math.round(hy0) - (ride || 0), lying, now); ctx.globalAlpha = h.alpha * vfa;
         if (fx && foe) { const p = Math.max(0, now - fx.t) / 1000; if (p > .22 && p < .42) { const k = (p - .22) / .2, cx = hx0 + d * 10, cy = hy0 - 8; ctx.strokeStyle = `rgba(255,255,255,${1 - k * .7})`; ctx.lineWidth = 1.6; ctx.beginPath();   // 揮砍弧線
           if (d > 0) ctx.arc(cx, cy, 9, -1.3, -1.3 + 2.4 * Math.min(1, k * 1.6)); else ctx.arc(cx, cy, 9, Math.PI + 1.3 - 2.4 * Math.min(1, k * 1.6), Math.PI + 1.3); ctx.stroke(); } } }
       if (h.act === 'hunt') { const fx = hfxOn(h, now), hp = fx && fx.hurt && Math.max(0, now - fx.t) < 720 ? fx.hp0 : h.hp;   // 血條等怪物打到才掉
@@ -336,7 +372,7 @@ function drawMap(now){
       if (h.mission && h.mission.comp && npc(h.mission.comp) && h.act === 'mission' && !MSPOT[h.mission.ag]) { ctx.fillStyle = '#c8b0ff'; ctx.fillRect(hx0 - 18, hy0 - 12, 7, 8); ctx.fillStyle = '#e8b98a'; ctx.fillRect(hx0 - 17, hy0 - 17, 5, 5); }
       ctx.globalAlpha = 1;
       if (BUB.cur && BUB.h === h && BUB.cur.until > now) bub = [BUB.cur.t, hx0, hy0 - (lying ? 20 : 34)];
-      if (cam.z > 1.4) nameTag(ctx, h.name, hx0, hy0 - (lying ? 12 : KEN_TAG), 'hero');
+      if (cam.z > 1.4 && vfa > .5) nameTag(ctx, h.name, hx0, hy0 - (lying ? 12 : KEN_TAG), 'hero');   // 勇者自己的名牌一直顯示
     }
   }
   drawArtists(now, 'vil', hm); drawArtists(now, 'wild', hm);
@@ -376,7 +412,7 @@ function mapClick(x, y){
   const h = H(), view = 'wild', hit = r => x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
   if (x < VW) {   // v17.11：點在村子那一段
     const o = [...vilHits].reverse().find(t => hit(t.r)); if (!o) return;
-    if (o.k === 'npc') return openNpcPop(o.id);
+    if (o.k === 'npc') { V.tagId = o.id; V.tagT = performance.now(); return openNpcPop(o.id); }   // v17.38：點到的村民顯示名牌
     ({ guild:() => openSheet('quest', 'offer'), temple:() => openSheet('gear', 'care'), clinic:() => openSheet('gear', 'care'), smith:() => openSheet('gear', 'gear'), office:() => openSheet('office', 'main'),
        mayor:() => npc('mayor') && npc('mayor').alive ? openNpcPop('mayor') : toast('村長家'), tavern:() => npc('tao') && npc('tao').alive ? openNpcPop('tao') : toast('酒館'),
        arena:() => openSheet('office', 'comp'), stage:() => toast('廣場：代言、上節目、粉絲見面會在這裡辦'), inn:() => toast('旅館：外地來的冒險者和商人住這裡'),
@@ -1468,7 +1504,10 @@ function drawWorldMini(now){
 function worldCam(h, hm, now){
   const z = SH / VH, panning = V.drag || (V.pan != null && now - V.panT < 3500); if (!panning) V.pan = null;
   const gone = ['dead', 'retired', 'left'].includes(h.act) || heroHidden(h);
-  const x = panning ? V.pan : hm === 'vil' ? (V.x ?? VD.office) : gone ? VD.office : h.x;
+  let x = panning ? V.pan : hm === 'vil' ? (V.x ?? VD.office) : gone ? VD.office : h.x;
+  // v17.38：村子裡鏡頭先不動，勇者快走出畫面（離中心超過半個畫面的 55%）才跟過去
+  if (!panning && hm === 'vil' && !gone && V.x != null) { const m = 180 / z * .55; if (V.cx == null) V.cx = x; if (x > V.cx + m) V.cx = x - m; else if (x < V.cx - m) V.cx = x + m; x = V.cx; }
+  else V.cx = null;   // 滑動畫面或不在村子時，下次回來重新以勇者為中心
   return [x, VH / 2, z];
 }
 // 舊存檔：寶箱、精英怪、迷路旅人不在新的路上的話，重新放到該區的路上
