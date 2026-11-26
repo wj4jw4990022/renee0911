@@ -47,6 +47,30 @@ PILLAR2=ascii_img(["..####..","#CCCCC#.","#CcCCC##","#CCCCcC#","#cCCCCC#","#CCCC
 ROCK=ascii_img(["....#####.....","..##LLRRR##...",".#LLRRRrRRR#..","#LRRRRRRRrRR#.","#RRrRRRRRRRRR#","#RRRRRRrRRRrr#","#rrRRRRRRrrrr#",".#rrrrrrrrrr#.","..##########.."],{'#':O,'L':'#fec99c','R':'#eaa56c','r':'#cf8254'})
 SKULL=ascii_img([".####.","#wwww#","#kwwk#","#wwww#",".#ww#.","..##.."],{'#':O,'w':'#f4eee0','k':'#3f2631'})
 
+# 未開放柵欄（v17.44）：Kenney 南北向木柵欄一段、紅叉木牌（補畫，粗線）、盔甲守衛（Tiny Dungeon 08_00＋長矛 10_11）
+def fence_col():
+    col=Image.new('RGBA',(16,64)); col.alpha_composite(tile('03_11'),(0,0))
+    for r in (1,2): col.alpha_composite(tile('04_11'),(0,16*r))
+    col.alpha_composite(tile('05_11'),(0,48)); return col
+def xsign():
+    oc=hexc(O); P=hexc('#c18557'); p=hexc('#9e623d'); L=hexc('#dca874'); R=hexc('#e0483c'); r=hexc('#962428')
+    im=Image.new('RGBA',(16,26)); q=im.load()
+    for y in range(16):
+        for x in range(16): q[x,y]=oc if x in (0,15) or y in (0,15) else (L if y==1 else p if y in (6,10,14) else P)
+    for y in range(15,26):
+        for x in (6,7,8,9): q[x,y]=oc if x in (6,9) or y==25 else p
+    S=set()
+    for i in range(4,8): S|={(i,i),(i+1,i)}
+    S|={(15-x,y) for x,y in S}; S|={(x,15-y) for x,y in S}
+    for x,y in S:
+        for a in (-1,0,1):
+            for b in (-1,0,1):
+                if 1<=x+a<=14 and 1<=y+b<=14 and (x+a,y+b) not in S: q[x+a,y+b]=r
+    for x,y in S: q[x,y]=R
+    return im
+def guard():
+    g=Image.new('RGBA',(22,24)); g.alpha_composite(tile('10_11',TD),(8,0)); g.alpha_composite(tile('08_00',TD),(0,8)); return g
+
 # 遊戲用：每個背景物一張 PNG（腳底＝最後一列）；地磚 16×16
 def items():
     D=(.72,.8,.74); M=(.86,.92,.86); FK=(.8,.86,.8); RD=(.92,.9,.88); SR=(.9,.86,.84)
@@ -68,6 +92,7 @@ def items():
      'treeD':tint(T2,D),'atreeD':tint(A2,D),'streeD':tint(tile('02_04'),D),'treeM':tint(T2,M),'atreeM':tint(A2,M),'streeM':tint(tile('02_04'),M),'satreeM':tint(tile('02_03'),M),
      'log':tile('08_10'),'stump':STUMP,
      # 荒地（粗線）
+     'fcol':fence_col(),'xsign':xsign(),'guard':guard(),
      'pillar':bold(PILLAR),'pillar2':bold(PILLAR2),'cactus':bold(CACTUS),'rock':bold(ROCK),'skull':bold(SKULL),
     }
     return it
