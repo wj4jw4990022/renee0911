@@ -112,23 +112,40 @@ def inn():
     s.chimney(5,3,27,7)
     hang_sign(s,26,16,14,'bed',cm={'p':'r'})
     return s.crop()
+def plaza_bench(s,x,y):   # 和村子街邊的長椅同一個做法（prop_bench）
+    for xx in (x+1,x+9): s.box(xx,y,xx+1,y+3,0,3,c='wd',tex=False,top='wd')
+    s.box(x,y,x+11,y+3,3,4,c='w',tex=False,top='wl')
+    s.box(x,y,x+11,y+1,4,8,c='w',tex=False,top='wl')
+def plaza_flowers(s,x,y):   # 和 prop_flowers 同一個做法
+    s.box(x,y,x+10,y+4,0,3,c='w',tex=False,top='grd')
+    for (dx,dy,c) in ((1,1,'r'),(3,2,'au'),(5,1,'pul'),(7,2,'rl'),(9,1,'au'),(2,3,'gr'),(6,3,'r'),(8,3,'gr'),(4,1,'gr')):
+        p=s.P(x+dx,y+dy,3); s.set(round(p[0]),int(p[1]),c); s.set(round(p[0]),int(p[1])-1,c if c!='gr' else 'grl')
+def plaza_lamp(s,x,y):   # 和 prop_lamp 同一個做法
+    s.box(x,y,x+2,y+2,0,1,c='bk',tex=False,top='sd'); s.box(x+.5,y+.5,x+1.5,y+1.5,1,20,c='bk',tex=False,top='bk')
+    F,R=s.box(x-1,y-1,x+3,y+3,20,25,c='bk',tex=False,top='bk'); s.window(F,1,21,2,3); s.window(R,1,21,2,3); s.pyramid(x-1,y-1,x+3,y+3,25,3,c='bk')
 def plaza():
-    s=new()
-    s.flat_top(-6,-6,30,22,0,'sl')
-    # 石板縫
-    for x in range(-6,30,6):
-        s.line(s.P(x,-6,0),s.P(x,22,0),'s')
-    for y in range(-6,22,6):
-        s.line(s.P(-6,y,0),s.P(30,y,0),'s')
-    s.outline_poly([s.P(-6,22,0),s.P(30,22,0),s.P(30,-6,0),s.P(-6,-6,0)])
-    s.box(4,0,22,16,0,4,mat='stone',c='s',top='g')
-    # 水面反光
-    for k in range(3): p=s.P(8+k*4,6+k,4); s.set(round(p[0]),int(p[1]),'gl')
-    s.box(11,6,15,10,4,12,c='s',tex=False,top='sl')
-    s.box(10,5,16,11,12,13,c='s',tex=False,top='g')
-    p=s.P(13,8,16); 
-    for k in range(4): s.set(round(p[0]),int(p[1])+k,'gl')
-    s.set(round(p[0])-1,int(p[1]),'gl'); s.set(round(p[0])+1,int(p[1]),'gl')
+    # v17.42：兩層噴水池、長椅、花圃（和街邊小物同做法）
+    s=B.new()
+    s.flat_top(-8,-8,32,24,0,'sl')
+    for x in range(-8,32,6): s.line(s.P(x,-8,0),s.P(x,24,0),'s')
+    for y in range(-8,24,6): s.line(s.P(-8,y,0),s.P(32,y,0),'s')
+    s.outline_poly([s.P(-8,24,0),s.P(32,24,0),s.P(32,-8,0),s.P(-8,-8,0)])
+    # 後排：長椅、花圃、路燈（先畫，噴水池蓋在前面）
+    plaza_bench(s,-2,-7); plaza_bench(s,14,-7); plaza_flowers(s,-7,6)
+    # 噴水池：石砌矮牆（和其他建築同樣的石牆紋理）、四角小石墩、水面
+    F,R=s.box(4,0,22,16,0,4,mat='stone',c='s',top='sl')
+    s.flat_top(5,1,21,15,4,'g')
+    for k in range(6): p=s.P(7+k*2,3+k*2,4); s.set(round(p[0]),int(p[1]),'gl')
+    # 中間：石台＋上層大水盆＋往上噴的水柱
+    s.box(10,5,16,11,4,10,c='s',tex=False,top='sl')
+    s.box(7,2,19,14,10,13,c='s',tex=False,top='sl'); s.flat_top(8,3,18,13,13,'g')
+    for k in range(4): p=s.P(10+k*2,5+k*2,13); s.set(round(p[0]),int(p[1]),'gl')
+    top=s.P(13,8,13); tx,ty=round(top[0]),int(top[1])
+    for k in range(1,8): s.set(tx,ty-k,'gh' if k>4 else 'gl'); s.set(tx+1,ty-k,'gl' if k>2 else 'g')
+    for d in (-1,1):
+        for i,(dx,dy) in enumerate(((1,-8),(2,-8),(3,-7),(4,-6),(5,-5))): s.set(tx+(dx if d>0 else 1-dx),ty+dy,'gh' if i<2 else 'gl')
+    # 前排：花圃、路燈
+    plaza_flowers(s,22,19)
     return s.crop()
 def office(stage='地方'):
     s=new()
