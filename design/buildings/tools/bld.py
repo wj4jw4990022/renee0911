@@ -125,7 +125,7 @@ def plaza_lamp(s,x,y):   # 和 prop_lamp 同一個做法
     F,R=s.box(x-1,y-1,x+3,y+3,20,25,c='bk',tex=False,top='bk'); s.window(F,1,21,2,3); s.window(R,1,21,2,3); s.pyramid(x-1,y-1,x+3,y+3,25,3,c='bk')
 def plaza():
     # v17.42：兩層噴水池、長椅、花圃（和街邊小物同做法）
-    s=B.new()
+    s=new()
     s.flat_top(-8,-8,32,24,0,'sl')
     for x in range(-8,32,6): s.line(s.P(x,-8,0),s.P(x,24,0),'s')
     for y in range(-8,24,6): s.line(s.P(-8,y,0),s.P(32,y,0),'s')
