@@ -1,0 +1,39 @@
+/* 草稿樣式：接在 css/style.css 後面載入即可預覽（這份只覆蓋外觀） */
+
+/* ===== 配置草稿（只在樣品裡） ===== */
+/* 1. 勇者卡縮成一條、右側按鈕變小 */
+.cap { padding:4px 10px 4px 4px; gap:8px; max-width:58%; }
+.cap .av { width:34px; height:34px; }
+.cap .hn b { font-size:16px; } .cap .hn span { font-size:11px; }
+.cap .capr { gap:3px; } .bars i { width:28px; height:5px; } .bars i b { height:5px; }
+.bell { width:36px; height:32px; } .mtabs { top:50px; } .mtabs button { width:36px; height:38px; font-size:10px; }
+.act span { font-size:11.5px; padding:3px 10px; background:rgba(67,48,31,.7); }
+/* 2. 對話和地圖一樣重要：對話字大一點、行距鬆一點 */
+#feed { font-size:14px; } .m { font-size:14px; line-height:1.6; padding:7px 12px; }
+#app:not(.chatx) #feed { gap:8px; }
+/* 3. 問題直接出現，但選項改輕：一排三個、只有外框，金色只在按下的那刻 */
+.qwait { border:none; border-left:4px solid var(--gold2); background:#fff6dc; padding:8px 12px; }
+.qwait .qt { font-size:14px; }
+.qopts, .qopts.n3 { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.qopts .rb:only-child, .qopts.n3 .rb:first-child { grid-column:auto; }
+.qopts .rb { min-height:38px; font-size:13px; background:#fffaf0; border:2px solid var(--gold2); box-shadow:none; color:var(--text); font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif; }
+.qopts .rb:active { background:var(--gold); }
+.qghost { min-height:24px; font-size:11.5px; text-align:right; padding-right:4px; }
+
+/* 草稿：像素圖示 */
+.pxi { image-rendering:pixelated; display:block; }
+.rbar .coin.money .pxi { width:16px; height:16px; }
+.ub .ic .pxi { width:32px; height:32px; }
+/* 草稿：花錢頁 */
+.subs button.off { opacity:.4; }
+.smith1 { display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 2px 10px; }
+.smith1 .sav { width:28px; height:28px; flex:none; overflow:hidden; background:var(--sky); border:1px solid var(--edge); }
+.smith1 .sav .pimg { width:100%; height:100%; }
+.smith1 .k { font-size:12px; color:var(--muted); }
+.td .pxi { width:16px; height:16px; }
+#shB .svgrid.care { grid-template-columns:1fr; gap:6px; }
+#shB .svgrid.care .svc { display:grid; grid-template-columns:40px 1fr auto; grid-template-rows:auto auto auto; column-gap:10px; row-gap:2px; align-items:center; padding:8px 10px; }
+#shB .svgrid.care .svc .si { grid-row:1 / span 3; width:36px; height:36px; }
+#shB .svgrid.care .svc > b, #shB .svgrid.care .svc > .k, #shB .svgrid.care .svc > .dg { grid-column:2; }
+#shB .svgrid.care .svc .btn { grid-column:3; grid-row:1 / span 3; margin:0; min-width:84px; }
+.walletR { margin-left:auto; display:flex; align-items:center; gap:4px; font-size:13px; color:var(--text); white-space:nowrap; }

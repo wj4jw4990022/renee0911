@@ -3,7 +3,7 @@
 /* 孤勇者 樣式 */
 :root { --bg:#f3e0b2; --panel:#fbf0d2; --panel2:#fbf0d2; --line:#b08a55; --text:#3b2616; --muted:#7a5a3a; --gold:#f2c14e; --green:#6fcf97; --red:#ff7b7b; --orange:#ffb347; --blue:#59a8ff; }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }   /* v17.21：雙點擊不縮放 */
-html, body { margin:0; height:100%; background:#2a1c12; color:var(--text); font-family:'Cubic11',-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; overflow:hidden; touch-action:manipulation; }
+html, body { margin:0; height:100%; background:#2a1c12; color:var(--text); font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; overflow:hidden; touch-action:manipulation; }
 button { font-family:inherit; color:var(--text); cursor:pointer; }
 button:disabled { opacity:.4; cursor:default; }
 .px { font-family:'Cubic11',sans-serif; }
@@ -425,108 +425,110 @@ input[type=range] { width:100%; accent-color:#f2c14e; }
 #tmenu .tc.off{opacity:.45}#tmenu .tc.red i{color:#b03a30}
 #tmenu .tc .tg{position:absolute;top:-7px;right:-4px;background:#ffb347;color:#2a1a00;font-size:10px;border-radius:8px;padding:1px 6px}
 
-/* ================= v17.29：開羅風（像素外框、木條、有厚度的按鈕） ================= */
-:root { --edge:#4a2f1b; --hi:#fffaf0; --pap:#fbf0d2; --pap2:#f3e0b2; --pap3:#e8cf96; --lo:#c9a466; --gold2:#c98a1c; --grn:#5bb05a; --grn2:#3b7f3c; --red2:#a8352f; --sky:#5b8fd0;
-  --wood:repeating-linear-gradient(90deg,#8a5a34 0 22px,#7d5130 22px 24px);
-  --notch:polygon(3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px),0 3px,3px 3px);
-  --notch2:polygon(2px 0,calc(100% - 2px) 0,calc(100% - 2px) 2px,100% 2px,100% calc(100% - 2px),calc(100% - 2px) calc(100% - 2px),calc(100% - 2px) 100%,2px 100%,2px calc(100% - 2px),0 calc(100% - 2px),0 2px,2px 2px); }
-html, body, #app { background:#2a1c12; }
-body { -webkit-font-smoothing:none; }
+/* ================= v17.30：開羅風・耐看版 =================
+   v17.29 的問題：外框太粗太多、木紋條紋、點陣字用在小字和非整數大小（12.5px、11.5px…）會糊，看久眼睛累。
+   做法：只有大容器有外框（2px、柔和的棕色）；分隔線改細實線；木條改素色；
+        內文、說明、對話改回一般字體，點陣字只留給標題、數字、按鈕標籤，而且只用 12／16／24px（字型原生大小，最清楚）。 */
+:root { --edge:#8a6a46; --edge2:#5a3e28; --pap:#fbf4e4; --pap2:#f1e6cc; --pap3:#e6d4ad; --lo:#d9c49a; --gold2:#c98a1c; --grn:#5bb05a; --grn2:#3b7f3c; --red2:#a8352f; --sky:#6b9bd6;
+  --text:#43301f; --muted:#86684a; --bg:#f1e6cc; --panel:#fbf4e4; --panel2:#fbf4e4; --line:#d9c49a;
+  --wood:#7d5634;
+  --notch:polygon(2px 0,calc(100% - 2px) 0,calc(100% - 2px) 2px,100% 2px,100% calc(100% - 2px),calc(100% - 2px) calc(100% - 2px),calc(100% - 2px) 100%,2px 100%,2px calc(100% - 2px),0 calc(100% - 2px),0 2px,2px 2px); }
+html, body { background:#2a1c12; }
 #app { background:var(--pap2); }
-#cv { filter:saturate(1.22) contrast(1.05) brightness(1.04); }
+#cv { filter:saturate(1.08); }
 
-/* 面板：羊皮紙＋深棕外框＋亮邊暗邊 */
+/* 點陣字：只用在標題、數字、按鈕，大小用 12／16／24 */
+.px, .sh b, .cap .hn b, .tile b, .pinfo .nm, .rbar, .coin, nav button, .subs button, .ff2 button, .segc button, .rb, .btn, .qopts .rb, .ib, .stHead .nm, .vss b, .rankc b, #evp .evn, .ff button { font-family:'Cubic11',-apple-system,"PingFang TC",sans-serif; }
+.rbar, .coin, nav button, .subs button, .ff2 button, .segc button, .rb, .btn, .ib, .ff button { font-size:12px; }
+.sh b, .cap .hn b, .tile b, .qopts .rb, .stHead .nm, .vss b { font-size:16px; }
+.pinfo .nm { font-size:24px; }
+.rb small, .btn small { font-size:11px; font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif; }
+
+/* 大容器：細外框、方角，不加亮邊暗邊 */
 .grp, .card, .upc, .item, .svc, .fac, .tile, .rgc, .duty, .vsc, .wc, .qi, .memc, .gbar, .qcard, .ac, .cand, .plan, .zc, .rankc, .actc, .stHead, .pslot, .cal {
-  border-radius:0; border:3px solid var(--edge); clip-path:var(--notch);
-  box-shadow:inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--pap3); }
-.qi.empty { border:2px dashed var(--lo); clip-path:none; box-shadow:none; }
-.grp > .li { border-top:2px dashed var(--lo); }
-.sec { color:var(--muted); font-weight:700; }
+  border-radius:0; border:2px solid var(--edge); clip-path:var(--notch); box-shadow:none; background-color:var(--pap); }
+.upc.rec, .item.rec { border-color:var(--gold2); background:#fff6dc; }
+.qi.empty { border:1px dashed var(--lo); clip-path:none; background:none; }
+.grp > .li { border-top:1px solid var(--pap3); }
+.sec { color:var(--muted); font-weight:500; }
 
-/* 小元件：方角 */
-.m, .rb, .btn, .subs button, .ff2 button, .ff button, .segc, .segc button, .coin, .ib, .chip, .tag, .rq span, .al, .cmp, .hxbtns button, .td, .ub, .slot, .av, .cav, .mav, .pt .pa, .wa, .rk, .qcard .qa span, .stCloud, .stg, .opt, .item .ic, .svc .si, .rankc .rb3, .ahd, .ahd .aav, .act span, .ztag, .bell, .cap, .cap .av, .qwait {
-  border-radius:0; }
+/* 小元件：方角、細邊，不加缺角（太碎） */
+.m, .rb, .btn, .subs button, .ff2 button, .ff button, .segc, .segc button, .coin, .ib, .chip, .tag, .rq span, .al, .cmp, .hxbtns button, .td, .ub, .slot, .av, .cav, .mav, .pt .pa, .wa, .rk, .qcard .qa span, .stCloud, .stg, .opt, .item .ic, .svc .si, .rankc .rb3, .ahd, .ahd .aav, .act span, .ztag, .bell, .cap, .cap .av, .qwait { border-radius:0; }
 .xbar, .xbar i, .lifebar, .lifebar i, .bars i, .bars i b, .seg i, .pips i, .slotbar i, .repg i, .lad i, .apg, .apg b, .fb, .fb i, .tgl, .tgl::after, .hb, .hb i, .pr2 .rbx, .pr2 .rbx i { border-radius:0; }
-.xbar, .lifebar, .bars i, .seg i, .pips i, .slotbar i, .apg, .fb { background:var(--lo); }
-.m, .rb, .btn, .subs button, .ff2 button, .segc, .coin, .ib, .chip, .tag, .rq span, .al, .cmp, .hxbtns button, .ahd, .bell, .cap, .qwait, .act span, .ztag { clip-path:var(--notch2); }
+.xbar, .lifebar, .bars i, .seg i, .pips i, .slotbar i, .apg, .fb { background:var(--pap3); }
+.chip, .tag, .rq span { background:#fffaf0; border-width:1px; }
 
-/* 按鈕：有厚度，按下去會陷 */
-.rb, .btn { background:var(--pap); border:3px solid var(--edge); box-shadow:inset 0 -4px 0 var(--pap3), inset 0 3px 0 var(--hi); }
-.rb:active:not(:disabled), .btn:active:not(:disabled) { transform:translateY(2px); box-shadow:inset 0 -1px 0 var(--pap3); }
-.btn.pri { background:var(--grn); color:#fff; text-shadow:0 2px 0 var(--grn2); box-shadow:inset 0 -4px 0 var(--grn2), inset 0 3px 0 #9fdc8f; }
-.btn.warn { background:#e0584f; color:#fff; text-shadow:0 2px 0 var(--red2); box-shadow:inset 0 -4px 0 var(--red2), inset 0 3px 0 #f4a097; }
-.qopts .rb, .upc.rec .btn, .item.rec .btn { background:var(--gold); color:#3b2616; border:3px solid var(--edge); box-shadow:inset 0 -4px 0 var(--gold2), inset 0 3px 0 #ffe29a; }
-.rb.ghost, .rb.more { background:transparent; border:2px dashed var(--lo); box-shadow:none; }
-.subs button, .ff2 button { background:var(--pap); border:3px solid var(--edge); color:var(--muted); }
-.subs button.on, .ff2 button.on, .segc button.on { background:var(--grn); color:#fff; text-shadow:0 2px 0 var(--grn2); box-shadow:inset 0 -3px 0 var(--grn2); border-color:var(--edge); }
-.segc { background:var(--pap2); border:3px solid var(--edge); }
-.tgl { background:#a58a66; border:3px solid var(--edge); } .tgl::after { background:var(--pap); top:2px; left:2px; } .tgl.on { background:var(--grn); } .tgl.on::after { left:22px; }
-.chip, .tag, .rq span { background:#fffaf0; }
+/* 按鈕：保留一點厚度（底下 3px 陰影），邊框細一點 */
+.rb, .btn { background:var(--pap); border:2px solid var(--edge); box-shadow:inset 0 -3px 0 var(--pap3); color:var(--text); }
+.rb:active:not(:disabled), .btn:active:not(:disabled) { transform:translateY(1px); box-shadow:inset 0 -1px 0 var(--pap3); }
+.btn.pri { background:var(--grn); color:#fff; border-color:var(--grn2); box-shadow:inset 0 -3px 0 var(--grn2); }
+.btn.warn { background:#e0584f; color:#fff; border-color:var(--red2); box-shadow:inset 0 -3px 0 var(--red2); }
+.qopts .rb, .upc.rec .btn, .item.rec .btn { background:var(--gold); color:#3b2616; border:2px solid var(--gold2); box-shadow:inset 0 -3px 0 var(--gold2); }
+.rb.ghost, .rb.more { background:transparent; border:1px dashed var(--lo); box-shadow:none; }
+.subs button, .ff2 button { background:var(--pap); border:2px solid var(--pap3); color:var(--muted); }
+.subs button.on, .ff2 button.on, .segc button.on { background:var(--grn); color:#fff; border-color:var(--grn2); }
+.segc { background:var(--pap2); border:2px solid var(--pap3); }
+.tgl { background:#c3ad8a; border:none; } .tgl::after { background:#fff; } .tgl.on { background:var(--grn); }
 
-/* 上方木條 */
-.rbar { background:var(--wood); border-bottom:3px solid var(--edge); color:#fff3d6; text-shadow:0 2px 0 #3b2616; }
-.rbar .coin.money { background:#3b2616; border:2px solid var(--gold); color:#fff3d6; }
-.coin.money .sep { background:rgba(255,243,214,.35); }
-.coin.money .fame b { color:#9fd0ff; }
-.ib { background:var(--pap); border:3px solid var(--edge); color:var(--text); box-shadow:inset 0 -3px 0 var(--pap3); }
+/* 上方：素色木條 */
+.rbar { background:var(--wood); border-bottom:2px solid var(--edge2); color:#fbefd5; }
+.rbar .coin.money { background:#5a3e28; border:1px solid #c9a466; color:#fbefd5; }
+.coin.money .sep { background:rgba(251,239,213,.3); }
+.coin.money .fame b { color:#a9d4ff; }
+.ib { background:var(--pap); border:2px solid var(--edge); color:var(--text); }
 
-/* 地圖上的資訊牌 */
-.cap { background:var(--pap); border:3px solid var(--edge); box-shadow:inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--pap3); }
+/* 地圖上的資訊牌：半透明羊皮紙，不搶地圖 */
+.cap { background:rgba(251,244,228,.94); border:2px solid var(--edge); }
 .cap .hn span { color:var(--muted); }
-.cap .av { border:3px solid var(--gold); background:var(--sky); }
-.bars i { height:7px; border:1px solid var(--edge); } .bars i b { height:5px; }
-.bell { background:var(--pap); border:3px solid var(--edge); }
-.mtabs .mgrp, .mtabs .zbtn { background:var(--pap); border:3px solid var(--edge); border-radius:0; }
+.cap .av { border:2px solid var(--gold2); background:var(--sky); }
+.bars i { height:6px; } .bars i b { height:6px; }
+.bell { background:rgba(251,244,228,.94); border:2px solid var(--edge); }
+.mtabs .mgrp, .mtabs .zbtn { background:rgba(251,244,228,.94); border:2px solid var(--edge); border-radius:0; }
 .mtabs .mgrp button:first-child, .mtabs .mgrp button:last-child { border-radius:0; }
-.act span, .ztag { background:#3b2616; border:2px solid var(--gold); color:#fff3d6; }
-.ahd { background:var(--pap); border:2px solid var(--edge); }
+.act span, .ztag { background:rgba(67,48,31,.88); border:none; color:#fbefd5; }
+.ahd { background:rgba(251,244,228,.94); border:1px solid var(--edge); }
 .ahd .aav { background:var(--sky); }
-.stage .alerts { border:3px solid var(--edge); border-radius:0; }
+.stage .alerts { border:2px solid var(--edge); border-radius:0; }
 
-/* 對話區 */
-.chat, #app:not(.chatx) .chat { background:var(--pap2); border-top:4px solid var(--edge); }
-#app.chatx .chat { border:3px solid var(--edge); border-radius:0; }
+/* 對話區：泡泡不加框，用底色區分 */
+.chat, #app:not(.chatx) .chat { background:var(--pap2); border-top:2px solid var(--edge); }
+#app.chatx .chat { border:2px solid var(--edge); border-radius:0; }
 .chH i { background:var(--edge); border-radius:0; }
-.m { background:#fffaf0; border:2px solid var(--edge); }
-.m.me { background:#cfe9b8; }
-.m.ev { border-width:2px; }
-.m.sys { border:none; clip-path:none; }
-#app:not(.chatx) .m.ev { clip-path:none; }
-.mav { border:2px solid var(--edge); background:var(--sky); }
-.m.ask { background:#fff1cf; border-color:var(--gold2); }
-.qwait { background:#fff1cf; border:3px solid var(--edge); color:var(--red2); }
-.m.arep { background:#e7f0f7; border:2px solid #2f64a3; }
+.m { background:#fffaf0; border:none; }
+.m.me { background:#d6ecc4; }
+.m.ask { background:#fff1cf; border:1px solid var(--gold2); }
+.mav { border:none; background:var(--sky); }
+.qwait { background:#fff1cf; border:1px solid var(--gold2); color:var(--red2); }
+.m.arep { background:#e9f1f8; border:1px solid #9cbcd8; }
 
-/* 底部木條＋任務方塊 */
-nav { background:var(--wood); border-top:4px solid var(--edge); }
-nav button { color:#fbe7b6; text-shadow:0 2px 0 #3b2616; }
+/* 底部：素色木條＋任務方塊 */
+nav { background:var(--wood); border-top:2px solid var(--edge2); }
+nav button { color:#f1dfb9; }
 nav button.on { color:#fff; }
-nav button.on:not(.mid):before { background:#fff; border-radius:0; height:4px; }
+nav button.on:not(.mid):before { background:#ffe29a; border-radius:0; height:3px; }
 nav button.mid { color:#ffe29a; }
-nav .bdg { border-radius:0; border-color:var(--edge); }
-nav .midb { width:60px; height:56px; margin-top:-20px; border-radius:0; background:var(--gold); border:4px solid var(--edge);
-  box-shadow:inset 0 -5px 0 var(--gold2), inset 0 4px 0 #ffe29a; flex-direction:column; gap:4px;
-  clip-path:polygon(4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px),0 4px,4px 4px); }
+nav .bdg { border-radius:0; border-color:var(--wood); }
+nav .midb { width:58px; height:54px; margin-top:-18px; border-radius:0; background:var(--gold); border:3px solid var(--edge2);
+  box-shadow:inset 0 -4px 0 var(--gold2); flex-direction:column; gap:4px; clip-path:var(--notch); }
 nav .midb .qring { display:none; }
 nav .midb > svg:not(.qring) { stroke:#3b2616; width:22px; height:22px; margin-top:2px; }
-/* 排程進度：4 格（data-q 由 updBadges 設） */
-nav .midb::after { content:''; width:34px; height:6px; background:
-  linear-gradient(90deg, var(--q1,#a8681a) 0 7px, transparent 7px 9px, var(--q2,#a8681a) 9px 16px, transparent 16px 18px, var(--q3,#a8681a) 18px 25px, transparent 25px 27px, var(--q4,#a8681a) 27px 34px); }
+nav .midb::after { content:''; width:34px; height:5px; background:
+  linear-gradient(90deg, var(--q1,#c98a1c) 0 7px, transparent 7px 9px, var(--q2,#c98a1c) 9px 16px, transparent 16px 18px, var(--q3,#c98a1c) 18px 25px, transparent 25px 27px, var(--q4,#c98a1c) 27px 34px); }
 nav .midb[data-q="1"] { --q1:#3b7f3c; } nav .midb[data-q="2"] { --q1:#3b7f3c; --q2:#3b7f3c; }
 nav .midb[data-q="3"] { --q1:#3b7f3c; --q2:#3b7f3c; --q3:#3b7f3c; } nav .midb[data-q="4"] { --q1:#3b7f3c; --q2:#3b7f3c; --q3:#3b7f3c; --q4:#3b7f3c; }
-@keyframes qbob { 0%, 100% { transform:translateY(0); } 50% { transform:translateY(-3px); } }
-nav .midb.empty { animation:qbob 1.2s steps(2, jump-none) infinite; }
-nav button.mid.on .midb { border-color:#3b2616; box-shadow:inset 0 -5px 0 var(--gold2), inset 0 4px 0 #ffe29a, inset 0 0 0 2px #fff3d6; }
-nav button.mid .bdg { top:-26px; }
+@keyframes qbob { 0%, 100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
+nav .midb.empty { animation:qbob 1.6s steps(2, jump-none) infinite; }
+nav button.mid.on .midb { box-shadow:inset 0 -4px 0 var(--gold2), inset 0 0 0 2px #fff3d6; }
+nav button.mid .bdg { top:-24px; }
 
 /* 底部面板 */
-.sheet { background:var(--pap2); border-top:4px solid var(--edge); border-radius:0; }
-.sh { background:var(--wood); border-bottom:3px solid var(--edge); padding:10px 14px; margin-bottom:8px; }
-.sh b { color:#fff3d6; text-shadow:0 2px 0 #3b2616; font-size:17px; }
-.pcard { background:#d9ebf2; } .pcard:before { display:none; }
-.shopk .sp { background:#fffaf0; color:var(--text); border:2px solid var(--edge); border-radius:0; }
-.toast { background:#3b2616; color:#fff3d6; border:2px solid var(--gold); border-radius:0; }
-#mission .box { border-top:4px solid var(--edge); border-radius:0; }
+.sheet { background:var(--pap2); border-top:2px solid var(--edge2); border-radius:0; }
+.sh { background:var(--wood); padding:10px 14px; margin-bottom:8px; }
+.sh b { color:#fbefd5; }
+.pcard { background:#e3eef5; } .pcard:before { display:none; }
+.shopk .sp { background:#fffaf0; color:var(--text); border:1px solid var(--edge); border-radius:0; }
+.toast { background:#43301f; color:#fbefd5; border:none; border-radius:0; }
+#mission .box { border-top:2px solid var(--edge2); border-radius:0; }
 
 /* 整頁劇情（大事件、瀕死、結局）維持深色；裡面借用的面板元件改回深字 */
 #evp, #dying, #end { --text:#f1ece0; --muted:#a3abbd; color:var(--text); }
