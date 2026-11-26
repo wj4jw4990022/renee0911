@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#161b27">
-<title>孤勇者 v17.24</title>
+<title>孤勇者 v17.25</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -54,8 +54,6 @@
   .coin.money .fame { display:flex; align-items:center; gap:4px; } .coin.money .fame b { color:var(--blue); }
   .clock { display:flex; align-items:center; gap:4px; padding:3px 3px 3px 10px; background:rgba(16,20,30,.84); border:1px solid rgba(255,255,255,.14); border-radius:16px; font-size:11.5px; color:#c9cfdb; white-space:nowrap; }
   .ib.sm { height:26px; min-width:30px; border-radius:13px; padding:0 8px; font-size:12px; border:none; background:#2f3a52; }
-  .hudchips { display:none !important; }
-  .hudchips .chip { background:rgba(16,20,30,.8); }
   .stage .alerts { position:absolute; right:58px; top:10px; width:min(250px, 70%); z-index:6; padding:8px; flex-direction:column; gap:6px; background:rgba(22,27,39,.97); border:1px solid #343e55; border-radius:14px; box-shadow:0 8px 20px rgba(0,0,0,.4); display:none; }
   .stage .alerts.open { display:flex; }
   .stage .alerts:empty { display:none; }
@@ -149,13 +147,11 @@
   nav button { background:none; border:none; color:var(--muted); font-size:11px; display:flex; flex-direction:column; align-items:center; gap:2px; min-height:44px; position:relative; }
   nav button.on { color:var(--gold); }
   nav button.on:not(.mid):before { content:''; position:absolute; top:-6px; left:30%; right:30%; height:3px; border-radius:0 0 3px 3px; background:var(--gold); }
-  nav .dot, nav .dot.on { display:none !important; }
+  nav .dot { display:none; }   /* dQuest、dOffice 只當「有新東西」的旗標用，不顯示 */
   nav .bdg { position:absolute; top:0; left:calc(50% + 6px); min-width:17px; height:17px; border-radius:9px; padding:0 4px; font-size:10.5px; font-style:normal; font-weight:700; line-height:17px; text-align:center; color:#fff; background:var(--red); border:2px solid #171c28; display:none; box-sizing:content-box; }
   nav .bdg.on { display:block; } nav .bdg.y { background:var(--gold); color:#12161f; } nav .bdg.g { background:#3c8a5a; }
   nav button.mid .bdg { top:-20px; left:calc(50% + 14px); z-index:2; }
   nav button svg { stroke:currentColor; }
-  nav .dot { position:absolute; top:2px; left:calc(50% + 8px); width:8px; height:8px; border-radius:4px; background:var(--red); display:none; }
-  nav .dot.on { display:block; }
   .sheet { position:absolute; left:0; right:0; bottom:60px; z-index:20; height:74%; background:#1f2636; border-top:1px solid #3a4359; border-radius:20px 20px 0 0; transform:translateY(105%); transition:transform .22s ease-out; display:flex; flex-direction:column; box-shadow:0 -10px 30px rgba(0,0,0,.45); }
   .sheet:not(.on) { transform:translateY(calc(100% + 120px)); visibility:hidden; transition:transform .22s ease-out, visibility 0s .22s; }
   .sheet.on { transform:none; }
@@ -463,7 +459,6 @@
       </button>
     </div>
     <div class="arow" id="arow"></div>
-    <div class="chips hudchips" id="chips"></div>
     <button class="bell" id="bell" aria-label="提醒"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 20a2 2 0 004 0"/></svg><i id="bellN"></i></button>
     <div class="alerts" id="alerts"></div>
     <div class="mtabs" id="mtabs"></div>
@@ -3232,7 +3227,6 @@ function drawMap(now){
   drawWorldMini(now);
   drawResBanner(now);
   drawPip(now);
-  // v17.8.1：任務小卡拿掉，只留下方的狀態列（drawScnCard 保留備用）
   // v17.11：地圖只有一條路，右側只留「跟拍」：按了鏡頭回到勇者身上
   if (drawMap.k !== 'road') { drawMap.k = 'road';
     $('mtabs').innerHTML = `<button class="zbtn on" data-follow="1" aria-label="鏡頭回到勇者身上"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span>跟拍</span></button>`;
@@ -4795,23 +4789,6 @@ function drawScnHero(now, hx, hy){
   } catch (e) { if (!scnErr++) console.error(e); }
 }
 // 地圖下方的任務小卡（螢幕座標，畫在夜色之後）
-function drawScnCard(now){
-  try {
-    const h = H(); if (h.act !== 'mission' || !h.mission || heroHidden(h)) return;
-    const o = h.mission, d = Math.max(1, o.days || 1), m = Math.min(d, d - Math.max(0, h.actDays) + 1), s = SCN, f = s ? s.f : scnFrac(h);
-    const title = o.n.length > 14 ? o.n.slice(0, 13) + '…' : o.n;
-    let line = `第 ${m}/${d} 個月` + (h.actDays <= 1 && o.endH != null && o.endH < mWin(o)[1] - .01 ? `（${fmtH(mEnd(o))} 收工）` : '');
-    if (s) line += s.t === 'search' || s.t === 'probe' ? ` · 找到 ${s.found}/${s.pts.length}` : s.t === 'boss' ? ` · 魔王剩 ${Math.round(clamp(s.bossHp, 0, 1) * 100)}%` : s.t === 'escort' ? ` · 路程 ${Math.round(Math.min(f, o.win === 0 ? .75 : 1) * 100)}%` : ` · ${ZONES[s.z].mon} ${s.kills}/${s.total}`;
-    else if (MSPOT[o.ag]) line += ' · ' + ({ endorse:'站台中', variety:'錄影中', meet:'見面會進行中', arena:'表演賽中', trial:'在藥局裡試藥' }[o.ag] || '');
-    if (s && s.down && !s.off) line = `第 ${m}/${d} 個月 · 撐不住了……`;
-    const ph = mPhase(h); if (ph && ph !== 'work' && ph !== 'slot') { const w = mWin(o); line = `第 ${m}/${d} 個月 · ` + ({ prep:'7:00 出發', go:'前往現場', back:'收工回家', home:m < d ? '明天繼續' : '', camp:'在營地過夜', free:hourOf() < w[0] ? fmtH(w[0]) + ' 開始' : '今天收工了' }[ph] || ''); }
-    const x = 8, y = SH - 64, w = 188, hh = 30;
-    ctx.fillStyle = 'rgba(16,20,30,.78)'; ctx.fillRect(x, y, w, hh); ctx.fillStyle = s && s.down ? '#ff7b7b' : '#f2c14e'; ctx.fillRect(x, y, 2, hh);
-    ctx.font = '11px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#f1ece0'; ctx.fillText((s ? `【${SCN_NAME[s.t]}】` : '') + title, x + 7, y + 12);
-    ctx.font = '10px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#a3abbd'; ctx.fillText(line, x + 7, y + 24);
-    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(x + 2, y + hh - 2, w - 2, 2); ctx.fillStyle = s && s.down ? '#ff7b7b' : '#f2c14e'; ctx.fillRect(x + 2, y + hh - 2, (w - 2) * f, 2);
-  } catch (e) { if (!scnErr++) console.error(e); }
-}
 // 村子裡的事務所任務：在街上演
 function drawVilShow(now){
   try {
@@ -4914,7 +4891,6 @@ function renderTop(){
   const mk0 = menuMul(); $('bSpeed').textContent = !S.paused && mk0 < 1 ? (mk0 ? '慢' : '停') : 'x' + S.speed; $('bPause').textContent = S.paused ? '▶' : '⏸';
   $('hname').textContent = h.name;
   $('hsub').textContent = `${jobName(h)} Lv${h.lv} · ${Math.floor(h.age)} 歲`;
-  $('chips').innerHTML = chipsOf(h).slice(0, 4).map(([k, t]) => `<span class="chip ${k}">${t}</span>`).join('');
   $('act').textContent = '正在：' + (tourRound() >= 0 ? tourTxt() : vCarry() ? '受傷了，被擡回村子' : legTxt(h) ? legTxt(h) : mPhase(h) && mPhase(h) !== 'work' && mPhase(h) !== 'slot' ? mTxt(h) : sleeping() ? (h.act === 'drink' ? '喝醉了，在酒館趴著睡' : '在家睡覺') : hourOf() >= 18.5 && ['idle', 'home'].includes(h.act) ? '晚上在村子裡放鬆' : hourOf() < 7 && h.act === 'hunt' ? '準備出門' : ACT_TXT(h));
   if (mPhase(h) === 'work' && SCN && !SCN.off) $('act').textContent += ' · ' + scnCnt();   // v17.9：進度數字
   { const z = h.act === 'hunt' && h.zone >= 0 ? h.zone : -1, m = h.act === 'mission' && h.mission ? h.mission : null, at = $('act').textContent; let extra = '';
@@ -5651,7 +5627,6 @@ const SUBS = {
   quest:[['queue', '排程'], ['take', '接任務']],
   gear:[['gear', '裝備'], ['care', '照顧'], ['caravan', '商隊'], ['own', '他自己買的']],
   office:[['main', '概況'], ['art', '旗下'], ['comp', '競爭'], ['fac', '設施']],
-  life:[['log', '年表'], ['mem', '回憶'], ['regret', '遺憾'], ['wall', '勇者牆']],
   set:[['set', '設定']],
 };
 const sub = {};
@@ -5924,7 +5899,7 @@ function renderSheet(){
       html += `<div class="sec">花錢照顧${pron(h)}</div><div class="svgrid">${cards.join('')}</div>`;
     }
   }
-  const lifeIs = k => sheetT === 'life' ? SS(k) : sheetT === 'hero' && SS('life') && (S.lifeT || 'log') === k;
+  const lifeIs = k => sheetT === 'hero' && SS('life') && (S.lifeT || 'log') === k;
   if (sheetT === 'hero' && SS('life')) html += `<div class="ff2">${[['log', '年表'], ['mem', '回憶'], ['regret', '遺憾']].map(([k, n]) => `<button class="${(S.lifeT || 'log') === k ? 'on' : ''}" data-lt="${k}">${n}</button>`).join('')}</div>`;
   if (lifeIs('log')) {
     const rg = regrets(h), hp = happyOf(rg), worst = rg.filter(r => r.lv).sort((a, b) => b.lv - a.lv)[0], wn = (h.mem || []).filter(m => m.k === 'wishOk').length;
@@ -6007,7 +5982,7 @@ function renderSheet(){
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">怎麼玩</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div></details></div>
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">信任與提示</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div></details></div></div>`;
     html += `<div class="sec" style="color:#ff9a9a">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
-    html += `<div class="stFoot">孤勇者 v17.24 · 只有你一個人在測試</div>`;
+    html += `<div class="stFoot">孤勇者 v17.25 · 只有你一個人在測試</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
@@ -6323,7 +6298,6 @@ function boot(){
   const h = H(); if (['dead', 'retired', 'left'].includes(h.act)) { openEnd(); }
   renderFeed(); renderAll();
   requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
-  window.__gy = { v16:{ pool:artistPool, hire:hireArtist, release:releaseArtist, canSwap, swap:swapMain, talk:talkArtist, policy:setPolicy, cut:setArtistCut, assign:assignAg, loveBan:setLoveBan, slots:artistSlots, rank:rankOf, rel:relOf }, S:() => S, sim:(sec) => { for (let i = 0; i < sec * 10; i++) simulate(.1); renderAll(); }, offline:(v) => { offline = v; }, ask:(...a) => { S.q = null; S.qq = []; ask(...a); evShown = null; evPage(); } };
 }
 // v17.21：雙點擊、雙指都不縮放畫面
 document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
