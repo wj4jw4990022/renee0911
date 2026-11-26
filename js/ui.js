@@ -132,7 +132,7 @@ function gearSlots(h){
   const ic = (p, c) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" aria-hidden="true">${p}</svg>`;
   const ch = h.charms.map(k => `<div class="slot t">${TREASURES[k].n}</div>`).join('') + Array(Math.max(0, CHARM_MAX - h.charms.length)).fill('<div class="slot e">+</div>').join('');
   const zs = ZONES.slice(0, topZ() + 1).map((Z, i) => [Z.n, danger(ratio(h, zD(i)))]).slice(-3);
-  return `<div class="sec" style="margin-top:2px">裝備與寶物</div><div class="card"><div class="slots"><div class="slot w">${ic('<path d="M4 20L18 6M14 4l6 6"/>', '#59a8ff')}${WPN.n[h.wpn]}${WNAME[h.cls]}</div><div class="slot a">${ic('<path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/>', '#6fcf97')}${ARM.n[h.arm]}</div>${ch}</div>
+  return `<div class="sec" style="margin-top:2px">裝備與寶物</div><div class="card"><div class="slots"><div class="slot w">${eqImg((EQ_WP[h.cls] || 'sword') + h.wpn, 20)}${WPN.n[h.wpn]}${WNAME[h.cls]}</div><div class="slot a">${eqImg('armor' + h.arm, 20)}${ARM.n[h.arm]}</div>${ch}</div>
     <div class="k" style="font-size:12px;margin-top:8px">寶物越危險的地方越容易撿到，身上最多帶 ${CHARM_MAX} 件</div></div>
     ${h.charms.map(k => `<div class="card"><b>${TREASURES[k].n}</b><div class="k" style="font-size:12px">${TREASURES[k].d}</div></div>`).join('')}
     <div class="card row"><span><span class="k" style="font-size:12px">戰力</span><div class="px" style="font-size:26px;color:var(--gold)">${Math.round(power(h))}</div></span><span style="font-size:12.5px;text-align:right;line-height:1.7">${zs.map(([n, d]) => `${n} <span class="dg ${d.k}">${d.n}</span>`).join('<br>')}</span></div>`;
@@ -163,10 +163,11 @@ function shopView(h){
     const nx = cur + 1, q = nx < 4 ? (kind === 'w' ? qw : qa) : null, can = q && S.gold >= q.p;
     const eff = kind === 'w' ? (() => { if (!q) return ''; const P0 = power(h), P1 = P0 / WPN.mul[cur] * WPN.mul[nx]; const z0 = bestSafeZone(); let z1 = z0; for (let i = 0; i <= topZ(); i++) if (P1 / zD(i) >= 1.3) z1 = i; return `戰力 ${Math.round(P0)} → <b style="color:#2f7a3a">${Math.round(P1)}</b>${z1 > z0 ? ` · <span class="dg g">${ZONES[z1].n}變安全</span>` : ''}`; })()
       : (q ? `HP ${maxHp(h)} → <b style="color:#2f7a3a">${Math.round(maxHp(h) / ARM.mul[cur] * ARM.mul[nx])}</b>` : '');
-    const dots = [0, 1, 2, 3].map(i => `<span class="td ${i < cur ? 'own' : i === cur ? 'cur' : i === nx ? 'nx' : ''}" title="${nm(i)}">${ic(p, i <= cur ? COL[i] : '#4a5470', 14)}</span>`).join('');
+    const ef = i => (kind === 'w' ? (EQ_WP[h.cls] || 'sword') : 'armor') + i;   // v17.31：像素裝備圖示
+    const dots = [0, 1, 2, 3].map(i => `<span class="td ${i < cur ? 'own' : i === cur ? 'cur' : i === nx ? 'nx' : ''}${i > cur ? ' eqoff' : ''}" title="${nm(i)}">${eqImg(ef(i), 16)}</span>`).join('');
     return `<div class="upc ${can ? 'rec' : ''}"><div class="row"><span class="k" style="font-size:12px">${kind === 'w' ? '武器' : '防具'}</span><span class="tds">${dots}</span></div>
-      <div class="upr"><div class="ub"><div class="ic">${ic(p, COL[cur])}</div><b>${nm(cur)}</b><span class="k" style="font-size:11.5px">使用中 · ×${T0.mul[cur]}</span></div>
-      ${q ? `<span class="ar">→</span><div class="ub nx"><div class="ic">${ic(p, COL[nx])}</div><b>${nm(nx)}</b><span class="k" style="font-size:11.5px">×${T0.mul[nx]}</span></div>` : `<div class="ub" style="flex:2;justify-content:center"><span class="dg g" style="font-size:13px">已經是最好的了</span></div>`}</div>
+      <div class="upr"><div class="ub"><div class="ic">${eqImg(ef(cur), 32)}</div><b>${nm(cur)}</b><span class="k" style="font-size:11.5px">使用中 · ×${T0.mul[cur]}</span></div>
+      ${q ? `<span class="ar">→</span><div class="ub nx"><div class="ic">${eqImg(ef(nx), 32)}</div><b>${nm(nx)}</b><span class="k" style="font-size:11.5px">×${T0.mul[nx]}</span></div>` : `<div class="ub" style="flex:2;justify-content:center"><span class="dg g" style="font-size:13px">已經是最好的了</span></div>`}</div>
       ${q ? `<div style="font-size:12.5px;margin:6px 0">${eff}</div><button class="btn" data-b="${kind}" ${can ? '' : 'disabled'}>${can ? `買${nm(nx)}　${fmt(q.p)}<span style="font-size:11px;opacity:.75;margin-left:6px">買完剩 ${fmt(S.gold - q.p)}</span>` : `${fmt(q.p)} · 還差 ${fmt(q.p - S.gold)}`}</button>` : ''}</div>`; };
   out += up('w', h.wpn) + up('a', h.arm);
   out += `<div class="card row"><span style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:10px;background:#3a2030;display:flex;align-items:center;justify-content:center">${ic('<path d="M9 3h6M10 3v5l-5 9a3 3 0 003 4h8a3 3 0 003-4l-5-9V3"/>', '#ff7b7b', 18)}</span><span>小藥水<div class="k" style="font-size:12px">身上 ${h.pots} / ${POT_MAX} 瓶，血少時自動喝</div></span></span><button class="btn" data-b="p" ${S.gold < POT_PRICE || h.pots >= POT_MAX ? 'disabled' : ''}>+1　${POT_PRICE}</button></div>`;
@@ -865,7 +866,7 @@ function drawArtists(now, view, hm){
     x = Math.round(x); y = Math.round(y);
     if (mon) { ctx.globalAlpha = Math.max(0, mon.a); drawMonster(ctx, zoneMon(a.mz), Math.round(mon.x), y + 4, mon.k, Math.floor(now / 200) % 2, false, true); ctx.globalAlpha = 1; }
     ctx.globalAlpha = .95; if (atk) drawSprite(ctx, a, x, y, lying, now, { atk:true, moving:false, left:false }); else drawHero(ctx, x, y, lying, now, a); ctx.globalAlpha = 1;
-    if (cam.z > 1.4) nameTag(ctx, a.name, x, y - (lying ? 12 : 25), 'artist');
+    if (cam.z > 1.4) nameTag(ctx, a.name, x, y - (lying ? 12 : KEN_TAG), 'artist');
   });
 }
 const mbar = (n, v, c) => `<div><span>${n}<b style="color:var(--text);font-weight:500">${Math.round(v)}</b></span><div class="xbar"><i style="width:${clamp(v, 2, 100)}%;background:${c}"></i></div></div>`;
@@ -1158,7 +1159,7 @@ function renderSheet(){
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">怎麼玩</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div></details></div>
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">信任與提示</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div></details></div></div>`;
     html += `<div class="sec" style="color:#b03a30">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
-    html += `<div class="stFoot">孤勇者 v17.29 · 只有你一個人在測試</div>`;
+    html += `<div class="stFoot">孤勇者 v17.31 · 只有你一個人在測試</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });

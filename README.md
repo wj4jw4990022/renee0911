@@ -13,11 +13,14 @@
 | `css/style.css` | 全部樣式 |
 | `js/data.js` | 基本設定、資料表（區域、職業、個性、天賦、寶物、事務所等級、NPC） |
 | `js/sim.js` | 狀態、每天的流程、戰鬥、傷病、事件、人際、委託、結局與下一代 |
+| `js/art.js` | 圖檔資料：Kenney 角色、表情泡泡、裝備圖示（v17.31，由 `tools/build_art.py` 產生，不要手改） |
 | `js/map.js` | 地圖、鏡頭、角色／怪物／建築造型、任務演出、交通、事件小窗格 |
 | `js/ui.js` | 介面：上方資訊、對話、底部選單各分頁、設定 |
 | `js/main.js` | 存檔、主迴圈、開始遊戲（要最後載入） |
 | `manifest.webmanifest`、`icons/` | 加到主畫面用的名稱、圖示（v17.28） |
+| 角色圖 | Kenney Tiny Dungeon（CC0，https://kenney.nl），換色、拼裝在遊戲裡即時做 |
 | `fonts/` | 俐方體11號（Cubic 11）點陣字，SIL Open Font License（見 `fonts/Cubic_11-OFL.txt`） |
+| `tools/build_art.py` | 從 design-wip 分支的 `design/` 重新產生 `js/art.js` |
 | `sw.js` | App 模式：有網路拿最新版，沒網路用上次存下的（v17.28） |
 
 注意：

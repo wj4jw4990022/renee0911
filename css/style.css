@@ -534,3 +534,8 @@ nav button.mid .bdg { top:-26px; }
 #dying :is(.grp, .card, .cand, .tile, .memc, .rgc, .btn, .rb, .chip, .tag, .upc, .wc, .item, .rankc),
 #end :is(.grp, .card, .cand, .tile, .memc, .rgc, .btn, .rb, .chip, .tag, .upc, .wc, .item, .rankc) { --text:#3b2616; --muted:#7a5a3a; color:var(--text); }
 
+
+/* ================= v17.31：像素裝備圖示 ================= */
+.eqi { image-rendering:pixelated; display:inline-block; vertical-align:middle; flex:none; }
+.slot .eqi { margin-right:2px; }
+.td.eqoff .eqi { filter:grayscale(1) brightness(.7); opacity:.45; }

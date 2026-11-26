@@ -160,7 +160,7 @@ function drawVillage(now){
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(x - 6, y, 12, 2);
     drawSprite(ctx, n, x, y, false, now + i * 137, { moving:Math.abs(p.tx - p.x) > 2, left:p.tx < p.x, expr:(n.sick || 0) > S.day ? 'sick' : 'normal' });
     const nearH = heroMap(h) === 'vil' ? Math.abs(villagePos(h)[0] - x) < 48 : n.aff >= 50;
-    if (nearH) nameTag(ctx, n.name.slice(0, 4), x, y - 25, n.aff >= 50 ? 'friend' : 'npc');
+    if (nearH) nameTag(ctx, n.name.slice(0, 4), x, y - KEN_TAG, n.aff >= 50 ? 'friend' : 'npc');
     if (heroMap(h) === 'vil' && !V.inside && Math.abs(villagePos(h)[0] - x) < 22 && !sleeping()) { const ph = Math.floor(now / 1800 + i * 3) % 6; if (ph < 2) { const em = ['…', '♪', '哈', '嗯', '!', '?'][(i + Math.floor(now / 10800)) % 6]; ctx.fillStyle = '#f1ece0'; ctx.fillRect(x + 3, y - 36, 11, 9); ctx.fillStyle = '#161b27'; ctx.font = fz(8) + 'px sans-serif'; ctx.fillText(em, x + 5, y - 29); } }
     vilHits.push({ r:[x - 9, y - 24, 18, 26], k:'npc', id:n.id }); });
 }
@@ -294,7 +294,7 @@ function drawMap(now){
       if (h.mission && h.mission.comp && npc(h.mission.comp) && h.act === 'mission' && !MSPOT[h.mission.ag]) { ctx.fillStyle = '#c8b0ff'; ctx.fillRect(hx0 - 18, hy0 - 12, 7, 8); ctx.fillStyle = '#e8b98a'; ctx.fillRect(hx0 - 17, hy0 - 17, 5, 5); }
       ctx.globalAlpha = 1;
       if (BUB.cur && BUB.h === h && BUB.cur.until > now) bub = [BUB.cur.t, hx0, hy0 - (lying ? 20 : 34)];
-      if (cam.z > 1.4) nameTag(ctx, h.name, hx0, hy0 - (lying ? 12 : 25), 'hero');
+      if (cam.z > 1.4) nameTag(ctx, h.name, hx0, hy0 - (lying ? 12 : KEN_TAG), 'hero');
     }
   }
   drawArtists(now, 'vil', hm); drawArtists(now, 'wild', hm);
@@ -605,6 +605,127 @@ function sprHair(style, hc, rect, set, X0, Y0, age){
   };
   (s[style] || s.short)();
 }
+// ================= v17.31：Kenney 換裝小人（CC0）＋walk3 走路＋頭上表情泡泡＋裝備圖示 =================
+// 圖檔資料在 js/art.js（tools/build_art.py 產生）。舊的 24×32 程序造型（sprGrid）留著備用，不再畫在地圖上。
+const KEN_SCALE = 1, KEN_TAG = 19, KEN_W = 48, KEN_H = 48, KEN_OX = 16, KEN_OY = 23, KEN_FOOT = 39;   // 畫布裡腳底在 y=39、人物中心 x=24
+const KEN_COL = { '#':'#3f2631', H:'#bd6c4a', h:'#763b36', S:'#f7c282', s:'#e19a65', C:'#c0cbdc', c:'#8b9bb4', k:'#262b44', P:'#9b4ca3', p:'#d176d0', m:'#52607c', G:'#25956a', g:'#43e1b3', o:'#eaa56c', x:'#aab7cc', r:'#e84537' };
+const KEN_LONG = ['long', 'hime', 'wave', 'bob', 'twin', 'lowtail', 'ponytail', 'bun'];
+const kenT = n => ART.ken[n];
+const kenAt = (n, x, y) => ART.ken[n][y * 16 + x];
+// 依每個人的資料拼出 16×16 的樣子（頭＋身體＋職業頭飾＋配件），回傳顏色陣列
+function kenGrid(h, expr){
+  const L = sprLooks(h), C = SPR_CLS[h.cls], age = h.age || 20, r = sprRng(sprHash(sprSeed(h) + '#k'));
+  const style = h.record ? 'buzz' : L.style;
+  let head = style === 'buzz' ? '07_02' : ['spiky', 'curly'].includes(style) ? '07_04' : KEN_LONG.includes(style) ? '08_03' : '07_01';
+  if (head === '07_01' && h.sex !== 'f' && age >= 45 && r() < .35) head = '07_02';
+  const body = h.cls === 'warrior' ? '08_02' : h.cls === 'archer' ? '09_04' : h.cls === 'mage' ? '07_00' : h.cls === 'thief' ? '09_03' : (h.sex === 'f' ? '08_03' : '07_01');
+  const cut = head === '08_03' || body === '07_00' || body === '09_03' ? 11 : 10;
+  let sk = L.skin; if (expr === 'sick' || h.addict) sk = sprMix(sk, '#b0d0a0', expr === 'sick' ? .45 : .32); if (expr === 'angry') sk = sprMix(sk, '#f07a6a', .28);
+  const sk2 = '#' + [1, 3, 5].map((i, j) => Math.round(parseInt(sk.slice(i, i + 2), 16) * [.91, .79, .78][j]).toString(16).padStart(2, '0')).join(''), hc = age >= 60 ? SPR_WHITE : age >= 52 ? SPR_GRAY : L.hair, hk = sprMix(hc, '#1a1020', .42);
+  const cl = h._cloth || (C ? C.c : (SPR_ROLE[h.role] || (h.sex === 'f' ? '#9a5a80' : '#4a7a5a'))), cl2 = sprMix(cl, '#000000', .32), clL = sprMix(cl, '#ffffff', .28);
+  const TH = { H:'#4a566e', h:'#2e3448', o:'#6a7690', C:'#8a94a8', x:'#8a94a8', c:'#3a4458' };
+  const G = [];
+  for (let y = 0; y < 16; y++) { const row = []; G.push(row);
+    for (let x = 0; x < 16; x++) {
+      let ch, col;
+      if (y < cut) { ch = kenAt(head, x, y);
+        if (h.cls === 'mage' && y <= 5) { ch = kenAt('07_00', x, y); col = ch === '.' ? null : KEN_COL[ch]; row.push(col); continue; }
+        if (h.cls === 'thief' && y <= 5) { ch = kenAt('09_03', x, y); col = ch === '.' ? null : (TH[ch] || KEN_COL[ch]); row.push(col); continue; }
+        col = ch === '.' ? null : ({ H:hc, h:hk, S:sk, s:sk2, o:'#e8708a' })[ch] || KEN_COL[ch];
+      } else { ch = kenAt(body, x, y);
+        if (ch === '.') { row.push(null); continue; }
+        if (ch === 'S') col = sk; else if (ch === 's') col = sk2;
+        else if (body === '07_01') col = ({ C:cl, c:cl2, H:L.pants, h:sprMix(L.pants, '#000000', .3) })[ch];
+        else if (body === '08_03') col = ({ P:cl, p:clL, H:head === '08_03' ? hc : cl2, h:head === '08_03' ? hk : cl2 })[ch];
+        else if (body === '07_00') col = ({ C:'#d176d0', c:'#9b4ca3', x:'#d176d0' })[ch];
+        else if (body === '09_03') col = TH[ch];
+        col = col || KEN_COL[ch];
+      }
+      row.push(col);
+    } }
+  if (h.cls === 'archer' && head !== '07_02') [4, 5, 6, 7, 8, 9, 10, 11].forEach((x, i) => { if (G[5][x] && G[5][x] !== KEN_COL['#']) G[5][x] = i >= 3 && i <= 5 ? KEN_COL.g : KEN_COL.G; });
+  if (h.sex !== 'f' && age >= 35 && head !== '07_02' && h.cls !== 'thief' && r() < .3) { for (let x = 5; x <= 10; x++) if (G[9][x] && G[9][x] !== KEN_COL['#']) G[9][x] = hk; G[8][4] = G[8][11] = hk; }
+  if (r() < .12 && h.cls !== 'thief') { for (let x = 5; x <= 10; x++) G[7][x] = KEN_COL['#']; G[8][5] = G[8][10] = '#78c8e6'; }
+  if ((h.perks && h.perks.includes('scar')) || h.scar) { G[5][10] = G[6][10] = G[7][11] = '#aa4646'; }
+  if (h.married && G[12][12]) G[12][12] = '#f2c14e';
+  return G;
+}
+// walk3：踏地的腳釘住、身體和抬起的腳往上 1 格；回傳 16×17
+function kenWalk(G, f){
+  const o = Array.from({ length:17 }, () => Array(16).fill(null));
+  const put = (x0, y0, x1, y1, dx, dy) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (G[y][x]) o[y - y0 + dy][x - x0 + dx] = G[y][x]; };
+  if (f % 2 === 0) { put(0, 0, 16, 16, 0, 1); return o; }
+  const lift = f === 1 ? 0 : 1; put(0, 0, 16, 14, 0, 0);
+  for (const side of [0, 1]) { const x0 = side ? 8 : 0, x1 = side ? 16 : 8;
+    if (side === lift) put(x0, 14, x1, 16, x0, 14); else { put(x0, 14, x1, 16, x0, 15); put(x0, 14, x1, 15, x0, 14); } }
+  return o;
+}
+// 文字圖 → 顏色陣列（表情、裝備共用調色盤）
+const ART_IX = {}; for (let i = 0; i < ART.ch.length; i++) ART_IX[ART.ch[i]] = ART.pal[i];
+function artGrid(s, w, h, ox = 0, stride = w){ const G = []; for (let y = 0; y < h; y++) { const row = []; for (let x = 0; x < w; x++) { const c = s[y * stride + ox + x]; row.push(c === ' ' ? null : ART_IX[c]); } G.push(row); } return G; }
+const EQ_WP = { warrior:'sword', archer:'bow', mage:'staff', thief:'dagger' };
+const EQ_G = {};
+function eqGrid(n, rot){ const k = n + (rot ? 'r' : ''); if (EQ_G[k]) return EQ_G[k]; const E = artGrid(ART.eq[n], 16, 16);
+  return EQ_G[k] = rot ? E.map((row, y) => row.map((_, x) => E[15 - x][y])) : E; }
+const eqImg = (n, z = 20) => ART.equrl[n] ? `<img class="eqi" src="${ART.equrl[n]}" width="${z}" height="${z}" alt="">` : '';
+// 攻擊動作：武器圖示拿在右手，劍往下砍、匕首往前刺、杖舉高發光、弓拉弦放箭
+const KEN_ATK = {
+  sword:[{ dy:-3 }, { dy:-3 }, { rot:1, dx:1, fx:'arc' }, { rot:1, dx:2 }, { rot:1, dx:1 }, {}],
+  dagger:[{}, { rot:1, dx:2, fx:'stab' }, {}, { rot:1, dx:2, fx:'stab' }, {}, {}],
+  staff:[{}, { dy:-3, fx:'glow' }, { dy:-3, fx:'glow2' }, { dx:1, fx:'cast' }, {}, {}],
+  bow:[{}, { pull:1 }, { pull:2 }, { fx:'shot' }, {}, {}],   // pull：往後拉、人往後靠 1 格
+};
+function kenCanvas(h, kind, f, expr){
+  const key = 'K|' + sprSig(h) + '|' + (h.sex || '') + '|' + (h._cloth || '') + '|' + (h.wpn || 0) + '|' + kind + '|' + f + '|' + (expr === 'sick' || expr === 'angry' ? expr : '');
+  let cv = SPR_CACHE.get(key); if (cv) return cv;
+  if (SPR_CACHE.size > 900) SPR_CACHE.clear();
+  const B = kenGrid(h, expr), O = Array.from({ length:KEN_H }, () => Array(KEN_W).fill(null));
+  const blit = (G, dx, dy) => G.forEach((row, y) => row.forEach((c, x) => { const X = x + dx, Y = y + dy; if (c && X >= 0 && X < KEN_W && Y >= 0 && Y < KEN_H) O[Y][X] = c; }));
+  const fx = (x, y, c = '#ffffff') => { if (x >= 0 && x < KEN_W && y >= 0 && y < KEN_H) O[y][x] = c; };
+  if (kind === 'down') { const R = Array.from({ length:16 }, () => Array(16).fill(null)); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) R[15 - x][y] = B[y][x]; blit(R, KEN_OX, KEN_FOOT - 15); }
+  else if (kind === 'attack' && h.cls && EQ_WP[h.cls]) {
+    const wp = EQ_WP[h.cls], P = KEN_ATK[wp][f % 6], dx = P.dx || 0, hx = KEN_OX + 13 + dx, hy = KEN_OY + 12 + (P.dy || 0), n = wp + clamp(h.wpn || 0, 0, 3);
+    const body = kenWalk(B, 0);
+    if (wp === 'bow') { blit(body, KEN_OX + dx - (P.pull ? 1 : 0), KEN_OY); blit(eqGrid(n), hx - 6 - (P.pull || 0), hy - 9);
+      if (P.fx === 'shot') for (let i = 0; i < 7; i++) fx(hx + 6 + i, hy - 1, i < 5 ? '#c8a070' : '#e8eef6'); }
+    else { blit(body, KEN_OX + dx, KEN_OY);
+      if (P.rot) blit(eqGrid(n, 1), hx - 1, hy - 3); else blit(eqGrid(n), hx - 3, hy - 14);
+      if (P.fx === 'arc') for (let a = -80; a <= 40; a += 12) { const t = a * Math.PI / 180; fx(Math.round(hx + Math.cos(t) * 13), Math.round(hy - 2 + Math.sin(t) * 13)); }
+      if (P.fx === 'stab') for (let i = 0; i < 4; i++) fx(hx + 15 + i, hy + 9 + (i % 2));
+      if (P.fx === 'glow' || P.fx === 'glow2') { const cx = hx - 3 + 12, cy = hy - 14 + 3, n2 = P.fx === 'glow' ? 4 : 8; for (let i = 0; i < n2; i++) { const t = i / n2 * 6.283; fx(Math.round(cx + Math.cos(t) * 5), Math.round(cy + Math.sin(t) * 5), '#bfe8ff'); } }
+      if (P.fx === 'cast') { const cx = hx - 3 + 12, cy = hy - 14 + 3; fx(cx + 5, cy - 2); fx(cx + 6, cy - 3, '#bfe8ff'); fx(cx + 7, cy - 1, '#bfe8ff'); fx(cx + 8, cy - 2); } }
+  } else blit(kenWalk(B, kind === 'walk' ? f % 4 : 0), KEN_OX, KEN_OY);
+  cv = document.createElement('canvas'); cv.width = KEN_W; cv.height = KEN_H;
+  const g = cv.getContext('2d'); O.forEach((row, y) => row.forEach((c, x) => { if (c) { g.fillStyle = c; g.fillRect(x, y, 1, 1); } }));
+  SPR_CACHE.set(key, cv); return cv;
+}
+// 表情泡泡：狀態 → 泡泡名稱
+const EMO_OF = { happy:'開心', blush:'害羞', love:'戀愛', angry:'生氣', sad:'難過', nervous:'緊張', tired:'累', sleepy:'想睡', sick:'生病', hurt:'好痛', ouch:'好痛', serious:'認真', down:'沮喪', surprise:'驚訝', puzzled:'疑惑', idea:'想到了', money:'想要錢', speechless:'無言', drunk:'喝醉' };
+const EMO_CV = {};
+function emoStrip(nm){ if (EMO_CV[nm]) return EMO_CV[nm]; const e = ART.emo[nm]; if (!e) return null;
+  const cv = document.createElement('canvas'); cv.width = e.w * e.n; cv.height = e.h; const g = cv.getContext('2d');
+  artGrid(e.px, e.w * e.n, e.h).forEach((row, y) => row.forEach((c, x) => { if (c) { g.fillStyle = c; g.fillRect(x, y, 1, 1); } }));
+  const tot = e.d.reduce((a, b) => a + b, 0); return EMO_CV[nm] = { cv, e, tot }; }
+function emoFrame(nm, now){ const s = emoStrip(nm); if (!s) return null; let t = ((now % s.tot) + s.tot) % s.tot, i = 0; while (i < s.e.n - 1 && t >= s.e.d[i]) { t -= s.e.d[i]; i++; } return { s, i }; }
+// 沒有特別狀態的時候，偶爾冒一個小念頭（每 8 秒有 1/5 機會，冒 2.6 秒）
+function idleEmo(h, now){
+  const ph = sprHash(sprSeed(h)) % 8000, slot = Math.floor((now + ph) / 8000), r = sprHash(sprSeed(h) + '@' + slot) % 100;
+  if (r >= 20 || (now + ph) % 8000 > 2600) return null;
+  const pool = ['idea', 'puzzled', 'surprise', 'speechless'];
+  if ((h.mood ?? 60) > 60) pool.push('happy', 'idea'); if (h.goal === 'rich' || h.goal === 'money' || (h.wallet != null && h.wallet < 50)) pool.push('money', 'money');
+  return pool[sprHash(sprSeed(h) + '~' + slot) % pool.length];
+}
+function emoKey(h, expr, lying, now){
+  if (lying) { if (h.act === 'dying') return null; if (expr === 'hurt' || h.bedDays > 0) return 'hurt'; if (expr && expr !== 'normal' && expr !== 'tired') return expr; return h.act === 'drink' ? 'drunk' : 'sleepy'; }
+  if (h.act === 'drink' && typeof hourOf === 'function' && hourOf() >= 20) return 'drunk';
+  if (expr && expr !== 'normal') return expr;
+  return idleEmo(h, now);
+}
+function drawEmo(c, nm, x, yBottom, now, pe){
+  const F = emoFrame(nm, now); if (!F) return; const { s, i } = F, w = s.e.w * pe, hh = s.e.h * pe;
+  const sx = Math.round(x - w / 2), sy = Math.max(1, Math.round(yBottom - hh));
+  c.drawImage(s.cv, i * s.e.w, 0, s.e.w, s.e.h, sx, sy, w, hh);
+}
 // 快取：同一個人同一格只畫一次
 const SPR_CACHE = new Map();
 function sprSig(h){ return [sprSeed(h), h.cls || h.role || '', (h.job || 0) > 0 ? 1 : 0, h.age >= 60 ? 2 : h.age >= 52 ? 1 : 0, h.age >= 62 ? 1 : 0, h.age >= 42 ? 1 : 0, h.married ? 1 : 0, (h.perks && h.perks.includes('scar')) ? 1 : 0, h.record ? 1 : 0, h.addict ? 1 : 0, h.hex ? [h.hex.X > 65, h.hex.E > 70, h.hex.A < 30].join('') : ''].join('|'); }
@@ -616,8 +737,8 @@ function sprCanvas(h, kind, f, expr){
   const g = cv.getContext('2d'); G.forEach((row, y) => row.forEach((c, x) => { if (c) { g.fillStyle = c; g.fillRect(x, y, 1, 1); } }));
   SPR_CACHE.set(key, cv); return cv;
 }
-// 大頭貼＝上半身特寫（24×24）
-function faceCanvas(h, expr){ const src = sprCanvas(h, 'idle', 0, expr || exprOf(h)), cv = document.createElement('canvas'); cv.width = 24; cv.height = 24; cv.getContext('2d').drawImage(src, 0, 0, 24, 24, 0, 0, 24, 24); return cv; }
+// 大頭貼＝Kenney 小人整隻（16×16）
+function faceCanvas(h, expr){ const src = kenCanvas(h, 'idle', 0, expr || exprOf(h)), cv = document.createElement('canvas'); cv.width = 16; cv.height = 16; cv.getContext('2d').drawImage(src, KEN_OX, KEN_OY + 1, 16, 16, 0, 0, 16, 16); return cv; }
 const URL_CACHE = new Map();
 function faceURL(h, expr){ if (!h) return ''; const e = expr || exprOf(h), key = sprSig(h) + '|' + e; let u = URL_CACHE.get(key); if (u) return u; if (URL_CACHE.size > 300) URL_CACHE.clear(); u = faceCanvas(h, e).toDataURL(); URL_CACHE.set(key, u); return u; }
 const pimg = (h, expr) => h ? `<img class="pimg" src="${faceURL(h, expr)}" alt="">` : '';
@@ -625,21 +746,22 @@ const pimg = (h, expr) => h ? `<img class="pimg" src="${faceURL(h, expr)}" alt="
 const NAME_C = { hero:'#f2c14e', artist:'#9fd0ff', friend:'#bff0cf', npc:'rgba(255,255,255,.8)' };
 function nameTag(c, t, x, y, kind){ c.font = fz(8) + 'px Cubic11, sans-serif'; const w = c.measureText(t).width; c.fillStyle = 'rgba(16,20,30,.55)'; c.fillRect(x - w / 2 - 2, y - 7, w + 4, 9); c.fillStyle = NAME_C[kind] || NAME_C.npc; c.fillText(t, x - w / 2, y); }
 function drawSprite(c, h, x, y, lying, now, opt){
-  let kind = 'idle', f = Math.floor(now / 220) % 4;
+  let kind = 'idle', f = 0;
   const moving = opt ? opt.moving : Math.abs((h.tx ?? h.x) - h.x) > .6 || Math.abs((h.ty ?? h.y) - h.y) > .6;
   const left = opt ? opt.left : moving && (h.tx ?? h.x) < h.x - .6;
   if (lying) kind = 'down';
   else if (opt && opt.atk) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
   else if ((h.act === 'hunt' || (h.act === 'mission' && h.mission && !MSPOT[h.mission.ag])) && h.flash > 0) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
-  else if (moving) { kind = 'walk'; f = Math.floor(now / 110) % 6; }
-  const cv = sprCanvas(h, kind, f, opt && opt.expr || exprOf(h));
+  else if (moving) { kind = 'walk'; f = Math.floor(now / 140) % 4; }
+  const expr = opt && opt.expr || exprOf(h), cv = kenCanvas(h, kind, f, expr), sc = opt && opt.scale || KEN_SCALE;
   // 像素對齊：在螢幕座標用整數倍放大，每個像素一樣大
-  const t = c.getTransform(), p = Math.max(1, Math.round(SPR_SCALE * t.a)), sx = Math.round(t.a * x + t.e), sy = Math.round(t.d * y + t.f);
+  const t = c.getTransform(), p = Math.max(1, Math.round(sc * t.a)), sx = Math.round(t.a * x + t.e), sy = Math.round(t.d * y + t.f);
   c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
-  if (left) { c.translate(sx, 0); c.scale(-1, 1); c.drawImage(cv, -12 * p, sy - 30 * p, 24 * p, 32 * p); }
-  else c.drawImage(cv, sx - 12 * p, sy - 30 * p, 24 * p, 32 * p);
+  if (left) { c.translate(sx, 0); c.scale(-1, 1); c.drawImage(cv, -24 * p, sy - KEN_FOOT * p, KEN_W * p, KEN_H * p); c.setTransform(1, 0, 0, 1, 0, 0); }
+  else c.drawImage(cv, sx - 24 * p, sy - KEN_FOOT * p, KEN_W * p, KEN_H * p);
+  if (!(opt && opt.noEmo)) { const ph = sprHash(sprSeed(h)) % 997, ek = emoKey(h, expr, lying, now + ph), nm = ek && EMO_OF[ek];
+    if (nm) drawEmo(c, nm, sx + (lying ? -4 * p : 0), sy - (lying ? 16 : KEN_TAG + 8) * t.a, now + ph, Math.max(1, Math.round(sc * .8 * t.a))); }
   c.restore();
-  if (lying && h.act !== 'dying') { c.fillStyle = '#fff'; c.font = '9px sans-serif'; c.fillText('z', x - 2, y - 12 - (Math.floor(now / 500) % 2) * 3); }
 }
 
 function drawHero(c, x, y, lying, now, hh){ drawSprite(c, hh || H(), x, y, lying, now); }
@@ -1217,7 +1339,8 @@ function mTxt(h){ const o = h.mission, ph = mPhase(h), hr = hourOf(), w = mWin(o
 // ================= v17.9：結果揭曉、武鬥大會、地下夜班、升格考核、村民請託 =================
 let RES = null;   // 地圖中間的結果橫幅
 // 小人（觀眾、擡擔架的村民、考官）
-function pxPerson(x, y, c, k, now){ const b = Math.round(Math.sin(now / 260 + k) * 1); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(x - 3, y, 7, 1); ctx.fillStyle = c; ctx.fillRect(x - 3, y - 7 + b, 6, 7); ctx.fillStyle = ['#e8b98a', '#c8966a', '#f0c8a0'][k % 3]; ctx.fillRect(x - 2, y - 11 + b, 5, 4); ctx.fillStyle = ['#4a2a1a', '#2a2a30', '#8a5a2a', '#c8a040'][k % 4]; ctx.fillRect(x - 2, y - 12 + b, 5, 2); }
+const PXP = {};
+function pxPerson(x, y, c, k, now){ const key = c + '|' + k, p = PXP[key] || (PXP[key] = { seed:'px' + key, name:'', sex:k % 2 ? 'f' : 'm', age:[28, 40, 22, 55][k % 4], _cloth:c }); drawSprite(ctx, p, x, y, false, now + k * 300, { moving:false, left:k % 2 === 1, scale:1, noEmo:true }); }
 function pxSay(x, y, t){ ctx.font = fz(8) + 'px Cubic11, sans-serif'; const w = ctx.measureText(t).width + 6; ctx.fillStyle = '#f1ece0'; ctx.fillRect(x - w / 2, y - 9, w, 10); ctx.fillStyle = '#161b27'; ctx.fillText(t, x - w / 2 + 3, y - 1); }
 // 結算外面包一層：記下前後的差別做成橫幅；勇者的感想留到晚上才說；決定要不要村口迎接、擡擔架
 function resolveMission(){
@@ -1535,7 +1658,7 @@ function drawEpisode(now){
     const k = Math.min(1, (now - EPC.t0) / 1200), tx = V.x + (EPC.x0 < V.x ? -16 : 16), x = Math.round(EPC.x0 + (tx - EPC.x0) * k), y = Math.round(V.y);
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(x - 6, y, 12, 2);
     drawSprite(ctx, n, x, y, false, now, { moving:k < 1, left:EPC.x0 > V.x });
-    nameTag(ctx, n.name.slice(0, 4), x, y - 25, n.aff >= 50 ? 'friend' : 'npc');
+    nameTag(ctx, n.name.slice(0, 4), x, y - KEN_TAG, n.aff >= 50 ? 'friend' : 'npc');
     if (k >= 1 && EPC.tag) pxSay(x, y - 31, EPC.tag);
   } catch (e) { if (!scnErr++) console.error(e); }
 }
@@ -1932,9 +2055,12 @@ function drawBubble(t, x, y){
 function drawFace(c, force){
   if (!c) return; const h = H(); if (!h) return;
   const e = typeof force === 'string' ? force : force === -1 ? 'nervous' : exprOf(h);
-  if (c.width !== 24) { c.width = 24; c.height = 24; }
-  const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, 24, 24); g.drawImage(sprCanvas(h, 'idle', 0, e), 0, 0, 24, 24, 0, 0, 24, 24);
+  if (c.width !== 32) { c.width = 32; c.height = 32; }
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, 32, 32); g.drawImage(kenCanvas(h, 'idle', 0, e), KEN_OX, KEN_OY + 1, 16, 16, 0, 0, 32, 32);
+  const nm = e !== 'normal' && EMO_OF[e]; if (nm) { const s = emoStrip(nm); if (s) { const i = s.e.n > 1 ? ART_STILL(s) : 0; g.drawImage(s.cv, i * s.e.w, 0, s.e.w, s.e.h, 32 - s.e.w, 0, s.e.w, s.e.h); } }
 }
+// 靜態代表格：非透明像素最多的那一格（動畫的第一格常是空的）
+function ART_STILL(s){ if (s.still != null) return s.still; const g = s.cv.getContext('2d'); let best = 0, bn = -1; for (let i = 0; i < s.e.n; i++) { const d = g.getImageData(i * s.e.w, 0, s.e.w, s.e.h).data; let n = 0; for (let k = 0; k < d.length; k += 4) if (d[k + 3] && (d[k] < 240 || d[k + 1] < 240)) n++; if (n > bn) { bn = n; best = i; } } return s.still = best; }
 function drawLying(c){ if (!c) return; const g = c.getContext('2d'); g.fillStyle = '#a9a59e'; g.fillRect(1, 3, 6, 6); g.fillStyle = '#55524c'; g.fillRect(0, 2, 3, 8); g.fillStyle = '#7e8a88'; g.fillRect(7, 3, 9, 7); g.fillStyle = '#5a5650'; g.fillRect(16, 4, 6, 2); g.fillRect(16, 7, 6, 2); g.fillStyle = '#2a2826'; g.fillRect(10, 10, 8, 1); }
 
 
