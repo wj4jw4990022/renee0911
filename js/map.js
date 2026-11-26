@@ -58,7 +58,7 @@ VSLOTS.forEach(b => { if (b.k !== 'house') VD[b.k] = b.door; });
 // 村子和野外共用同一條橫軸。勇者「在村子裡」時，模擬座標就停在村口（GX, GY）；x 超過村口就是在野外。
 const GX = VD.gate, GY = V_WALK;
 const inVil = h => h.x <= GX + 1.5;
-const RY0 = 124, RY1 = 162;   // 野外的路面：勇者和怪物活動的範圍
+const RY0 = 112, RY1 = 148;   // 野外勇者和怪物活動的範圍（v17.34：路面縮成和村子一樣 124～150，怪物站在路上）
 // 依序：草原、森林、王都、荒地、礦坑、海岸、雪山、魔王城；越遠越長
 const WSEG = [['z', 0, 230], ['z', 1, 260], ['cap', -1, 140], ['z', 2, 290], ['z', 3, 320], ['z', 4, 350], ['z', 5, 390], ['z', 6, 460]];
 const CAP = { x0:0, x1:0 };
@@ -1130,19 +1130,21 @@ function vilHills(k){ if (VHILL[k]) return VHILL[k]; const f = k === 'far' ? .72
   return VHILL[k] = c; }
 // 街道地面：後面的草地、人行道、石板路、前面的草邊
 let VSTREET = null;
+// 斜角鋪面（村子、王都共用）：人行道小菱形磚、路緣石、車道大菱形石板、前面路緣。畫在 g 的 x0～x1，ox 是世界座標的偏移（讓花紋接得起來）
+function paveIso(g, x0, x1, ox){ const hash = (a, b) => { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5; return n - Math.floor(n); };
+  const iso = (y0, y1, T, cols, line, o2) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const u = (x + ox + o2) / 2 + y, v = (x + ox + o2) / 2 - y, fu = ((u % T) + T) % T, fv = ((v % T) + T) % T;
+    g.fillStyle = fu < 1 || fv < 1 ? line : cols[Math.floor(hash(Math.floor(u / T), Math.floor(v / T)) * cols.length)]; g.fillRect(x, y, 1, 1); } };
+  const w = x1 - x0;
+  iso(V_BASE, V_ROAD - 2, 6, ['#d8ccb0', '#d2c5a8', '#dcd2b8'], '#b8a888', 0);
+  g.fillStyle = '#e6dcc4'; g.fillRect(x0, V_BASE, w, 1);   // 人行道後緣
+  g.fillStyle = '#c8bca0'; g.fillRect(x0, V_ROAD - 2, w, 1); g.fillStyle = '#9a8c70'; g.fillRect(x0, V_ROAD - 1, w, 1);   // 路緣石：頂面＋側面（厚度）
+  iso(V_ROAD, V_ROAD_B, 10, ['#c4a77a', '#bfa274', '#c9ad82', '#b89a6e'], '#9a7c54', 3);
+  speckle(g, x0, V_ROAD, w, V_ROAD_B - V_ROAD, ['#a8895e', '#d2b68a'], w / 3, 7);
+  g.fillStyle = '#d2c5a8'; g.fillRect(x0, V_ROAD_B - 1, w, 1); g.fillStyle = '#8a7a5e'; g.fillRect(x0, V_ROAD_B, w, 2); }   // 前面的路緣
 function vilStreet(){ if (VSTREET) return VSTREET; const c = document.createElement('canvas'); c.width = VW; c.height = VH; const g = c.getContext('2d');
   // v17.32：斜角版。後面草地、人行道（小菱形磚）、路緣石、車道（大菱形石板）、前面路緣與草地
   g.fillStyle = '#6f9a48'; g.fillRect(0, 92, VW, 26); speckle(g, 0, 92, VW, 26, ['#7eab52', '#5f8a3e'], VW / 2, 11);
-  const hash = (a, b) => { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5; return n - Math.floor(n); };
-  // 菱形格：u、v 是兩條斜角軸（往右下、往右上），T 是格子大小；格線畫深色，每格隨機深淺
-  const iso = (y0, y1, T, cols, line, ox) => { for (let y = y0; y < y1; y++) for (let x = 0; x < VW; x++) { const u = (x + ox) / 2 + y, v = (x + ox) / 2 - y, fu = ((u % T) + T) % T, fv = ((v % T) + T) % T;
-    g.fillStyle = fu < 1 || fv < 1 ? line : cols[Math.floor(hash(Math.floor(u / T), Math.floor(v / T)) * cols.length)]; g.fillRect(x, y, 1, 1); } };
-  iso(V_BASE, V_ROAD - 2, 6, ['#d8ccb0', '#d2c5a8', '#dcd2b8'], '#b8a888', 0);
-  g.fillStyle = '#e6dcc4'; g.fillRect(0, V_BASE, VW, 1);   // 人行道後緣
-  g.fillStyle = '#c8bca0'; g.fillRect(0, V_ROAD - 2, VW, 1); g.fillStyle = '#9a8c70'; g.fillRect(0, V_ROAD - 1, VW, 1);   // 路緣石：頂面＋側面（厚度）
-  iso(V_ROAD, V_ROAD_B, 10, ['#c4a77a', '#bfa274', '#c9ad82', '#b89a6e'], '#9a7c54', 3);
-  speckle(g, 0, V_ROAD, VW, V_ROAD_B - V_ROAD, ['#a8895e', '#d2b68a'], VW / 3, 7);
-  g.fillStyle = '#d2c5a8'; g.fillRect(0, V_ROAD_B - 1, VW, 1); g.fillStyle = '#8a7a5e'; g.fillRect(0, V_ROAD_B, VW, 2);   // 前面的路緣
+  paveIso(g, 0, VW, 0);
   g.fillStyle = '#6f9a48'; g.fillRect(0, V_ROAD_B + 2, VW, VH - V_ROAD_B - 2); speckle(g, 0, V_ROAD_B + 2, VW, VH - V_ROAD_B - 2, ['#7eab52', '#5f8a3e', '#86b65a'], VW / 3, 13);
   return VSTREET = c; }
 // ================= v17.7：任務作息 =================
@@ -1364,14 +1366,22 @@ function drawSky(now){
 let WGROUND = null;
 const ZROAD = ['#b89a6e', '#8a7050', '#a89070', '#7a7068', '#d8c08a', '#c8d0d8', '#4a3a4a'];
 function wildGround(){ if (WGROUND) return WGROUND; const W0 = Math.ceil(WW - VW), c = document.createElement('canvas'); c.width = W0; c.height = VH; const g = c.getContext('2d');
+  // v17.34：野外是自然土路，寬度和村子的車道一樣（V_ROAD～V_ROAD_B）；上下緣是不規則的草邊，每區用自己的地面顏色
+  const n1 = x => Math.sin(x * .31) * .9 + Math.sin(x * .113 + 1.7) * 1.1 + Math.sin(x * 1.37) * .5;
   const seg = (x0, x1, back, road, verge, k) => { const a = Math.round(x0 - VW), w = Math.round(x1 - x0) + 14;
-    g.fillStyle = back; g.fillRect(a, 92, w, 26); speckle(g, a, 92, w, 26, [monMix(back, '#ffffff', .12), monMix(back, '#000000', .15)], w / 2, k);
-    g.fillStyle = monMix(road, '#ffffff', .1); g.fillRect(a, 118, w, 6); g.fillStyle = road; g.fillRect(a, 124, w, 34); speckle(g, a, 124, w, 34, [monMix(road, '#000000', .14), monMix(road, '#ffffff', .14)], w / 1.5, k + 3);
-    g.fillStyle = monMix(road, '#000000', .2); g.fillRect(a, 157, w, 1); g.fillStyle = verge; g.fillRect(a, 158, w, 12); speckle(g, a, 158, w, 12, [monMix(verge, '#ffffff', .15), monMix(verge, '#000000', .15)], w / 3, k + 7); };
+    g.fillStyle = back; g.fillRect(a, 92, w, V_ROAD - 92 + 3); speckle(g, a, 92, w, V_ROAD - 92, [monMix(back, '#ffffff', .12), monMix(back, '#000000', .15)], w / 2, k);
+    g.fillStyle = verge; g.fillRect(a, V_ROAD_B - 3, w, VH - V_ROAD_B + 3); speckle(g, a, V_ROAD_B, w, VH - V_ROAD_B, [monMix(verge, '#ffffff', .15), monMix(verge, '#000000', .15)], w / 3, k + 7);
+    for (let x = a; x < a + w; x++) { const wx = x + VW, t = V_ROAD + Math.round(n1(wx) * .9), b = V_ROAD_B - 1 + Math.round(n1(wx + 57) * .9);
+      g.fillStyle = road; g.fillRect(x, t, 1, b - t + 1);
+      g.fillStyle = monMix(road, '#000000', .18); g.fillRect(x, b, 1, 1);   // 下緣的陰影
+      g.fillStyle = monMix(road, '#ffffff', .12); g.fillRect(x, t, 1, 1); }
+    speckle(g, a, V_ROAD + 2, w, V_ROAD_B - V_ROAD - 4, [monMix(road, '#000000', .14), monMix(road, '#ffffff', .14)], w / 1.5, k + 3);
+    // 車轍：兩條淡淡的線
+    g.fillStyle = monMix(road, '#000000', .08); for (let x = a; x < a + w; x++) if ((x * 7 + k) % 11 > 2) { g.fillRect(x, V_ROAD + 9, 1, 1); g.fillRect(x, V_ROAD_B - 9, 1, 1); } };
   seg(VW, ZONES[0].rect[0], '#6f9a48', '#b89a6e', '#6f9a48', 1);
   ZONES.forEach((Z, z) => seg(Z.rect[0], Z.rect[2], Z.c, ZROAD[z], z === 4 ? '#e0cc98' : z === 5 ? '#eef3f8' : z === 6 ? '#2e2238' : monMix(Z.c, '#000000', .1), z * 11 + 2));
   seg(CAP.x0, CAP.x1, '#8a9a6a', '#c4a77a', '#6f9a48', 99);
-  const a = Math.round(CAP.x0 - VW); for (let y = 127, r = 0; y < 156; y += 6, r++) for (let x = a + (r % 2) * 5; x < a + CAP.x1 - CAP.x0; x += 10) { g.fillStyle = (x + y) % 3 ? '#cdb184' : '#c4a77a'; g.fillRect(x + 1, y + 1, 8, 4); }   // 王都的石板路
+  paveIso(g, Math.round(CAP.x0 - VW) - 4, Math.round(CAP.x1 - VW) + 18, CAP.x0 - VW);   // 王都：和村子一樣的菱形石板路
   return WGROUND = c; }
 // 每區的遠景
 function drawZoneBack(z, x0, x1, bm){
@@ -1389,17 +1399,18 @@ function drawWild(now){
   const hr = hourOf(), bm = hr >= 20 || hr < 6 ? (hr >= 23 || hr < 6 ? 'late' : 'night') : 'day', h = H();
   ctx.drawImage(wildGround(), VW, 0, WW - VW, VH);
   // 王都：城堡、民房、驛站
-  if (CAP.x1 > L && CAP.x0 < R) { const cx = (CAP.x0 + CAP.x1) / 2;
-    drawBld(ctx, 'castle', cx - 30, 28, 84, 90, bm); drawBld(ctx, 'cottage', CAP.x0 + 4, 94, 22, 22, bm, { roof:'#4f7fb0', wall:'#c8a070' }); drawBld(ctx, 'inn', CAP.x1 - 48, 58, 40, 60, bm);
-    nameTag(ctx, '王都', cx + 12, 24, 'hero'); nameTag(ctx, '驛站', CAP.x1 - 28, 54, 'npc'); drawBld(ctx, 'stop', COACH_B() - 6, 98, 12, 20, 'day'); }
+  if (CAP.x1 > L && CAP.x0 < R) {   // v17.34：王都換成斜角圖：城堡在後、民房在左前、驛站在右前
+    const put = (nm, left, back) => { const B = ART.bld[nm], wx = Math.round(left + B.ax), gy = V_BASE - 2 - (B.h - 1 - B.ay) - back; drawIso(ctx, nm, wx, gy, bm); return [left + B.w / 2, gy - B.ay]; };
+    const ct = put('cap_castle', CAP.x0 + 20, 6); put('cap_house_0', CAP.x0 - 4, 0); const st = put('cap_station', CAP.x1 - 40, 0);
+    nameTag(ctx, '王都', ct[0], ct[1] - 2, 'hero'); nameTag(ctx, '驛站', st[0], st[1] - 2, 'npc'); }
   ZONES.forEach((Z, z) => { const [x0, , x1] = Z.rect; if (x1 < L || x0 > R) return;
     drawZoneBack(z, x0, x1, bm);
     // 路標
     ctx.fillStyle = '#6a4428'; ctx.fillRect(x0 + 6, 104, 2, 16); nameTag(ctx, Z.n, x0 + 7, 102, 'npc');
     // 魔王在區域盡頭（任務演出中會另外畫）
     const bossScn = SCN && !SCN.off && SCN.t === 'boss' && SCN.z === z;
-    if (z === 2 && !h.bossKill && !bossScn) drawMonster(ctx, 'boneking', x1 - 34, 152, 'idle', Math.floor(now / 260) % 4, false, true);
-    if (z === 6 && zoneOpen(6) && !S.boss2Done && !bossScn) drawMonster(ctx, 'abyss', x1 - 44, 154, 'idle', Math.floor(now / 260) % 4, false, true);
+    if (z === 2 && !h.bossKill && !bossScn) drawMonster(ctx, 'boneking', x1 - 34, 146, 'idle', Math.floor(now / 260) % 4, false, true);
+    if (z === 6 && zoneOpen(6) && !S.boss2Done && !bossScn) drawMonster(ctx, 'abyss', x1 - 44, 147, 'idle', Math.floor(now / 260) % 4, false, true);
     // 還沒開放：柵欄、守衛、暗下來
     if (!zoneOpen(z)) { ctx.fillStyle = 'rgba(10,12,20,.45)'; ctx.fillRect(x0, 0, x1 - x0 + 14, VH);
       ctx.fillStyle = '#8a5a3a'; for (let y = RY0 - 8; y < RY1 + 4; y += 7) ctx.fillRect(x0 + 2, y, 3, 5); ctx.fillRect(x0 + 1, RY0 - 6, 5, 2); ctx.fillRect(x0 + 1, RY1 - 2, 5, 2);
