@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#161b27">
-<title>孤勇者 v17.23</title>
+<title>孤勇者 v17.24</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -5660,7 +5660,8 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => { const t
 $('shX').onclick = closeSheet;
 $('cap').onclick = () => { if (sheetT === 'hero') closeSheet(); else openSheet('hero', 'state'); };
 function openSheet(t, sb){ sheetT = t; if (t === 'quest' && ['ag', 'offer', 'due'].includes(sb)) { S.takeF = sb; sb = 'take'; } if (sb) sub[t] = sb; if (t === 'quest') $('dQuest').classList.remove('on'); if (t === 'office') $('dOffice').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); renderSheet(); $('sheet').style.bottom = $('nav').offsetHeight + 'px'; $('sheet').classList.add('on'); }
-function closeSheet(){ resetArm = false; artScroll = null; sheetT = null; $('sheet').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('on')); }
+let archArm = false;
+function closeSheet(){ resetArm = false; archArm = false; artScroll = null; sheetT = null; $('sheet').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('on')); }
 
 // ================= v16 介面：旗下藝人、事務所內 =================
 let arArm = null, artScroll = null; const arepOpen = new Set();   // 解約要按兩次
@@ -5997,6 +5998,7 @@ function renderSheet(){
     html += `<div class="sec">存檔</div><div class="grp">
       <div class="li col"><div class="row"><div class="tx"><b>雲端存檔</b><small>${cloud.state === 'ok' || cloud.state === 'connecting' ? '存在你的帳號底下，換裝置也找得回來。約每 45 秒、離開畫面時自動存' : '這個畫面不能用雲端存檔（可能沒登入，或在不支援的地方開啟）'}</small></div>${cloud.state === 'ok' ? '<button class="btn sm2" id="bSaveNow">立即存</button>' : ''}</div>
         ${newer ? `<div class="dg r" style="font-size:12.5px;margin-top:8px">雲端有比較新的進度：第 ${cr.gen} 代「${esc(cr.name || '')}」，${ym(cr.day || 0)}</div><button class="btn pri" id="bCloud" style="width:100%;margin-top:6px">載入雲端存檔（會覆蓋這台裝置的進度）</button>` : ''}</div>
+      ${(() => { let a = null; try { a = JSON.parse(localStorage.getItem(ARCH_KEY) || 'null'); } catch (e) {} return a && a.js ? `<div class="li col"><div class="tx"><b>清除前的進度</b><small>改版清除舊紀錄時先收起來的：第 ${a.gen || 1} 代「${esc(a.name)}」，${ym(a.day || 0)}。找回會取代現在這一局（現在這一局會先放進備份）</small></div><button class="btn${archArm ? ' warn' : ''}" id="bArch" style="width:100%;margin-top:8px">${archArm ? '再按一次確定找回' : '找回清除前的進度'}</button></div>` : ''; })()}
       <div class="li col"><div class="tx"><b>存檔搬家</b><small id="saveMsg">匯出會得到一串文字，到別的裝置按「匯入」貼上即可</small></div>
         <div class="grid2" style="margin-top:8px"><button class="btn" id="bExp">匯出</button><button class="btn" id="bImpShow">匯入</button></div>
         <textarea id="saveTxt" rows="4" style="width:100%;margin-top:8px;background:#161b27;color:var(--text);border:1px solid #3a4359;border-radius:10px;padding:8px;font-size:12px;display:none" aria-label="存檔文字"></textarea>
@@ -6005,7 +6007,7 @@ function renderSheet(){
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">怎麼玩</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div></details></div>
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">信任與提示</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div></details></div></div>`;
     html += `<div class="sec" style="color:#ff9a9a">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
-    html += `<div class="stFoot">孤勇者 v17.23 · 只有你一個人在測試</div>`;
+    html += `<div class="stFoot">孤勇者 v17.24 · 只有你一個人在測試</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
@@ -6038,6 +6040,7 @@ function renderSheet(){
   B.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const k = b.dataset.up, l = S.office[k] || 0, c = officeCost(k, l); if (S.gold < c || l >= officeMax()) return; S.gold -= c; finAdd('office', -c); S.office[k] = l + 1; toast(`${OFFICE[k].n}升到 Lv${l + 1}`); renderAll(); });
   const cr = $('cutR'); if (cr) cr.oninput = () => { const old = S.cut; S.cut = +cr.value; if (S.cut > old) adj('trust', -(S.cut - old) * .4); else adj('trust', (old - S.cut) * .3); renderTop(); cr.parentElement.previousElementSibling.innerHTML = `抽成比例：<b style="color:var(--gold)">${S.cut}%</b>`; };
   if ($('bCloud')) $('bCloud').onclick = () => cloudRestore(cloud.remote.js);
+  if ($('bArch')) $('bArch').onclick = () => { if (!archArm) { archArm = true; renderSheet(); return; } archRestore(); };
   const ta = $('saveTxt');
   if ($('bExp')) $('bExp').onclick = () => { save(); ta.style.display = ''; $('saveBtns').style.display = ''; $('bImp').style.display = 'none'; $('bCopy').style.display = '';
     try { ta.value = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); $('saveMsg').textContent = '這串文字就是你的存檔，按「複製」或自己全選複製'; } catch (e) { $('saveMsg').textContent = '匯出失敗'; } ta.select(); };
@@ -6192,7 +6195,9 @@ async function cloudInit(){
     const snap = await cloud.ref.get();
     const r = snap.exists ? snap.data() : null;
     cloud.state = 'ok';
-    if (r && r.js && wipeNow) { cloud.remote = null; toast('舊紀錄已全部清除，重新開始'); }
+    if (r && r.js && (r.at || 0) < WIPE_AT) {   // v17.24：清除日以前的雲端存檔才算舊紀錄，先收進「清除前的進度」再蓋
+      archSet(r.js, 'cloud'); try { await db.doc('data/users/' + id + '/save_arch').set({ ...r, archivedAt:Date.now(), wipe:WIPE_ID }); } catch (e) {}
+      cloud.remote = null; if (wipeNow) toast('舊紀錄已清除，重新開始（設定 › 存檔可以找回）'); }
     else if (r && r.js) {
       cloud.remote = r; cloud.at = r.at || 0;
       const fresh = S.day <= 2 && S.gen === 1 && !S.wall.length;   // 這台裝置是全新開局
@@ -6278,14 +6283,29 @@ function catchUp(){
 }
 
 // ================= 開始 =================
-// 一次性清除：照小方的要求，把舊紀錄全部刪掉（每台裝置第一次打開這版時執行一次）
-const WIPE_ID = 'w20261123';
+// 一次性清除：照小方的要求，把舊紀錄全部清掉（每台裝置第一次打開這版時執行一次）
+// v17.24（B4）清除前先把進度收進「清除前的進度」（設定 › 存檔可以找回），顯示偏好不清；
+//   只算 WIPE_AT 以前的存檔：全新裝置、或清除之後才存的雲端進度都不會被當成舊紀錄丟掉。
+//   ⚠ 要再清一次：WIPE_ID 和 WIPE_AT 一起改，WIPE_AT 設成「這個時間以前的存檔才清」。
+const WIPE_ID = 'w20261123', WIPE_AT = Date.parse('2026-11-23T00:00:00+08:00');
+const ARCH_KEY = 'guyongzhe_arch';
 let wipeNow = false;
+const archSet = (js, from) => { try { const o = parseSave(js); if (!o) return; const a = JSON.parse(localStorage.getItem(ARCH_KEY) || 'null');
+  if (a && a.id === WIPE_ID && (a.lastSave || 0) >= (o.lastSave || 0)) return;   // 已經收過比較新的就不蓋
+  localStorage.setItem(ARCH_KEY, JSON.stringify({ id:WIPE_ID, at:Date.now(), from, lastSave:o.lastSave || 0, gen:o.gen, day:o.day, name:(o.hero && o.hero.name) || '', js })); } catch (e) {} };
 function wipeOnce(){
   try { if (localStorage.getItem('guyongzhe_wipe') === WIPE_ID) return;
-    Object.keys(localStorage).filter(k => k.startsWith('guyongzhe_')).forEach(k => localStorage.removeItem(k));
-    localStorage.setItem('guyongzhe_wipe', WIPE_ID); wipeNow = true; } catch (e) {}
+    let old = localStorage.getItem(SAVE_KEY); if (!parseSave(old || '')) { try { old = (JSON.parse(localStorage.getItem(BK_KEY) || 'null') || {}).js || null; } catch (e) { old = null; } }
+    const o = old && parseSave(old);
+    if (o && (o.lastSave || 0) < WIPE_AT) { archSet(old, 'local');
+      Object.keys(localStorage).filter(k => k.startsWith('guyongzhe_') && ![ARCH_KEY, PREF_KEY].includes(k)).forEach(k => localStorage.removeItem(k));
+      wipeNow = true; }
+    localStorage.setItem('guyongzhe_wipe', WIPE_ID); } catch (e) {}
 }
+function archRestore(){ let a = null; try { a = JSON.parse(localStorage.getItem(ARCH_KEY) || 'null'); } catch (e) {} if (!a || !parseSave(a.js)) { toast('找不到清除前的進度'); return; }
+  try { localStorage.setItem(BK_KEY, JSON.stringify({ day:S.day, gen:S.gen, at:Date.now(), js:JSON.stringify(S) })); } catch (e) {}   // 現在這一局先放進備份
+  noSave = true; try { localStorage.setItem(SAVE_KEY, JSON.stringify(parseSave(a.js))); localStorage.setItem('guyongzhe_reset', '1'); } catch (e) {}
+  toast('已找回清除前的進度'); setTimeout(() => location.reload(), 600); }
 function boot(){
   wipeOnce();
   const s = load();
