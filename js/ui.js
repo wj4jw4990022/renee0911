@@ -864,7 +864,7 @@ function drawArtists(now, view, hm){
     else { const Z = ZONES[a.mz]; if (!Z || Z.map !== view) return; const [x0, y0, x1, y1] = Z.rect; x = x0 + (x1 - x0) * (.3 + .15 * i) + Math.sin(now / 1300 + i) * 10; y = (y0 + y1) / 2 + Math.cos(now / 1600 + i) * 8;
       const ph = (now / 5200 + i * .37) % 1; mon = { x:x + 15, k:ph > .82 ? 'down' : ph % .2 < .05 ? 'hurt' : 'idle', a:ph > .82 ? 1 - (ph - .82) / .18 : 1 }; atk = ph < .82 && Math.floor(now / 380 + i) % 3 === 0; }   // 打怪動作
     x = Math.round(x); y = Math.round(y);
-    if (mon) { ctx.globalAlpha = Math.max(0, mon.a); drawMonster(ctx, zoneMon(a.mz), Math.round(mon.x), y + 4, mon.k, Math.floor(now / 200) % 2, false, true); ctx.globalAlpha = 1; }
+    if (mon) { ctx.globalAlpha = Math.max(0, mon.a); drawMonster(ctx, zoneMon(a.mz), Math.round(mon.x), y + 4, mon.k, Math.floor(now / 200) % 2, false, true, mon.seed ??= Math.random()); ctx.globalAlpha = 1; }
     ctx.globalAlpha = .95; if (atk) drawSprite(ctx, a, x, y, lying, now, { atk:true, moving:false, left:false }); else drawHero(ctx, x, y, lying, now, a); ctx.globalAlpha = 1;
     if (cam.z > 1.4) nameTag(ctx, a.name, x, y - (lying ? 12 : KEN_TAG), 'artist');
   });
@@ -1159,7 +1159,7 @@ function renderSheet(){
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">怎麼玩</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div></details></div>
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">信任與提示</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div></details></div></div>`;
     html += `<div class="sec" style="color:#b03a30">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
-    html += `<div class="stFoot">孤勇者 v17.32 · 只有你一個人在測試</div>`;
+    html += `<div class="stFoot">孤勇者 v17.33 · 只有你一個人在測試</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });

@@ -77,14 +77,14 @@ const $ = id => document.getElementById(id);
 
 // ================= 資料 =================
 const zD = z => ZONES[z].D * (S && S.surge > S.day ? 1.5 : 1) * (S && S.weather === 'storm' ? 1.25 : S && S.weather === 'snow' ? 1.1 : 1);
-const ZONES = [
-  { n:'草原', D:8,   exp:4,  gold:6,  mon:'史萊姆', rect:[150, 92, 360, 212],  c:'#5c8f47', mc:'#7bd17a', map:'out' },
-  { n:'森林', D:45,  exp:14, gold:16, mon:'野狼',   rect:[0, 0, 150, 212],     c:'#2f5a2c', mc:'#9aa0ad', map:'out' },
-  { n:'荒地', D:120, exp:40, gold:42, mon:'骷髏兵', rect:[150, 0, 360, 92],    c:'#8a7a58', mc:'#e8e2d0', map:'out' },
-  { n:'礦坑',   D:220,  exp:72,  gold:75,  mon:'岩石魔像', rect:[0, 0, 140, 125],    c:'#5a524a', mc:'#a89a88', map:'far' },
-  { n:'海岸',   D:380,  exp:125, gold:125, mon:'巨鉗蟹',   rect:[0, 145, 140, 270],  c:'#c9b27a', mc:'#e0624a', map:'far' },
+const ZONES = [   // v17.33：mon＝各區代表怪（有菁英版的那隻強敵，和 design/monsters 的圖一致）
+  { n:'草原', D:8,   exp:4,  gold:6,  mon:'野豬', rect:[150, 92, 360, 212],  c:'#5c8f47', mc:'#7bd17a', map:'out' },
+  { n:'森林', D:45,  exp:14, gold:16, mon:'哥布林', rect:[0, 0, 150, 212],     c:'#2f5a2c', mc:'#9aa0ad', map:'out' },
+  { n:'荒地', D:120, exp:40, gold:42, mon:'木乃伊', rect:[150, 0, 360, 92],    c:'#8a7a58', mc:'#e8e2d0', map:'out' },
+  { n:'礦坑',   D:220,  exp:72,  gold:75,  mon:'骷髏礦工', rect:[0, 0, 140, 125],    c:'#5a524a', mc:'#a89a88', map:'far' },
+  { n:'海岸',   D:380,  exp:125, gold:125, mon:'魚人',   rect:[0, 145, 140, 270],  c:'#c9b27a', mc:'#e0624a', map:'far' },
   { n:'雪山',   D:520,  exp:175, gold:170, mon:'雪怪',     rect:[220, 0, 360, 125],  c:'#dfe7ee', mc:'#f8fbff', map:'far' },
-  { n:'魔王城', D:800,  exp:265, gold:255, mon:'惡魔騎士', rect:[220, 145, 360, 270], c:'#3a2a4a', mc:'#c06cff', map:'far' },
+  { n:'魔王城', D:800,  exp:265, gold:255, mon:'黑騎士', rect:[220, 145, 360, 270], c:'#3a2a4a', mc:'#c06cff', map:'far' },
 ];
 const ZGATE = [null, null, null,
   { t:'勇者 Lv12，或事務所升格「新銳經紀人」', ok:h => h.lv >= 12 || rankOf() >= 2 },
@@ -136,7 +136,7 @@ const POT_PRICE = 30, POT_MAX = 5;
 // v2：寶物（只有危險的地方比較容易撿到），最多帶 3 個，死後傳一個給下一代
 const TREASURES = {
   clover:  { n:'四葉幸運草',   z:0, d:'好事更常發生，瀕死時更容易有人救', luck:.15 },
-  wolfking:{ n:'狼王之牙',     z:1, d:'戰力 +12%', pw:.12 },
+  wolfking:{ n:'哥布林王的短刀', z:1, d:'戰力 +12%', pw:.12 },
   tear:    { n:'妖精之淚',     z:1, d:'壓力累積 -30%', calm:.3 },
   amulet:  { n:'古代護符',     z:2, d:'受到的傷害 -15%', guard:.15 },
   crown:   { n:'骷髏王冠碎片', z:2, d:'打怪的錢 +30%', gold:.3 },

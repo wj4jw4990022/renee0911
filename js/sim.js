@@ -761,8 +761,8 @@ function askJob(){ const h = H(); const c = CLS[h.cls];
 function refreshOffers(){
   const h = H(); S.offers = []; S.offerDay = S.day;
   const zs = [bestSafeZone(), Math.min(topZ(), bestSafeZone() + 1), Math.min(topZ(), bestSafeZone() + ri(0, 2))];
-  const NAMES = [['清掉田邊的史萊姆','護送商人過草原','幫農夫找走失的牛'], ['獵殺森林狼群','採集森林深處的草藥','救出迷路的小孩'], ['清除荒地的骷髏兵','調查荒地遺跡','奪回被搶的貨物'],
-    ['清理礦坑裡的魔像','救出受困的礦工','護送礦石車'], ['驅逐海岸的巨鉗蟹','找回沉船的貨物','護送漁村的祭典'], ['討伐雪山的雪怪','護送翻山的商隊','尋找冰原上的遇難者'], ['潛入魔王城偵察','擊退魔王城的惡魔騎士','奪回被搶走的聖物']];
+  const NAMES = [['清掉田邊的史萊姆','護送商人過草原','幫農夫找走失的牛'], ['掃蕩森林的哥布林','採集森林深處的草藥','救出迷路的小孩'], ['清除荒地的木乃伊','調查荒地遺跡','奪回被搶的貨物'],
+    ['清理礦坑裡的骷髏礦工','救出受困的礦工','護送礦石車'], ['驅逐海岸的大螃蟹','找回沉船的貨物','護送漁村的祭典'], ['討伐雪山的雪怪','護送翻山的商隊','尋找冰原上的遇難者'], ['潛入魔王城偵察','擊退魔王城的黑騎士','奪回被搶走的聖物']];
   for (let j = 0; j < (S.office.intel || 0); j++) zs.push(Math.min(topZ(), bestSafeZone() + ri(0, 2)));
   if (isFr('guild')) zs.push(Math.min(topZ(), bestSafeZone() + ri(0, 1)));
   const rk = (1 + rkx() * .25) * (isFr('guild') ? 1.1 : 1) * (S.priceWar > S.day ? .8 : 1);

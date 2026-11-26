@@ -240,7 +240,7 @@ function drawMons(now, view){
   mons.forEach(m => { if (ZONES[m.z].map !== view || !zoneOpen(m.z) || (SCN && !SCN.off && SCN.z === m.z)) return; const type = zoneMon(m.z);
     let kind = 'idle', f = Math.floor(now / 240 + m.ph) % 4, left = m.ph > 3;
     if (m === tg && h.fighting) { left = h.x < m.x; if (h.flash > .55) { kind = 'hurt'; f = Math.floor(now / 120) % 2; } else if (h.flash > 0) { kind = 'attack'; f = Math.min(2, Math.floor((.55 - h.flash) / .18)); } }
-    drawMonster(ctx, type, m.x, m.y + 4, kind, f, false, left); });
+    drawMonster(ctx, type, m.x, m.y + 4, kind, f, false, left, m.ph); });
 }
 // 地圖上的東西：寶箱、精英怪、迷路的旅人、商隊
 function drawThings(now, view){
@@ -779,195 +779,41 @@ function drawSprite(c, h, x, y, lying, now, opt){
 }
 
 function drawHero(c, x, y, lying, now, hh){ drawSprite(c, hh || H(), x, y, lying, now); }
-// ================= 怪物造型（粗描邊平塗，越強越大；前期可愛、後期有威嚴） =================
-// kind：idle / attack / hurt / down；f：格數；elite：菁英
-const MON_OUT = '#262230';
-const MON_DEF = {
-  slime: { n:'史萊姆',   W:18, H:14, frames:{ idle:4, attack:3, hurt:2 } },
-  wolf:  { n:'野狼',     W:28, H:22, frames:{ idle:4, attack:3, hurt:2 } },
-  skel:  { n:'骷髏兵',   W:24, H:30, frames:{ idle:4, attack:3, hurt:2 } },
-  golem: { n:'岩石魔像', W:34, H:36, frames:{ idle:4, attack:3, hurt:2 } },
-  crab:  { n:'巨鉗蟹',   W:32, H:22, frames:{ idle:4, attack:3, hurt:2 } },
-  yeti:  { n:'雪怪',     W:34, H:40, frames:{ idle:4, attack:3, hurt:2 } },
-  dknight:{ n:'惡魔騎士', W:34, H:42, frames:{ idle:4, attack:3, hurt:2 } },
-  boneking:{ n:'骸骨魔王', W:46, H:52, frames:{ idle:4, attack:3, hurt:2 } },
-  abyss: { n:'深淵魔王', W:62, H:60, frames:{ idle:4, attack:3, hurt:2 } },
-};
-const MON_BY_NAME = { '史萊姆':'slime', '野狼':'wolf', '骷髏兵':'skel', '岩石魔像':'golem', '巨鉗蟹':'crab', '雪怪':'yeti', '惡魔騎士':'dknight', '骸骨魔王':'boneking', '深淵魔王':'abyss' };
 const monMix = (a, b, t) => { const p = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16)); const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b); return '#' + [r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t].map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join(''); };
-function monGrid(type, kind = 'idle', f = 0, elite = false){
-  const D = MON_DEF[type], W = D.W, H = D.H, G = Array.from({ length:H }, () => Array(W).fill(null));
-  const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < W && y >= 0 && y < H && c !== undefined) G[y][x] = c; };
-  const rect = (x0, y0, x1, y1, c) => { for (let y = Math.round(y0); y <= Math.round(y1); y++) for (let x = Math.round(x0); x <= Math.round(x1); x++) set(x, y, c); };
-  const ell = (cx, cy, rx, ry, c) => { for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) { const dx = (x - cx) / rx, dy = (y - cy) / ry; if (dx * dx + dy * dy <= 1) set(x, y, c); } };
-  const line = (x0, y0, x1, y1, c, th = 1) => { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1); for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n; rect(x - (th - 1) / 2, y - (th - 1) / 2, x + (th - 1) / 2, y + (th - 1) / 2, c); } };
-  const ball = (cx, cy, rx, ry, c, sh = .22, hl = true) => { const cS = monMix(c, '#1a1420', sh), cL = monMix(c, '#ffffff', .35);
-    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) { const dx = (x - cx) / rx, dy = (y - cy) / ry; if (dx * dx + dy * dy <= 1) set(x, y, dx * .55 + dy * .85 > .62 ? cS : c); }
-    if (hl) { set(cx - rx * .5, cy - ry * .55, cL); set(cx - rx * .5 + 1, cy - ry * .55, cL); set(cx - rx * .5, cy - ry * .55 + 1, cL); } };
-  const orb = (cx, cy, rx, ry, c, sh = .22) => { const cS = monMix(c, '#1a1420', sh), cL = monMix(c, '#ffffff', .4);
-    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) { const dx = (x - cx) / rx, dy = (y - cy) / ry, d = dx * dx + dy * dy; if (d <= 1) set(x, y, d > .62 && dx * .5 + dy * .85 > .35 ? cS : c); }
-    set(cx - rx * .55, cy - ry * .55, cL); set(cx - rx * .55 + 1, cy - ry * .55, cL); set(cx - rx * .55, cy - ry * .55 + 1, cL); };
-  const poly = (pts, c) => { const ys = pts.map(p => p[1]), y0 = Math.floor(Math.min(...ys)), y1 = Math.ceil(Math.max(...ys)); for (let y = y0; y <= y1; y++) { const xs = []; for (let i = 0; i < pts.length; i++) { const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length]; if ((ay <= y && by > y) || (by <= y && ay > y)) xs.push(ax + (y - ay) * (bx - ax) / (by - ay)); } xs.sort((a, b) => a - b); for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.ceil(xs[k]); x <= Math.floor(xs[k + 1]); x++) set(x, y, c); } };
-  const plate = (pts, c, sh = .25) => { poly(pts, c); const xs = pts.map(p => p[0]), mx = (Math.min(...xs) + Math.max(...xs)) / 2; poly(pts.map(([x, y]) => [Math.max(x, mx + (Math.max(...xs) - mx) * .35), y]), monMix(c, '#1a1420', sh)); line(pts[0][0], pts[0][1], pts[1][0], pts[1][1], monMix(c, '#ffffff', .35)); };
-  const bigEye = (x, y, look = 0, c = INK) => { rect(x, y, x + 2, y + 2, '#ffffff'); rect(x + 1 + look, y + 1, x + 1 + look, y + 2, c); };
-  const INK = '#262230', bob = kind === 'idle' ? [0, 0, 1, 1][f % 4] : 0, atk = kind === 'attack' ? f % 3 : -1, hurt = kind === 'hurt';
-  const dx = hurt ? -2 : atk === 1 ? 2 : 0;
-  const eyes = (x, y, gap, c = INK, big) => { rect(x + dx, y, x + dx, y + (big ? 1 : 1), c); rect(x + gap + dx, y, x + gap + dx, y + 1, c); };
-  ({
-    slime:() => { const sq = kind === 'idle' ? [0, 1, 1, 0][f % 4] : atk === 0 ? 2 : atk === 1 ? -2 : 0, rx = 8 + sq * .5, ry = 6 - sq * .5;
-      ell(9 + dx, 13 - ry + .5, rx, ry, '#7bd17a'); rect(2 + dx, 12, 16 + dx, 13, '#7bd17a'); ell(12 + dx, 10, 3, 2, '#64b864');
-      set(5 + dx, 13 - ry * 1.4, '#c8f4c0'); set(6 + dx, 13 - ry * 1.6, '#c8f4c0');
-      if (hurt) { set(6 + dx, 8, INK); set(7 + dx, 9, INK); set(6 + dx, 10, INK); set(11 + dx, 8, INK); set(10 + dx, 9, INK); set(11 + dx, 10, INK); }
-      else { eyes(6, 8 + Math.max(0, sq), 5); if (atk === 1) rect(8 + dx, 11, 9 + dx, 11, INK); else { set(8 + dx, 11, INK); set(9 + dx, 11, INK); } } },
-    wolf:() => { const b = '#9aa6ba', bL = '#e8ecf2', y0 = bob, lunge = atk === 1 ? 3 : atk === 0 ? -1 : 0, X = dx + lunge;
-      ball(4 + X, 10 + y0, 3.5, 3, b, .2, false); set(1 + X, 8 + y0, bL); set(2 + X, 7 + y0, bL);   // 蓬蓬的尾巴
-      ball(12 + X, 14 + y0, 8, 5.5, b); ball(12 + X, 16 + y0, 5.5, 2.6, bL, .1, false);   // 圓身體＋白肚子
-      [[7, 0], [10, 1], [14, 0], [17, 1]].forEach(([x, k]) => rect(x + X, 18 + y0, x + 2 + X, 20 + (kind === 'idle' ? 0 : k), monMix(b, '#1a1420', .25)));
-      ball(20 + X, 9 + y0, 6, 5.5, b);   // 大頭
-      poly([[15 + X, 6 + y0], [16 + X, 0 + y0], [19 + X, 4 + y0]], b); poly([[21 + X, 4 + y0], [24 + X, 0 + y0], [25 + X, 6 + y0]], b);   // 耳朵
-      set(16 + X, 3 + y0, '#f0a0b0'); set(17 + X, 4 + y0, '#f0a0b0'); set(23 + X, 3 + y0, '#f0a0b0'); set(23 + X, 4 + y0, '#f0a0b0');
-      ball(23 + X, 12 + y0, 3.6, 2.4, bL, .08, false); rect(25 + X, 10 + y0, 26 + X, 11 + y0, INK);   // 白色口鼻＋鼻子
-      if (hurt) { set(17 + X, 8 + y0, INK); set(18 + X, 9 + y0, INK); set(17 + X, 10 + y0, INK); set(21 + X, 8 + y0, INK); set(20 + X, 9 + y0, INK); set(21 + X, 10 + y0, INK); }
-      else { rect(18 + X, 8 + y0, 18 + X, 9 + y0, INK); rect(21 + X, 8 + y0, 21 + X, 9 + y0, INK); set(18 + X, 8 + y0, INK); }
-      if (atk === 1) { rect(21 + X, 14 + y0, 26 + X, 15 + y0, '#c84a5a'); set(22 + X, 14 + y0, '#ffffff'); set(25 + X, 14 + y0, '#ffffff'); }
-      else { set(22 + X, 14 + y0, INK); set(23 + X, 15 + y0, INK); set(24 + X, 14 + y0, INK); } },
-    skel:() => { const bone = '#f4eee0', boneS = '#cfc6b0', y0 = bob, X = dx + (atk === 1 ? 2 : 0), up = atk === 0 ? -6 : atk === 1 ? 3 : 0;
-      rect(8 + X, 24, 9 + X, 28, bone); rect(13 + X, 24, 14 + X, 28, bone); rect(7 + X, 29, 10 + X, 29, bone); rect(12 + X, 29, 15 + X, 29, bone);
-      plate([[7 + X, 22 + y0], [16 + X, 22 + y0], [14 + X, 24 + y0], [9 + X, 24 + y0]], bone);   // 骨盆
-      rect(11 + X, 15 + y0, 12 + X, 22 + y0, boneS);
-      [16, 18, 20].forEach((y, k) => { rect(7 + X + k, y + y0, 16 - k + X, y + y0, bone); set(7 + X + k, y + 1 + y0, boneS); set(16 - k + X, y + 1 + y0, boneS); });   // 直直的肋骨
-      rect(5 + X, 16 + y0, 6 + X, 21 + y0, bone); rect(4 + X, 22 + y0, 6 + X, 23 + y0, bone);
-      const hx = 18 + X, hy = 19 + y0 + up * .5; line(16 + X, 16 + y0, hx, hy, bone, 2); rect(hx - 1, hy - 1, hx + 1, hy + 1, bone);
-      line(hx, hy, hx + 3, hy - 8 + up * .5, '#e8dcc4', 3); rect(hx + 2, hy - 11 + up * .5, hx + 5, hy - 9 + up * .5, bone);
-      // 頭骨：平頂、突出的顴骨、方下巴
-      plate([[5 + X, 3 + y0], [18 + X, 3 + y0], [19 + X, 10 + y0], [17 + X, 13 + y0], [6 + X, 13 + y0], [4 + X, 10 + y0]], bone, .15);
-      rect(7 + X, 1 + y0, 16 + X, 2 + y0, bone);
-      plate([[8 + X, 13 + y0], [15 + X, 13 + y0], [15 + X, 15 + y0], [8 + X, 15 + y0]], bone, .15); [9, 11, 13].forEach(x => rect(x + X, 14 + y0, x + X, 15 + y0, INK));
-      if (hurt) { [[6, 6], [7, 7], [8, 8], [8, 6], [6, 8]].forEach(([x, y]) => set(x + X, y + y0, INK)); [[15, 6], [16, 7], [17, 8], [17, 6], [15, 8]].forEach(([x, y]) => set(x + X, y + y0, INK)); }
-      else { poly([[6 + X, 6 + y0], [10 + X, 6 + y0], [10 + X, 8 + y0], [8 + X, 10 + y0], [6 + X, 9 + y0]], INK); poly([[13 + X, 6 + y0], [17 + X, 6 + y0], [17 + X, 9 + y0], [15 + X, 10 + y0], [13 + X, 8 + y0]], INK); set(7 + X, 7 + y0, '#ffffff'); set(14 + X, 7 + y0, '#ffffff'); }
-      set(11 + X, 11 + y0, INK); set(12 + X, 11 + y0, INK); },
-    golem:() => { const r = '#9a8e80', y0 = bob, up = atk === 0 ? -7 : atk === 1 ? 3 : 0, moss = '#78b050';
-      rect(10 + dx, 30, 14 + dx, 35, monMix(r, '#1a1420', .25)); rect(20 + dx, 30, 24 + dx, 35, monMix(r, '#1a1420', .25));   // 腳
-      ball(17 + dx, 20 + y0, 12, 11, r);   // 圓石身體
-      line(10 + dx, 16 + y0, 13 + dx, 19 + y0, monMix(r, '#1a1420', .3)); line(22 + dx, 24 + y0, 25 + dx, 22 + y0, monMix(r, '#1a1420', .3));   // 裂紋
-      ball(17 + dx, 7 + y0, 7, 6, r);   // 頭
-      ball(15 + dx, 2 + y0, 4, 1.8, moss, .2, false); set(13 + dx, 1 + y0, '#a8d878'); set(18 + dx, 1 + y0, moss);   // 頭頂的苔
-      if (hurt) { rect(13 + dx, 7 + y0, 15 + dx, 7 + y0, INK); rect(19 + dx, 7 + y0, 21 + dx, 7 + y0, INK); }
-      else { rect(13 + dx, 6 + y0, 15 + dx, 8 + y0, '#ffd84a'); rect(19 + dx, 6 + y0, 21 + dx, 8 + y0, '#ffd84a'); set(13 + dx, 6 + y0, '#fff6c0'); set(19 + dx, 6 + y0, '#fff6c0'); }
-      rect(16 + dx, 10 + y0, 18 + dx, 10 + y0, INK);
-      ball(4 + dx, 21 + y0 + up, 4, 4.5, r); ball(30 + dx, 21 + y0 + up, 4, 4.5, r);   // 大拳頭
-      set(25 + dx, 14 + y0, moss); set(26 + dx, 14 + y0, moss); set(9 + dx, 26 + y0, moss); },
-    crab:() => { const c = '#e0643a', cD = '#b84a2a', cL = '#f4906a', y0 = bob, open = atk === 1 ? 2 : atk === 0 ? 0 : 1;
-      [6, 9, 22, 25].forEach((x, i) => line(x + dx, 15 + y0, x + dx + (i < 2 ? -3 : 3), 21, cD));
-      ell(16 + dx, 14 + y0, 10, 6, c); ell(16 + dx, 16 + y0, 8, 3, cL); rect(8 + dx, 11 + y0, 24 + dx, 11 + y0, cD);
-      line(12 + dx, 9 + y0, 12 + dx, 5 + y0, cD); line(20 + dx, 9 + y0, 20 + dx, 5 + y0, cD);
-      rect(11 + dx, 3 + y0, 13 + dx, 5 + y0, '#ffffff'); rect(19 + dx, 3 + y0, 21 + dx, 5 + y0, '#ffffff'); set(12 + dx, 4 + y0, INK); set(20 + dx, 4 + y0, INK);
-      if (hurt) { rect(11 + dx, 4 + y0, 13 + dx, 4 + y0, INK); rect(19 + dx, 4 + y0, 21 + dx, 4 + y0, INK); }
-      const cy = atk === 0 ? 3 : 6;
-      [[3, -1], [29, 1]].forEach(([x, s]) => { ell(x + dx, cy + 4 + y0, 3, 3, c); rect(x + dx - 2, cy - open + y0, x + dx - (s < 0 ? 0 : -2) , cy + 1 - open + y0, c); rect(x + dx - (s < 0 ? -2 : 2) , cy + 2 + y0, x + dx + (s < 0 ? 2 : 0), cy + 3 + y0, cL); line(x + dx, cy + 7 + y0, x + dx + (s < 0 ? 4 : -4), 12 + y0, cD, 2); }); },
-    yeti:() => { const w = '#f4f7fb', face = '#9cc4ec', y0 = bob, up = atk === 0 ? -8 : atk === 1 ? 3 : 0;
-      rect(10 + dx, 33, 15 + dx, 39, '#d8e0ea'); rect(19 + dx, 33, 24 + dx, 39, '#d8e0ea');
-      ball(17 + dx, 23 + y0, 13, 12, w, .16);   // 毛茸茸的身體
-      for (let x = 6; x <= 28; x += 3) set(x + dx, 34 + y0, w);   // 毛邊
-      ball(17 + dx, 10 + y0, 9, 8, w, .16);   // 頭
-      poly([[9 + dx, 6 + y0], [7 + dx, 0 + y0], [12 + dx, 4 + y0]], '#d8c8a0'); poly([[25 + dx, 6 + y0], [27 + dx, 0 + y0], [22 + dx, 4 + y0]], '#d8c8a0');   // 小角
-      ball(17 + dx, 12 + y0, 6.5, 5, face, .15, false);   // 藍色臉
-      if (hurt) { [[13, 10], [14, 11], [13, 12], [21, 10], [20, 11], [21, 12]].forEach(([x, y]) => set(x + dx, y + y0, INK)); }
-      else { bigEye(12 + dx, 9 + y0, 1); bigEye(19 + dx, 9 + y0, 0); line(11 + dx, 7 + y0, 14 + dx, 8 + y0, INK); line(23 + dx, 7 + y0, 20 + dx, 8 + y0, INK); }
-      rect(15 + dx, 15 + y0, 19 + dx, 15 + y0, INK); set(15 + dx, 16 + y0, '#ffffff'); set(19 + dx, 16 + y0, '#ffffff');   // 嘴和小獠牙
-      ball(4 + dx, 21 + y0 + up, 4, 7, w, .16); ball(30 + dx, 21 + y0 + up, 4, 7, w, .16);
-      rect(2 + dx, 27 + y0 + up, 6 + dx, 28 + y0 + up, face); rect(28 + dx, 27 + y0 + up, 32 + dx, 28 + y0 + up, face); },
-    dknight:() => { const a = '#7a86a8', aS = '#525c7a', aL = '#b4bed8', y0 = bob, cape = '#c0384a', X = dx + (atk === 1 ? 2 : 0);
-      poly([[8 + X, 17 + y0], [26 + X, 17 + y0], [30 + X, 37], [4 + X, 37]], monMix(cape, '#1a1420', .35)); [8, 14, 20, 26].forEach(x => set(x + X, 37, null));
-      rect(11 + X, 31, 14 + X, 38, aS); rect(19 + X, 31, 22 + X, 38, aS); rect(10 + X, 39, 15 + X, 41, '#3a3a52'); rect(18 + X, 39, 23 + X, 41, '#3a3a52');
-      plate([[9 + X, 18 + y0], [24 + X, 18 + y0], [22 + X, 30 + y0], [11 + X, 30 + y0]], a);   // 倒梯形胸甲
-      line(16.5 + X, 19 + y0, 16.5 + X, 29 + y0, aS); rect(15 + X, 22 + y0, 18 + X, 24 + y0, '#ff4a5a'); set(15 + X, 22 + y0, '#ffc0c8');
-      rect(10 + X, 30 + y0, 23 + X, 31 + y0, '#4a3626'); rect(15 + X, 30 + y0, 18 + X, 31 + y0, '#f2c14e');
-      plate([[4 + X, 17 + y0], [11 + X, 16 + y0], [11 + X, 21 + y0], [5 + X, 22 + y0]], aL); plate([[22 + X, 16 + y0], [29 + X, 17 + y0], [28 + X, 22 + y0], [22 + X, 21 + y0]], a);   // 方形護肩
-      // 頭盔：方正、往下收的尖下緣
-      plate([[9 + X, 3 + y0], [24 + X, 3 + y0], [24 + X, 13 + y0], [20 + X, 16 + y0], [13 + X, 16 + y0], [9 + X, 13 + y0]], a);
-      rect(15 + X, 0 + y0, 18 + X, 2 + y0, cape); rect(16 + X, -1 + y0, 17 + X, -1 + y0, cape);
-      poly([[9 + X, 6 + y0], [3 + X, 1 + y0], [5 + X, 0 + y0], [10 + X, 4 + y0]], '#efe4c8'); poly([[24 + X, 6 + y0], [30 + X, 1 + y0], [28 + X, 0 + y0], [23 + X, 4 + y0]], '#efe4c8');
-      rect(10 + X, 8 + y0, 23 + X, 10 + y0, '#1e1a2a'); rect(15 + X, 10 + y0, 18 + X, 14 + y0, '#1e1a2a');
-      if (hurt) { rect(11 + X, 9 + y0, 14 + X, 9 + y0, '#ffffff'); rect(19 + X, 9 + y0, 22 + X, 9 + y0, '#ffffff'); }
-      else { rect(11 + X, 9 + y0, 14 + X, 9 + y0, '#ff4a4a'); rect(19 + X, 9 + y0, 22 + X, 9 + y0, '#ff4a4a'); set(11 + X, 9 + y0, '#ffd0d0'); set(19 + X, 9 + y0, '#ffd0d0'); }
-      const sw = atk === 0 ? -2.0 : atk === 1 ? .35 : -1.05, hx = 25 + X, hy = atk === 0 ? 18 : 27 + y0;
-      rect(hx - 2, hy - 2, hx + 2, hy + 2, aL);
-      const tx = hx + Math.cos(sw) * 17, ty = hy + Math.sin(sw) * 17;
-      line(hx + Math.cos(sw) * 2, hy + Math.sin(sw) * 2, tx, ty, '#d8deea', 3); line(hx + Math.cos(sw) * 3 - Math.sin(sw), hy + Math.sin(sw) * 3 - Math.cos(sw), tx - Math.sin(sw), ty - Math.cos(sw), '#ffffff');
-      line(hx - Math.sin(sw) * 4, hy + Math.cos(sw) * 4, hx + Math.sin(sw) * 4, hy - Math.cos(sw) * 4, '#f2c14e', 2); line(hx - Math.cos(sw) * 3, hy - Math.sin(sw) * 3, hx, hy, '#6a4a2a', 2); },
-    boneking:() => { const bone = '#f4eee0', boneS = '#cfc6b0', robe = '#6a4aa8', robeS = '#4e3486', gold = '#f2c14e', y0 = bob, up = atk === 0 ? -9 : atk === 1 ? 2 : 0;
-      poly([[11 + dx, 25 + y0], [31 + dx, 25 + y0], [38 + dx, 51], [4 + dx, 51]], robe); poly([[22 + dx, 25 + y0], [31 + dx, 25 + y0], [38 + dx, 51], [27 + dx, 51]], robeS);
-      rect(4 + dx, 49, 38 + dx, 51, gold); line(13 + dx, 27 + y0, 9 + dx, 49, gold); line(29 + dx, 27 + y0, 33 + dx, 49, gold);
-      poly([[16 + dx, 27 + y0], [26 + dx, 27 + y0], [24 + dx, 42], [18 + dx, 42]], '#2a2040');
-      rect(20.5 + dx, 27 + y0, 21.5 + dx, 41, boneS); [30, 33, 36, 39].forEach((y, k) => { rect(17 + dx + k * .5, y + y0, 25 - k * .5 + dx, y + y0, bone); });
-      poly([[6 + dx, 19 + y0], [14 + dx, 26 + y0], [28 + dx, 26 + y0], [36 + dx, 19 + y0], [33 + dx, 28 + y0], [9 + dx, 28 + y0]], robeS); line(6 + dx, 19 + y0, 14 + dx, 26 + y0, gold); line(36 + dx, 19 + y0, 28 + dx, 26 + y0, gold);   // 尖高領
-      // 頭骨：平頂、寬顴骨、往下收的方下巴
-      plate([[10 + dx, 3 + y0], [32 + dx, 3 + y0], [34 + dx, 13 + y0], [30 + dx, 20 + y0], [12 + dx, 20 + y0], [8 + dx, 13 + y0]], bone, .15);
-      plate([[14 + dx, 20 + y0], [28 + dx, 20 + y0], [27 + dx, 24 + y0], [15 + dx, 24 + y0]], bone, .15); rect(14 + dx, 20 + y0, 28 + dx, 20 + y0, boneS); [16, 19, 22, 25].forEach(x => rect(x + dx, 22 + y0, x + dx, 24 + y0, INK));
-      poly([[12 + dx, 10 + y0], [19 + dx, 10 + y0], [19 + dx, 13 + y0], [16 + dx, 17 + y0], [12 + dx, 15 + y0]], INK); poly([[23 + dx, 10 + y0], [30 + dx, 10 + y0], [30 + dx, 15 + y0], [26 + dx, 17 + y0], [23 + dx, 13 + y0]], INK);   // 稜角眼窩
-      if (!hurt) { rect(15 + dx, 12 + y0, 17 + dx, 14 + y0, '#ff6a3a'); rect(25 + dx, 12 + y0, 27 + dx, 14 + y0, '#ff6a3a'); set(15 + dx, 12 + y0, '#ffe0a0'); set(25 + dx, 12 + y0, '#ffe0a0'); }
-      else { set(16 + dx, 13 + y0, '#ffffff'); set(26 + dx, 13 + y0, '#ffffff'); }
-      poly([[20 + dx, 17 + y0], [22 + dx, 17 + y0], [21 + dx, 19 + y0]], INK);
-      poly([[10 + dx, 4 + y0], [11 + dx, -2 + y0], [15 + dx, 2 + y0], [21 + dx, -3 + y0], [27 + dx, 2 + y0], [31 + dx, -2 + y0], [32 + dx, 4 + y0]], gold); rect(10 + dx, 3 + y0, 32 + dx, 5 + y0, gold); rect(10 + dx, 5 + y0, 32 + dx, 5 + y0, '#c8962a');
-      poly([[20 + dx, 2 + y0], [21 + dx, 0 + y0], [22 + dx, 2 + y0], [21 + dx, 4 + y0]], '#e04a7a'); set(14 + dx, 4 + y0, '#4ab0e0'); set(28 + dx, 4 + y0, '#4ab0e0');
-      const sx = 40 + dx + (atk === 1 ? 2 : 0);
-      rect(sx, 14 + up + y0, sx + 1, 50, '#8a6ac8'); rect(sx + 1, 14 + up + y0, sx + 1, 50, '#6a4aa8');
-      poly([[sx + .5, 5 + up + y0], [sx + 4, 10 + up + y0], [sx + .5, 15 + up + y0], [sx - 3, 10 + up + y0]], '#b06aff'); set(sx - 1, 9 + up + y0, '#ffffff');   // 菱形水晶
-      line(31 + dx, 30 + y0, sx - 1, 32 + y0 + up / 2, robe, 3); rect(sx - 1, 31 + y0 + up / 2, sx + 2, 33 + y0 + up / 2, bone);
-      if (atk === 1) [[-3, -3], [4, -2], [0, -6], [-4, 2]].forEach(([a, b]) => set(sx + a, 10 + up + y0 + b, '#e0b0ff')); },
-    abyss:() => { const b = '#5a3e8e', bS = '#3e2a66', glow = '#ff5ae0', y0 = bob, wf = kind === 'idle' ? [0, 1, 2, 1][f % 4] : atk === 0 ? 3 : 0, wing = '#3a2a62', claw = '#efe4c8';
-      poly([[24 + dx, 22 + y0], [2 + dx, 4 + y0 - wf], [6 + dx, 18 + y0], [3 + dx, 28 + y0], [12 + dx, 26 + y0], [14 + dx, 34 + y0], [24 + dx, 30 + y0]], wing);
-      poly([[38 + dx, 22 + y0], [60 + dx, 4 + y0 - wf], [56 + dx, 18 + y0], [59 + dx, 28 + y0], [50 + dx, 26 + y0], [48 + dx, 34 + y0], [38 + dx, 30 + y0]], monMix(wing, '#1a1420', .2));
-      line(24 + dx, 22 + y0, 2 + dx, 4 + y0 - wf, '#7a5ab8', 2); line(38 + dx, 22 + y0, 60 + dx, 4 + y0 - wf, '#7a5ab8', 2);
-      line(40 + dx, 46, 52 + dx, 53, bS, 3); poly([[51 + dx, 50], [58 + dx, 53], [52 + dx, 57]], glow);
-      plate([[20 + dx, 45], [28 + dx, 45], [27 + dx, 56], [21 + dx, 56]], bS); plate([[34 + dx, 45], [42 + dx, 45], [41 + dx, 56], [35 + dx, 56]], bS);
-      [21, 24, 27].forEach(x => poly([[x + dx - 1, 57], [x + dx + 1, 57], [x + dx, 59]], claw)); [35, 38, 41].forEach(x => poly([[x + dx - 1, 57], [x + dx + 1, 57], [x + dx, 59]], claw));
-      // V 字形上身：寬肩窄腰
-      plate([[16 + dx, 26 + y0], [46 + dx, 26 + y0], [40 + dx, 38 + y0], [36 + dx, 48 + y0], [26 + dx, 48 + y0], [22 + dx, 38 + y0]], b);
-      poly([[26 + dx, 33 + y0], [36 + dx, 33 + y0], [34 + dx, 47 + y0], [28 + dx, 47 + y0]], '#7a5ab8'); [37, 41, 45].forEach(y => rect(27 + dx, y + y0, 35 + dx, y + y0, b));
-      poly([[31 + dx, 27 + y0], [34 + dx, 30 + y0], [31 + dx, 33 + y0], [28 + dx, 30 + y0]], glow); set(30 + dx, 29 + y0, '#ffffff');
-      const up = atk === 0 ? -8 : atk === 1 ? 4 : 0;
-      line(17 + dx, 28 + y0, 13 + dx, 38 + y0 + up, b, 5); line(45 + dx, 28 + y0, 49 + dx, 38 + y0 + up, bS, 5);
-      plate([[10 + dx, 38 + y0 + up], [16 + dx, 38 + y0 + up], [16 + dx, 42 + y0 + up], [10 + dx, 42 + y0 + up]], b); plate([[46 + dx, 38 + y0 + up], [52 + dx, 38 + y0 + up], [52 + dx, 42 + y0 + up], [46 + dx, 42 + y0 + up]], bS);
-      [11, 13, 15].forEach(x => poly([[x + dx - .5, 43 + y0 + up], [x + dx + .5, 43 + y0 + up], [x + dx, 46 + y0 + up]], claw)); [47, 49, 51].forEach(x => poly([[x + dx - .5, 43 + y0 + up], [x + dx + .5, 43 + y0 + up], [x + dx, 46 + y0 + up]], claw));
-      // 頭：倒三角、尖下巴
-      plate([[22 + dx, 8 + y0], [40 + dx, 8 + y0], [40 + dx, 18 + y0], [34 + dx, 25 + y0], [28 + dx, 25 + y0], [22 + dx, 18 + y0]], b);
-      poly([[23 + dx, 11 + y0], [16 + dx, 6 + y0], [14 + dx, 0 + y0], [19 + dx, 3 + y0], [25 + dx, 8 + y0]], claw); poly([[39 + dx, 11 + y0], [46 + dx, 6 + y0], [48 + dx, 0 + y0], [43 + dx, 3 + y0], [37 + dx, 8 + y0]], claw);
-      if (hurt) { rect(25 + dx, 14 + y0, 28 + dx, 14 + y0, '#ffffff'); rect(34 + dx, 14 + y0, 37 + dx, 14 + y0, '#ffffff'); }
-      else { poly([[24 + dx, 13 + y0], [29 + dx, 14 + y0], [28 + dx, 16 + y0], [25 + dx, 15 + y0]], glow); poly([[38 + dx, 13 + y0], [33 + dx, 14 + y0], [34 + dx, 16 + y0], [37 + dx, 15 + y0]], glow); set(26 + dx, 14 + y0, '#ffffff'); set(35 + dx, 14 + y0, '#ffffff'); line(23 + dx, 11 + y0, 29 + dx, 13 + y0, INK, 2); line(39 + dx, 11 + y0, 33 + dx, 13 + y0, INK, 2); }
-      rect(27 + dx, 19 + y0, 35 + dx, 20 + y0, INK); [28, 31, 34].forEach(x => set(x + dx, 20 + y0, '#ffffff'));
-      if (atk === 1) for (let i = 0; i < 5; i++) set(54 + dx - i * 2, 28 + i * 4, glow); },
-  })[type]();
-  // 菁英：顏色偏金，描邊改成金色光環，頭上一顆星
-  if (elite) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (G[y][x] && G[y][x] !== INK && G[y][x] !== '#ffffff') G[y][x] = monMix(G[y][x], '#e8a020', .28);
-  const O = G.map(r => r.slice()), ring = elite ? '#f2c14e' : MON_OUT;
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!G[y][x] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => G[y + b] && G[y + b][x + a])) O[y][x] = MON_OUT;
-  if (elite) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!O[y][x] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => O[y + b] && O[y + b][x + a] === MON_OUT)) O[y][x] = ring;
-  if (hurt) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (O[y][x] && O[y][x] !== MON_OUT && O[y][x] !== ring) O[y][x] = f % 2 ? '#ffffff' : monMix(O[y][x], '#ff4a4a', .45);
-  if (kind === 'down') { const R = Array.from({ length:H }, () => Array(W).fill(null)); const sq = Math.max(1, Math.round(H * .45)); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (O[y][x]) { const ny = H - 1 - Math.floor((H - 1 - y) * sq / H); R[ny][x] = monMix(O[y][x], '#262230', .35); } return R; }
-  return O;
-}
-
-// 怪物快取＋在地圖上畫（像素對齊，和勇者同一個比例，腳底對齊 y）
+// ================= v17.33：怪物換成 design/monsters 的定案圖（ART.mon，16×16，魔王 24×24，和勇者同比例 1 格＝1 世界單位） =================
+// 每區一個「族」z0～z6：雜魚 a、c，強敵 b、d，菁英 e（強敵 b 的菁英版）。同一族裡每隻怪用 seed 固定挑一種
+// 圖本身不動，動作用程式做：待機上下彈、攻擊往前衝、受傷閃白／泛紅、倒下壓扁變暗
+const zoneMon = z => 'z' + Math.max(0, Math.min(6, z));
+const MON_OUT = '#3f2631';
+function monKey(type, seed, elite){ if (!/^z\d$/.test(type)) return ART.mon[type] ? type : 'z0a';
+  if (elite) return type + 'e';
+  const r = ((Math.sin((seed || 0) * 12.9898 + 4.1) * 43758.5453) % 1 + 1) % 1;
+  return type + (r < .4 ? 'a' : r < .7 ? 'c' : r < .85 ? 'b' : 'd'); }
 const MON_CACHE = new Map();
-function monCanvas(type, kind, f, elite){
-  const key = type + '|' + kind + '|' + f + '|' + (elite ? 1 : 0); let cv = MON_CACHE.get(key); if (cv) return cv;
-  const D = MON_DEF[type], G = monGrid(type, kind, f, elite); cv = document.createElement('canvas'); cv.width = D.W + 2; cv.height = D.H + 5;
-  const g = cv.getContext('2d'); G.forEach((row, y) => row.forEach((c, x) => { if (c) { g.fillStyle = c; g.fillRect(x + 1, y + 4, 1, 1); } }));
-  if (elite) { g.fillStyle = '#f2c14e'; const sx = Math.floor(cv.width / 2) - 1; [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]].forEach(([a, b]) => g.fillRect(sx + a, b, 1, 1)); }
-  MON_CACHE.set(key, cv); return cv;
+function monCanvas(key, kind, f){
+  const ck = key + '|' + (kind === 'hurt' ? 'hurt' + (f % 2) : kind === 'down' ? 'down' : 'n'); let cv = MON_CACHE.get(ck); if (cv) return cv;
+  const M = ART.mon[key], W = M.w, H = M.h; let G = [];
+  for (let y = 0; y < H; y++) { const row = []; for (let x = 0; x < W; x++) { const ch = M.px[y * W + x]; row.push(ch === ' ' ? null : M.pal[ART.mch.indexOf(ch)]); } G.push(row); }
+  if (kind === 'hurt') G = G.map(r => r.map(c => !c || c === MON_OUT ? c : f % 2 ? '#ffffff' : monMix(c, '#ff4a4a', .45)));
+  if (kind === 'down') { const R = Array.from({ length:H }, () => Array(W).fill(null)), sq = .45;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (G[y][x]) { const ny = H - 1 - Math.floor((H - 1 - y) * sq); R[ny][x] = monMix(G[y][x], '#262230', .35); } G = R; }
+  cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+  G.forEach((row, y) => row.forEach((c, x) => { if (c) { g.fillStyle = c; g.fillRect(x, y, 1, 1); } }));
+  MON_CACHE.set(ck, cv); return cv;
 }
-const monHalf = type => (MON_DEF[type] ? MON_DEF[type].W : 20) * SPR_SCALE / 2;
-function drawMonster(c, type, x, y, kind, f, elite, left){
-  const cv = monCanvas(type, kind, f, elite), t = c.getTransform(), p = Math.max(1, Math.round(SPR_SCALE * t.a)), sx = Math.round(t.a * x + t.e), sy = Math.round(t.d * y + t.f), w = cv.width * p, hh = cv.height * p;
+const monHalf = type => (/^z\d/.test(type) ? 16 : ART.mon[type] ? ART.mon[type].w : 16) / 2;
+const monH = type => /^z\d/.test(type) ? 16 : ART.mon[type] ? ART.mon[type].h : 16;
+// seed：同一隻怪每次都畫成同一種（例如 m.ph）；elite：用菁英圖
+function drawMonster(c, type, x, y, kind, f, elite, left, seed){
+  const key = monKey(type, seed, elite), cv = monCanvas(key, kind, f), t = c.getTransform(), p = Math.max(1, Math.round(t.a));
+  const dx = kind === 'attack' ? [1, 3, 1][f % 3] * (left ? -1 : 1) : 0, dy = kind === 'idle' && (f % 4 === 1 || f % 4 === 2) ? -1 : 0;
+  const sx = Math.round(t.a * x + t.e) + dx * p, sy = Math.round(t.d * y + t.f) + dy * p, w = cv.width * p, hh = cv.height * p;
   c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
-  c.fillStyle = 'rgba(0,0,0,.22)'; c.beginPath(); c.ellipse(sx, sy, w * .34, Math.max(2, p * 2), 0, 0, 7); c.fill();
-  if (left) { c.translate(sx, 0); c.scale(-1, 1); c.drawImage(cv, -Math.round(w / 2), sy - hh + p, w, hh); }
-  else c.drawImage(cv, sx - Math.round(w / 2), sy - hh + p, w, hh);
+  c.fillStyle = 'rgba(0,0,0,.22)'; c.beginPath(); c.ellipse(sx - dx * p, Math.round(t.d * y + t.f), w * .34, Math.max(2, p * 2), 0, 0, 7); c.fill();
+  if (left) { c.translate(sx, 0); c.scale(-1, 1); c.drawImage(cv, -Math.round(w / 2), sy - hh, w, hh); }
+  else c.drawImage(cv, sx - Math.round(w / 2), sy - hh, w, hh);
   c.restore();
 }
-const zoneMon = z => MON_BY_NAME[ZONES[z].mon] || 'slime';
 // ================= v17.4：建築與地景造型（和人物、怪物同風格：粗描邊、平塗、少陰影） =================
 // 每棟建築是一張像素格，像素密度和人物一樣（1 格＝SPR_SCALE 世界單位），快取成小畫布，畫的時候像素對齊。
 // 'W' 是窗戶玻璃：白天反光藍、晚上暖黃、深夜暗黃。
@@ -1648,7 +1494,7 @@ function drawRide(now, h, x, y){
   const L = h.leg; if (!L || offline) return 0;
   if (L.tp && now - L.tp < 1500) { const a = 1 - (now - L.tp) / 1500; ctx.globalAlpha = a; [[x, y], L.tpFrom].forEach(([px, py]) => { ctx.strokeStyle = '#c9b6ff'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(px, py + 1, 14, 4, 0, 0, 7); ctx.stroke(); ctx.fillStyle = '#f1e8ff'; for (let i = 0; i < 5; i++) ctx.fillRect(px - 10 + i * 5, py - 6 - ((now / 60 + i * 7) % 18), 1.5, 3); }); ctx.globalAlpha = 1; }
   if (L.encT && now - L.encT < 2500) { const ex = x + Math.sign(L.toX - L.fromX) * 18;
-    if (L.enc === 'mon') { const z = ZONES.findIndex(Z => x >= Z.rect[0] && x <= Z.rect[2] + 14); drawMonster(ctx, z >= 0 ? zoneMon(z) : 'slime', ex, y + 4, Math.floor(now / 200) % 2 ? 'hurt' : 'idle', Math.floor(now / 200) % 2, false, ex > x); }
+    if (L.enc === 'mon') { const z = ZONES.findIndex(Z => x >= Z.rect[0] && x <= Z.rect[2] + 14); drawMonster(ctx, zoneMon(Math.max(0, z)), ex, y + 4, Math.floor(now / 200) % 2 ? 'hurt' : 'idle', Math.floor(now / 200) % 2, false, ex > x, L.encSeed ??= Math.random()); }
     else { pxPerson(ex, y, L.enc === 'merc' ? '#8a5a3a' : '#59a8ff', 2, now); if (L.enc === 'merc') drawBld(ctx, 'cart', ex + 6, y - 14, 20, 15, 'day'); } }
   const left = L.toX < L.fromX;
   if (L.mode === 'coach' && h.x >= COACH_A() - 2 && h.x <= COACH_B() + 2) { drawBld(ctx, left ? 'coachL' : 'coach', x - 24, y - 26, 48, 28, 'day'); return 'hide'; }
@@ -2042,8 +1888,8 @@ function drawScene(now, view){
     s.mobs.forEach(m => { const isT = m === s.tg && !m.dead; let kind = 'idle', f = Math.floor(now / 240 + m.ph) % 4;
       if (m.dead) { kind = 'down'; f = 0; } else if (isT && h.flash > .55) { kind = 'hurt'; f = Math.floor(now / 120) % 2; } else if (isT && Math.hypot(m.x - h.x, m.y - h.y) < 22 && Math.floor(now / 900 + m.ph) % 3 === 0) { kind = 'attack'; f = Math.floor(now / 160) % 3; }
       ctx.globalAlpha = m.dead ? Math.max(0, 1 - (now - m.dead) / 700) : 1;
-      drawMonster(ctx, s.mob, m.x, m.y + 4, kind, f, !!(s.elite && m.boss), h.x < m.x); ctx.globalAlpha = 1; });
-    if (s.t === 'boss' && s.mobs[0] && !s.mobs[0].dead) { const m = s.mobs[0], w = 40, by = m.y - (MON_DEF[s.mob] ? MON_DEF[s.mob].H * SPR_SCALE + 8 : 52); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(m.x - w / 2, by, w, 4); ctx.fillStyle = '#ff7b7b'; ctx.fillRect(m.x - w / 2, by, w * clamp(s.bossHp, 0, 1), 4); }
+      drawMonster(ctx, s.mob, m.x, m.y + 4, kind, f, !!(s.elite && m.boss), h.x < m.x, m.ph); ctx.globalAlpha = 1; });
+    if (s.t === 'boss' && s.mobs[0] && !s.mobs[0].dead) { const m = s.mobs[0], w = 40, by = m.y - (monH(s.mob) + 8); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(m.x - w / 2, by, w, 4); ctx.fillStyle = '#ff7b7b'; ctx.fillRect(m.x - w / 2, by, w * clamp(s.bossHp, 0, 1), 4); }
   } catch (e) { if (!scnErr++) console.error(e); }
 }
 // 勇者頭上的進度、被打中的傷害數字、血條

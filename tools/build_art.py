@@ -55,7 +55,25 @@ for nm, m in BM.items():
             s.append(CH[bpal.index(hx)])
     bld[nm] = {'w':m['w'], 'h':m['h'], 'ax':m['ax'], 'ay':m['ay'], 'door':m['door'], 'dy':m['dy'], 'dw':m['dw'], 'px':''.join(s)}
 assert len(bpal) < len(CH), len(bpal)
-out = '// 自動產生（tools/build_art.py），不要手改。圖檔來源：design-wip 分支 design/final、design/buildings、Kenney Tiny Dungeon（CC0）\n'
-out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl, 'bch':''.join(CH[:len(bpal)]), 'bpal':bpal, 'bld':bld}, ensure_ascii=False, separators=(',',':')) + ';\n'
+# 怪物（design/monsters，定案）：每區 a／c 雜魚、b／d 強敵、e 菁英（b 的菁英版）；魔王 boneking、abyss。底下透明的列裁掉，腳底就是最後一列
+ZN = ['草原', '森林', '荒地', '礦坑', '海岸', '雪山', '魔王城']; mon = {}   # 顏色多，每隻各自一個小色盤
+def menc(f):
+    im = Image.open(f).convert('RGBA'); bb = im.getbbox(); im = im.crop((0, 0, im.width, bb[3])); s = []; mpal = []
+    for y in range(im.height):
+        for x in range(im.width):
+            r,g,b,a = im.getpixel((x,y))
+            if a < 128: s.append(' '); continue
+            hx = '#%02x%02x%02x' % (r,g,b)
+            if hx not in mpal: mpal.append(hx)
+            s.append(CH[mpal.index(hx)])
+    assert len(mpal) < len(CH), (f, len(mpal))
+    return {'w':im.width, 'h':im.height, 'pal':mpal, 'px':''.join(s)}
+for f in sorted(glob.glob(D + '/monsters/*.png')):
+    nm = os.path.basename(f)[:-4]
+    if nm.startswith('_'): continue
+    if nm.startswith('BOSS_'): mon['boneking' if '骸骨' in nm else 'abyss'] = menc(f); continue
+    t, zn, _ = nm.split('_', 2); mon['z%d%s' % (ZN.index(zn), t.lower())] = menc(f)
+out = '// 自動產生（tools/build_art.py），不要手改。圖檔來源：design-wip 分支 design/final、design/buildings、design/monsters、Kenney Tiny Dungeon（CC0）\n'
+out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl, 'bch':''.join(CH[:len(bpal)]), 'bpal':bpal, 'bld':bld, 'mch':''.join(CH), 'mon':mon}, ensure_ascii=False, separators=(',',':')) + ';\n'
 open(os.path.dirname(os.path.abspath(__file__)) + '/../js/art.js', 'w').write(out)
 print('pal', len(pal), 'bytes', len(out))
