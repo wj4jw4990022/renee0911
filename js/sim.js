@@ -119,7 +119,7 @@ function adj(k, v){
 }
 function gainExp(n){
   const h = H(); n *= (hasP(h, 'genius') ? 1.3 : 1) * (.85 + .3 * hx(h, 'C')); if (S.coach) n *= 1.2; n *= 1 + (S.office.gym || 0) * .12;
-  h.exp += n;
+  h.exp += n; const lv0 = h.lv;
   while (h.exp >= expNeed(h.lv)) {
     h.exp -= expNeed(h.lv); h.lv++; h.hp = 1;
     adj('mood', 6);
@@ -127,6 +127,7 @@ function gainExp(n){
     if (h.lv % 5 === 0) { logLife(`升到 Lv${h.lv}`); addFame(5); }
     if (h.lv === 15 || h.lv === 30) askJob();
   }
+  if (h.lv > lv0) fxPop('Lv UP!', 'lv');   // v17.29
 }
 function finAdd(k, v){ if (!S || !v) return; S.finM = S.finM || {}; S.finM[k] = (S.finM[k] || 0) + v; }
 function finClose(){
@@ -330,18 +331,18 @@ function openDying(){
       <div class="vig"></div>
       <div style="position:absolute;left:0;right:0;top:44px;text-align:center">
         <div class="px" style="font-size:26px;letter-spacing:4px">${h.name}倒下了</div>
-        <div style="font-size:13px;color:#9a978f;margin-top:4px">${h.dyingWhy}</div>
+        <div style="font-size:13px;color:#7a5a3a;margin-top:4px">${h.dyingWhy}</div>
       </div>
     </div>
     <div style="padding:6px 22px 0;text-align:center">
       <svg width="300" height="40" viewBox="0 0 346 44" aria-hidden="true"><path d="M0 24 H120 l8 -4 l6 4 h18 l6 -18 l8 34 l6 -16 h20 H346" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-linejoin="round"/></svg>
-      <div><span style="font-size:13px;color:#9a978f">還能撐</span> <b class="px beat" id="dLeft" style="font-size:34px;color:#ff7b7b;font-weight:400">0:15</b></div>
+      <div><span style="font-size:13px;color:#7a5a3a">還能撐</span> <b class="px beat" id="dLeft" style="font-size:34px;color:#ff7b7b;font-weight:400">0:15</b></div>
     </div>
     <div class="m" style="margin:6px 22px 0;max-width:none;background:#1a1d25;border:1px solid #2c2f38;color:#d6d2ca">${line}</div>
     <div style="margin:12px 22px 0;display:flex;flex-direction:column;gap:8px">
       <button class="opt" id="dO1" style="background:#2a1c1f;border-color:#7a3a3a" ${canPay ? '' : 'disabled'}><div class="row"><span>請神官緊急傳送救治</span><span style="color:#f2c14e">${fmt(cost)} 金</span></div><div class="s">${canPay ? '一定能活下來，但會重傷臥床，可能留下殘疾' : '錢不夠'}</div></button>
-      <button class="opt" id="dO2"><div class="row"><span>大喊求救，賭路過的冒險者</span><span style="color:#9a978f">免費</span></div><div class="s">看運氣。${pron(h)}的朋友越多，越可能有人來</div></button>
-      <button class="opt" id="dO3" style="background:transparent;border-style:dashed;min-height:48px;color:#b9b4ab;font-size:13.5px">陪${pron(h)}走完最後一段</button>
+      <button class="opt" id="dO2"><div class="row"><span>大喊求救，賭路過的冒險者</span><span style="color:#7a5a3a">免費</span></div><div class="s">看運氣。${pron(h)}的朋友越多，越可能有人來</div></button>
+      <button class="opt" id="dO3" style="background:transparent;border-style:dashed;min-height:48px;color:#7a5a3a;font-size:13.5px">陪${pron(h)}走完最後一段</button>
     </div>`;
   $('dying').classList.add('on');
   drawLying($('dcv'));
@@ -787,13 +788,13 @@ function openMission(o, keep){
   const Z = o.z >= 0 ? ZONES[o.z] : null, st = [h.sta < 25 ? ['r', '很累'] : h.sta < 50 ? ['o', '有點累'] : ['g', '精神好'], h.bedDays > 0 ? ['r', '養傷中'] : hasP(h, 'lame') ? ['o', '跛腳'] : hasP(h, 'scar') ? ['o', '有舊傷'] : null, [h.pots ? '' : 'o', `藥水 ×${h.pots}`], fd.i !== d.i ? ['o', fd.i < d.i ? '他太有自信了' : '他太擔心了'] : null].filter(Boolean);
   const comps = showComp ? S.npcs.filter(canComp) : [];
   $('mBox').innerHTML = `
-    <div style="width:40px;height:4px;border-radius:2px;background:#4a5470;align-self:center"></div>
-    <div style="border-radius:16px;overflow:hidden;border:1px solid ${o.boss || o.boss2 ? '#7a5ac8' : '#343e55'};background:#1d2433">
-      <div style="height:64px;background:${Z ? Z.c : '#8a6a46'};position:relative"><span style="position:absolute;left:10px;top:10px;padding:2px 9px;border-radius:9px;background:rgba(18,22,31,.85);font-size:12px">${typeTag(o)}${Z ? Z.n : '村子'} · ${durTxt(H(), o)}</span>${o.until ? `<span style="position:absolute;right:10px;top:10px;padding:2px 9px;border-radius:9px;background:rgba(18,22,31,.85);font-size:12px" class="${o.until - S.day <= 1 ? 'dg r' : ''}">${dueTxt(o.until)}</span>` : ''}</div>
+    <div style="width:40px;height:4px;border-radius:2px;background:#8a6a46;align-self:center"></div>
+    <div style="border-radius:16px;overflow:hidden;border:1px solid ${o.boss || o.boss2 ? '#7a5ac8' : '#343e55'};background:#fbf0d2">
+      <div style="height:64px;background:${Z ? Z.c : '#8a6a46'};position:relative"><span style="position:absolute;left:10px;top:10px;padding:2px 9px;border-radius:9px;background:rgba(18,22,31,.85);font-size:12px;color:#fff3d6">${typeTag(o)}${Z ? Z.n : '村子'} · ${durTxt(H(), o)}</span>${o.until ? `<span style="position:absolute;right:10px;top:10px;padding:2px 9px;border-radius:9px;background:rgba(18,22,31,.85);font-size:12px;color:#fff3d6" class="${o.until - S.day <= 1 ? 'dg r' : ''}">${dueTxt(o.until)}</span>` : ''}</div>
       <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px">
         <div class="k" style="font-size:12px">${o.ag ? '事務所任務' : o.boss || o.boss2 ? '村長的懸賞' : '冒險者公會的委託'}</div>
         <div class="px" style="font-size:20px">${o.n}</div>
-        <div style="font-size:13px;color:#c9cfdb">${o.ag ? `事務所得到：名聲 +${o.fame}、<b style="color:var(--gold)">${fmt(o.gold)}</b> 金 · ${pron(h)}只拿 ${Math.round((o.share || .1) * 100)}%` : `報酬 <b style="color:var(--gold)">${fmt(o.reward)}</b> 金（你抽 ${S.cut}%）`}</div>
+        <div style="font-size:13px;color:#6b4e33">${o.ag ? `事務所得到：名聲 +${o.fame}、<b style="color:var(--gold)">${fmt(o.gold)}</b> 金 · ${pron(h)}只拿 ${Math.round((o.share || .1) * 100)}%` : `報酬 <b style="color:var(--gold)">${fmt(o.reward)}</b> 金（你抽 ${S.cut}%）`}</div>
         ${o.ag ? `<div class="k" style="font-size:12px">${AGT[o.ag].d}</div>` : ''}
         ${o.D ? `<div class="seg" style="margin-top:2px"><i class="${d.i === 0 ? 'on' : ''}" style="background:#6fcf97"></i><i class="${d.i === 1 ? 'on' : ''}" style="background:#ffb347"></i><i class="${d.i === 2 ? 'on' : ''}" style="background:#ff7b7b"></i></div><div class="row"><b class="dg ${d.k}" style="font-size:14px">${d.n}</b><span style="font-size:13px">勝率約 <b>${win}%</b></span></div>` : '<div class="dg g" style="font-size:13px">不用打，但不一定合他的胃口</div>'}
       </div>
@@ -801,12 +802,12 @@ function openMission(o, keep){
     ${lateWarn}
     <div><div class="row" style="margin-bottom:8px"><b style="font-size:14px">出發成員</b><span class="k" style="font-size:12px">${showComp ? '同伴越強勝率越高，但同伴也可能受傷' : '這個任務一個人去'}</span></div>
       <div class="party">
-        <div class="pslot"><div class="pf" style="background:${CLS[h.cls].col}"><canvas id="mface" width="20" height="20" style="width:30px;height:30px;image-rendering:pixelated"></canvas></div><b style="font-size:13.5px">${h.name}</b><span style="font-size:11.5px;color:#c9b6ff">戰力 ${Math.round(power(h))}</span></div>
-        ${showComp ? (cn ? `<button class="pslot c" data-cmp=""><div class="pf" style="background:#3a4a3a">${cn.name.slice(0, 1)}</div><b style="font-size:13.5px">${cn.name}</b><span style="font-size:11.5px;color:#8fe0b0">+${Math.round(cn.pw * 100)}%${compCost(cn) ? ` · 傭金 ${fmt(compCost(cn))}` : ''}</span><span style="position:absolute;right:8px;top:6px;font-size:11px" class="k">換掉</span></button>` : `<div class="pslot e"><span style="font-size:24px">+</span><span style="font-size:12.5px">從下面選同伴</span></div>`) : `<div class="pslot e"><span style="font-size:12.5px">不需要同伴</span></div>`}
+        <div class="pslot"><div class="pf" style="background:${CLS[h.cls].col}"><canvas id="mface" width="20" height="20" style="width:30px;height:30px;image-rendering:pixelated"></canvas></div><b style="font-size:13.5px">${h.name}</b><span style="font-size:11.5px;color:#6a4fb0">戰力 ${Math.round(power(h))}</span></div>
+        ${showComp ? (cn ? `<button class="pslot c" data-cmp=""><div class="pf" style="background:#3a4a3a">${cn.name.slice(0, 1)}</div><b style="font-size:13.5px">${cn.name}</b><span style="font-size:11.5px;color:#2f7a3a">+${Math.round(cn.pw * 100)}%${compCost(cn) ? ` · 傭金 ${fmt(compCost(cn))}` : ''}</span><span style="position:absolute;right:8px;top:6px;font-size:11px" class="k">換掉</span></button>` : `<div class="pslot e"><span style="font-size:24px">+</span><span style="font-size:12.5px">從下面選同伴</span></div>`) : `<div class="pslot e"><span style="font-size:12.5px">不需要同伴</span></div>`}
       </div>
       ${showComp ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${comps.map(n => `<button class="cmp ${mComp === n.id ? 'on' : ''}" data-cmp="${n.id}">${n.name} <span class="dg g">+${Math.round(n.pw * 100)}%</span>${compCost(n) ? `<span class="k">（${fmt(compCost(n))}）</span>` : ''}</button>`).join('') || '<span class="k" style="font-size:12px">交情到「朋友」以上的人，才願意陪著出任務</span>'}</div>` : ''}
     </div>
-    <div class="tags">${st.map(([c, t]) => `<span class="tag ${c === 'g' ? 'g' : ''}" style="${c === 'r' ? 'border-color:var(--red);color:#ff9a9a' : c === '' ? 'border-color:#4a5470;color:var(--muted)' : ''}">${t}</span>`).join('')}</div>
+    <div class="tags">${st.map(([c, t]) => `<span class="tag ${c === 'g' ? 'g' : ''}" style="${c === 'r' ? 'border-color:var(--red);color:#b03a30' : c === '' ? 'border-color:#8a6a46;color:var(--muted)' : ''}">${t}</span>`).join('')}</div>
     <div class="say"><div class="av" style="width:36px;height:36px;border-radius:18px">${h.name.slice(0, 1)}</div><div class="m">${fear}</div></div>
     <div style="display:flex;gap:10px"><button class="btn" id="mNo" style="min-height:52px;padding:0 18px">先不要</button><button class="btn" id="mGo" style="flex:1;min-height:52px;background:var(--gold);color:#12161f;border:none;font-weight:700;font-size:16px" ${S.queue.length >= Q_MAX ? 'disabled' : ''}>${S.queue.length >= Q_MAX ? '排程滿了' : `排進排程${o.D ? `（勝率 ${win}%）` : ''}`}</button></div>`;
   drawFace($('mface'), d.i === 2 ? -1 : 0);
@@ -1455,7 +1456,7 @@ function rvCounter(i, k){
 }
 // ================= v9：回來時的摘要 =================
 function openPop(html){
-  $('mBox').innerHTML = `<div style="width:40px;height:4px;border-radius:2px;background:#4a5470;align-self:center"></div>${html}<button class="btn" id="popOk" style="min-height:46px">知道了</button>`;
+  $('mBox').innerHTML = `<div style="width:40px;height:4px;border-radius:2px;background:#8a6a46;align-self:center"></div>${html}<button class="btn" id="popOk" style="min-height:46px">知道了</button>`;
   $('mission').classList.add('on'); S.paused = true;
   $('popOk').onclick = closeMission; $('mission').onclick = e => { if (e.target.id === 'mission') closeMission(); };
 }
@@ -1575,7 +1576,7 @@ function npcCard(n){
   if (canComp(n)) tags.push(`<span class="dg g">可同行 +${Math.round(n.pw * 100)}%</span>`);
   const tr = (n.treat ?? -9) + 3 <= S.day, can = !n.dark && n.role !== 'rival';
   return `<div class="card" style="padding:8px 12px"><div class="row"><span style="min-width:0"><b>${n.name}</b> <span class="k" style="font-size:12px">${n.title}</span></span><span class="dg ${n.role === 'rival' ? 'o' : n.aff >= 50 ? 'g' : ''}" style="font-size:12.5px;flex:none">${relWord(n)}</span></div>
-    ${n.role === 'rival' ? '' : `<div style="height:4px;background:#3a4359;border-radius:2px;margin:5px 0 4px;overflow:hidden"><i style="display:block;height:4px;background:${n.aff >= 50 ? 'var(--green)' : '#8b93a7'};width:${Math.round(n.aff)}%"></i></div>`}
+    ${n.role === 'rival' ? '' : `<div style="height:4px;background:#c9a466;border-radius:2px;margin:5px 0 4px;overflow:hidden"><i style="display:block;height:4px;background:${n.aff >= 50 ? 'var(--green)' : '#8b93a7'};width:${Math.round(n.aff)}%"></i></div>`}
     <div class="k" style="font-size:12px">${tags.join(' · ')}</div>
     <div class="row" style="margin-top:4px;gap:8px;align-items:center"><span class="k" style="font-size:12px;min-width:0">${ROLE_FX[n.role] || ''}</span>${can ? `<button class="btn" data-treat="${n.id}" ${tr && S.gold >= 30 ? '' : 'disabled'} style="flex:none;min-height:34px;padding:4px 10px">${tr ? '請客 30' : '剛請過'}</button>` : ''}</div></div>`;
 }
@@ -2060,14 +2061,14 @@ function openEnd(){
   $('end').innerHTML = `
     <div class="k" style="font-size:12px">第 ${h.gen} 代勇者 · 生平紀錄</div>
     <div class="px" style="font-size:28px;margin-top:4px">${h.name}</div>
-    <div style="font-size:13px;color:#c9cfdb;margin-top:2px">${jobName(h)} · Lv${h.lv} · ${Math.floor(h.age)} 歲 · <b style="color:${h.act === 'dead' ? '#ff9a9a' : h.act === 'retired' ? '#8fe0b0' : '#ffc46e'}">${tag}</b></div>
+    <div style="font-size:13px;color:#6b4e33;margin-top:2px">${jobName(h)} · Lv${h.lv} · ${Math.floor(h.age)} 歲 · <b style="color:${h.act === 'dead' ? '#b03a30' : h.act === 'retired' ? '#2f7a3a' : '#a8681a'}">${tag}</b></div>
     <div class="card" style="margin-top:12px;font-size:13.5px;line-height:1.6">${h.endWhy}<div class="k" style="font-size:12px;margin-top:4px">個性：${Object.keys(HEX).map(k => hexWord(k, h.hex[k])).filter(w => !w.startsWith('介於')).join('、') || '很平均'}<br>最在乎：${h.des.map(k => DESIRES[k].n).join('、')}<br>人生目標：${GOALS[h.goal] ? GOALS[h.goal].n : ''}${h.said !== h.goal ? `（對你說的是${GOALS[h.said].n}）` : ''}${h.sentHome ? `，一共寄了 ${fmt(h.sentHome)} 金回老家` : ''}</div></div>
     <div class="grid2" style="margin:8px 0">
       <div class="card" style="margin:0">打倒魔物<br><b class="px" style="font-size:20px">${fmt(h.kills)}</b></div>
       <div class="card" style="margin:0">交到的朋友<br><b class="px" style="font-size:20px">${friendsN()}</b></div>
     </div>
-    <div class="sec">臨終的遺憾 · 幸福分數 <b style="color:${happy >= 70 ? '#8fe0b0' : happy >= 40 ? '#ffc46e' : '#ff9a9a'}">${happy}</b></div>
-    <div class="card" style="padding:4px 12px">${rg.map(r => `<div class="tl"><span class="d" style="width:22px;color:${['#8fe0b0', '#ffc46e', '#ff9a9a'][r.lv]}">${['✓', '△', '✗'][r.lv]}</span><span><b style="font-weight:500">${r.n}</b><br><span class="k" style="font-size:12px">${r.why}</span></span></div>`).join('')}</div>
+    <div class="sec">臨終的遺憾 · 幸福分數 <b style="color:${happy >= 70 ? '#2f7a3a' : happy >= 40 ? '#a8681a' : '#b03a30'}">${happy}</b></div>
+    <div class="card" style="padding:4px 12px">${rg.map(r => `<div class="tl"><span class="d" style="width:22px;color:${['#2f7a3a', '#a8681a', '#b03a30'][r.lv]}">${['✓', '△', '✗'][r.lv]}</span><span><b style="font-weight:500">${r.n}</b><br><span class="k" style="font-size:12px">${r.why}</span></span></div>`).join('')}</div>
     <div class="k" style="font-size:12px;margin:-2px 2px 8px">你的事務所從${pron(h)}身上賺到的錢，和${pron(h)}過得幸不幸福，是兩回事。</div>
     <div class="sec">人生年表</div>
     ${h.log.slice(-14).map(e => `<div class="tl"><span class="d">${Math.floor(e.age)} 歲</span><span>${e.t}</span></div>`).join('') || '<div class="k">（沒有特別的事）</div>'}

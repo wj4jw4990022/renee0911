@@ -46,8 +46,16 @@ function renderAlerts(){
   const bn = $('bellN'), urg = a.some(x => x[0] === 'r'); bn.textContent = a.length; bn.className = a.length ? 'on' + (urg ? ' r' : '') : '';
   $('alerts').querySelectorAll('[data-al]').forEach(b => b.onclick = () => { const x = a[+b.dataset.al]; $('alerts').classList.remove('open'); $('bell').classList.remove('open'); if (x[2] === 'caravan') openCaravan(); else if (x[2] === 'map') { userView = ZONES[x[3]].map; viewMan = performance.now(); } else openSheet(x[2], x[3]); });
 }
+const FXM = { s:null, g:0, f:0, ga:0, fa:0, t:0 };   // v17.29：金庫、名聲變多時在勇者頭上跳字（攢一下再跳，避免太吵）
+function fxMoney(){
+  if (FXM.s !== S) { FXM.s = S; FXM.g = S.gold; FXM.f = S.fame; FXM.ga = FXM.fa = 0; return; }
+  const dg = S.gold - FXM.g, df = Math.round(S.fame) - Math.round(FXM.f); FXM.g = S.gold; FXM.f = S.fame;
+  if (dg > 0) FXM.ga += dg; if (df > 0) FXM.fa += df;
+  const now = performance.now(); if (now - FXM.t < 1200) return; FXM.t = now;
+  if (FXM.ga >= 1) fxPop(`+${fmt(FXM.ga)} 金`, 'gold'); if (FXM.fa >= 1) fxPop(`+${fmt(FXM.fa)} ★`, 'fame'); FXM.ga = FXM.fa = 0;
+}
 function renderTop(){
-  const h = H(); renderAlerts();
+  const h = H(); renderAlerts(); fxMoney();
   updBadges(h);
   $('gold').textContent = fmt(S.gold); $('fame').textContent = fmt(Math.round(S.fame));
   $('bars').innerHTML = [[h.sta, '#6fcf97'], [h.mood, '#f2c14e'], [h.stress, '#ff7b7b']].map(([v, c]) => `<i><b style="width:${clamp(v, 0, 100)}%;background:${c}"></b></i>`).join('');
@@ -78,7 +86,7 @@ function renderFeed(){
     if (qDup && i === askI) return '';
     if (m.k === 'hero') return `<div class="mrow"><span class="mav">${pimg(h)}</span><div class="m${i === askI ? ' ask' : ''}">${esc(m.t)}</div></div>`;
     if (m.k === 'me') return `<div class="m me">${esc(m.t)}</div>`;
-    if (m.k === 'arep') { const op = arepOpen.has(m.d); return `<div class="m arep" data-arp="${m.d}" role="button" aria-expanded="${op}"><div class="ah2"><b style="font-weight:500">${esc(m.t)}</b><span>${op ? '收合' : '展開 ›'}</span></div>${op ? `<div class="ar2">${(m.L || []).map(esc).join('<br>')}</div>` : `<div style="color:#c9cfdb;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((m.L || [])[0] || '')}</div>`}</div>`; }
+    if (m.k === 'arep') { const op = arepOpen.has(m.d); return `<div class="m arep" data-arp="${m.d}" role="button" aria-expanded="${op}"><div class="ah2"><b style="font-weight:500">${esc(m.t)}</b><span>${op ? '收合' : '展開 ›'}</span></div>${op ? `<div class="ar2">${(m.L || []).map(esc).join('<br>')}</div>` : `<div style="color:#6b4e33;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((m.L || [])[0] || '')}</div>`}</div>`; }
     if (m.k === 'sys') return `<div class="m sys">${esc(m.t)}</div>`;
     return `<div class="m ${m.k}">${m.hr != null ? `<span class="tm">${clockTxt(m.hr)}</span>` : ''}<i class="evi">${/good/.test(m.k) ? '✓' : /bad/.test(m.k) ? '✕' : '!'}</i><b>${esc(m.g)}</b>${esc(m.t)}</div>`;
   }).join('');
@@ -92,7 +100,7 @@ function renderReplies(){
   if (S.q) {
     const sys0 = S.q.text.startsWith('（'), left = Math.max(0, S.q.until - S.day) + 1;
     r.className = 'asking';
-    r.innerHTML = `<div class="qwait"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="qt">${esc(sys0 ? S.q.text.replace(/^（|）$/g, '') : S.q.text)}</span>${BIG_Q.has(S.q.key) ? '<span id="qCd" style="flex:none;color:#ff9a9a">剩 20 秒</span>' : `<span style="flex:none">剩 ${left} 個月</span>`}</div>
+    r.innerHTML = `<div class="qwait"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="qt">${esc(sys0 ? S.q.text.replace(/^（|）$/g, '') : S.q.text)}</span>${BIG_Q.has(S.q.key) ? '<span id="qCd" style="flex:none;color:#b03a30">剩 20 秒</span>' : `<span style="flex:none">剩 ${left} 個月</span>`}</div>
       <div class="qopts ${S.q.opts.length === 3 ? 'n3' : ''}">${S.q.opts.map((o, i) => `<button class="rb q" data-a="${i}">${esc(o)}</button>`).join('')}</div><button class="qghost" data-a="-1">已讀不回（讓${pron(h)}自己決定）</button>`;
     r.querySelectorAll('[data-a]').forEach(b => b.onclick = () => answer(+b.dataset.a));
     $('feed').scrollTop = $('feed').scrollHeight;
@@ -115,10 +123,10 @@ function heroCard(h){
   const showG = h.revealed ? h.goal : h.said, need = expNeed(h.lv);
   return `<div class="pcard"><canvas id="pcv" width="32" height="32" aria-label="${esc(h.name)}的模樣"></canvas><div class="pinfo">
     <div class="k" style="font-size:11.5px">第 ${h.gen} 代${h.master ? ` · ${esc(h.master)}的徒弟` : ''}</div>
-    <div class="nm px">${esc(h.name)}</div><div style="font-size:13px;color:#c9b6ff">${jobName(h)} · Lv${h.lv} · ${Math.floor(h.age)} 歲</div>
+    <div class="nm px">${esc(h.name)}</div><div style="font-size:13px;color:#6a4fb0">${jobName(h)} · Lv${h.lv} · ${Math.floor(h.age)} 歲</div>
     <div class="tags"><span class="tag">${TRAITS[h.trait].n}</span><span class="tag">${TRAITS[h.trait2].n}</span><span class="tag g">${h.revealed ? '' : '自稱'}${GOALS[showG].n}</span></div>
-    <div><div class="row k" style="font-size:11px"><span>經驗</span><span>${fmt(Math.floor(h.exp))} / ${fmt(need)}</span></div><div class="xbar"><i style="width:${clamp(h.exp / need * 100, 0, 100)}%;background:#c9b6ff"></i></div></div></div></div>
-    <div class="tiles"><div class="tile"><b style="color:#8fe0b0">${Math.round(h.sta)}</b><span>體力</span></div><div class="tile"><b style="color:var(--gold)">${Math.round(h.mood)}</b><span>心情</span></div><div class="tile"><b style="color:#ff9a9a">${Math.round(h.stress)}</b><span>壓力</span></div><div class="tile"><b style="color:var(--blue)">${Math.round(h.trust)}</b><span>信任</span></div></div>`;
+    <div><div class="row k" style="font-size:11px"><span>經驗</span><span>${fmt(Math.floor(h.exp))} / ${fmt(need)}</span></div><div class="xbar"><i style="width:${clamp(h.exp / need * 100, 0, 100)}%;background:#6a4fb0"></i></div></div></div></div>
+    <div class="tiles"><div class="tile"><b style="color:#2f7a3a">${Math.round(h.sta)}</b><span>體力</span></div><div class="tile"><b style="color:var(--gold)">${Math.round(h.mood)}</b><span>心情</span></div><div class="tile"><b style="color:#b03a30">${Math.round(h.stress)}</b><span>壓力</span></div><div class="tile"><b style="color:var(--blue)">${Math.round(h.trust)}</b><span>信任</span></div></div>`;
 }
 function gearSlots(h){
   const ic = (p, c) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" aria-hidden="true">${p}</svg>`;
@@ -139,7 +147,7 @@ function hexRadar(h, ok, km){
 function qCard(h, o, ag){
   const Z = o.z >= 0 ? ZONES[o.z] : null, d = o.D ? danger(ratio(h, o.D)) : null, win = o.D ? Math.round(winP(ratio(h, o.D)) * 100) : null;
   return `<div class="qcard" role="button" tabindex="0" ${ag ? `data-ag="${o.id}"` : `data-o="${o.id}"`} style="${o.ug ? 'border:2px solid #9a3a3a;background:#26181c' : o.boss || o.boss2 ? 'border:2px solid #7a5ac8' : ag ? 'border-color:#6b5aa8' : ''}"><div class="qa" style="background:${o.ug ? '#3a2228' : Z ? Z.c : '#8a6a46'}"><span>${o.ug ? '地下 · ' : ''}${typeTag(o)}${Z ? Z.n : '村子'} · ${durTxt(H(), o)}</span></div>
-    <div class="qb"><div class="qn px">${o.n}</div><div style="font-size:12.5px;color:#c9cfdb">${o.ug ? `${fmt(o.gold)} 金 · 惡名 +${o.inf}${o.violent ? ' · 要動手' : ''}` : ag ? `名聲 +${o.fame} · ${fmt(o.gold)} 金` : `報酬 <b style="color:var(--gold)">${fmt(o.reward)}</b> 金`}</div>
+    <div class="qb"><div class="qn px">${o.n}</div><div style="font-size:12.5px;color:#6b4e33">${o.ug ? `${fmt(o.gold)} 金 · 惡名 +${o.inf}${o.violent ? ' · 要動手' : ''}` : ag ? `名聲 +${o.fame} · ${fmt(o.gold)} 金` : `報酬 <b style="color:var(--gold)">${fmt(o.reward)}</b> 金`}</div>
     ${d ? `<div class="seg"><i class="${d.i === 0 ? 'on' : ''}" style="background:#6fcf97"></i><i class="${d.i === 1 ? 'on' : ''}" style="background:#ffb347"></i><i class="${d.i === 2 ? 'on' : ''}" style="background:#ff7b7b"></i></div><div class="dg ${d.k}" style="font-size:12.5px">${d.n} · 勝率約 ${win}%</div>` : '<div class="dg g" style="font-size:12.5px">不用打</div>'}
     ${o.until ? `<div style="font-size:12px" class="${o.until - S.day <= 1 ? 'dg r' : 'k'}">${dueTxt(o.until)}</div>` : ''}</div></div>`;
 }
@@ -153,8 +161,8 @@ function shopView(h){
   const COL = ['#a3abbd', '#c9cfdb', '#f2c14e', '#59a8ff'];
   const up = (kind, cur) => { const T0 = kind === 'w' ? WPN : ARM, nm = i => T0.n[i] + (kind === 'w' ? WNAME[h.cls] : ''), p = kind === 'w' ? '<path d="M4 20L18 6M14 4l6 6"/>' : '<path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/>';
     const nx = cur + 1, q = nx < 4 ? (kind === 'w' ? qw : qa) : null, can = q && S.gold >= q.p;
-    const eff = kind === 'w' ? (() => { if (!q) return ''; const P0 = power(h), P1 = P0 / WPN.mul[cur] * WPN.mul[nx]; const z0 = bestSafeZone(); let z1 = z0; for (let i = 0; i <= topZ(); i++) if (P1 / zD(i) >= 1.3) z1 = i; return `戰力 ${Math.round(P0)} → <b style="color:#8fe0b0">${Math.round(P1)}</b>${z1 > z0 ? ` · <span class="dg g">${ZONES[z1].n}變安全</span>` : ''}`; })()
-      : (q ? `HP ${maxHp(h)} → <b style="color:#8fe0b0">${Math.round(maxHp(h) / ARM.mul[cur] * ARM.mul[nx])}</b>` : '');
+    const eff = kind === 'w' ? (() => { if (!q) return ''; const P0 = power(h), P1 = P0 / WPN.mul[cur] * WPN.mul[nx]; const z0 = bestSafeZone(); let z1 = z0; for (let i = 0; i <= topZ(); i++) if (P1 / zD(i) >= 1.3) z1 = i; return `戰力 ${Math.round(P0)} → <b style="color:#2f7a3a">${Math.round(P1)}</b>${z1 > z0 ? ` · <span class="dg g">${ZONES[z1].n}變安全</span>` : ''}`; })()
+      : (q ? `HP ${maxHp(h)} → <b style="color:#2f7a3a">${Math.round(maxHp(h) / ARM.mul[cur] * ARM.mul[nx])}</b>` : '');
     const dots = [0, 1, 2, 3].map(i => `<span class="td ${i < cur ? 'own' : i === cur ? 'cur' : i === nx ? 'nx' : ''}" title="${nm(i)}">${ic(p, i <= cur ? COL[i] : '#4a5470', 14)}</span>`).join('');
     return `<div class="upc ${can ? 'rec' : ''}"><div class="row"><span class="k" style="font-size:12px">${kind === 'w' ? '武器' : '防具'}</span><span class="tds">${dots}</span></div>
       <div class="upr"><div class="ub"><div class="ic">${ic(p, COL[cur])}</div><b>${nm(cur)}</b><span class="k" style="font-size:11.5px">使用中 · ×${T0.mul[cur]}</span></div>
@@ -184,10 +192,10 @@ function finView(){
   const sum = {}; hs.forEach(x => Object.keys(x.c).forEach(k => sum[k] = (sum[k] || 0) + x.c[k]));
   const ins = Object.keys(sum).filter(k => sum[k] > 0).sort((a, b) => sum[b] - sum[a]), outs = Object.keys(sum).filter(k => sum[k] < 0).sort((a, b) => sum[a] - sum[b]);
   const tin = ins.reduce((a, k) => a + sum[k], 0), tout = -outs.reduce((a, k) => a + sum[k], 0), mx = Math.max(tin, tout, 1);
-  const bar = k => `<div class="fr"><span class="fl">${FINN[k] ? FINN[k][0] : k}</span><span class="fb"><i style="width:${Math.abs(sum[k]) / mx * 100}%;background:${FINN[k] ? FINN[k][1] : '#a3abbd'}"></i></span><span class="fv ${sum[k] < 0 ? 'dg r' : 'dg g'}">${sum[k] > 0 ? '+' : ''}${fmt(Math.round(sum[k]))}</span></div>`;
+  const bar = k => `<div class="fr"><span class="fl">${FINN[k] ? FINN[k][0] : k}</span><span class="fb"><i style="width:${Math.abs(sum[k]) / mx * 100}%;background:${FINN[k] ? FINN[k][1] : '#7a5a3a'}"></i></span><span class="fv ${sum[k] < 0 ? 'dg r' : 'dg g'}">${sum[k] > 0 ? '+' : ''}${fmt(Math.round(sum[k]))}</span></div>`;
   const net = tin - tout;
   return `<div class="sec">收支（最近 ${hs.length} 個月）</div><div class="card">${trLine()}
-    <div class="row" style="font-size:12.5px"><span>收入 <b class="dg g">+${fmt(Math.round(tin))}</b></span><span>支出 <b class="dg r">-${fmt(Math.round(tout))}</b></span><span>淨賺 <b style="color:${net >= 0 ? '#8fe0b0' : '#ff9a9a'}">${net >= 0 ? '+' : ''}${fmt(Math.round(net))}</b></span></div>
+    <div class="row" style="font-size:12.5px"><span>收入 <b class="dg g">+${fmt(Math.round(tin))}</b></span><span>支出 <b class="dg r">-${fmt(Math.round(tout))}</b></span><span>淨賺 <b style="color:${net >= 0 ? '#2f7a3a' : '#b03a30'}">${net >= 0 ? '+' : ''}${fmt(Math.round(net))}</b></span></div>
     <svg width="100%" viewBox="0 0 ${W} ${Hh}" style="display:block;margin:6px 0" role="img" aria-label="最近 ${hs.length} 個月的金庫變化，從 ${fmt(gs[0])} 到 ${fmt(gs[gs.length - 1])}">${lo < 0 ? `<line x1="0" x2="${W}" y1="${ys(0)}" y2="${ys(0)}" stroke="#ff7b7b" stroke-dasharray="3 3" stroke-width="1"/>` : ''}<polyline points="${pts}" fill="none" stroke="#f2c14e" stroke-width="2.5" stroke-linejoin="round"/>${gs.map((v, i) => i === gs.length - 1 ? `<circle cx="${xs(i)}" cy="${ys(v)}" r="3.5" fill="#f2c14e"/>` : '').join('')}<text x="${W - 4}" y="12" text-anchor="end" font-size="10" fill="#a3abbd">${fmt(hi)}</text><text x="${W - 4}" y="${Hh - 2}" text-anchor="end" font-size="10" fill="#a3abbd">${fmt(lo)}</text></svg>
     ${ins.map(bar).join('')}${outs.map(bar).join('')}</div>`;
 }
@@ -240,7 +248,7 @@ function updBadges(h){
   set('set', newer ? '!' : 0, '');
   const pq = S.q && ['wedding', 'visitNpc', 'favor', 'npcLoan', 'kidnap', 'love', 'propose'].includes(S.q.key) ? 1 : 0, sk = S.npcs.filter(n => n.alive && (n.sick || 0) > S.day && n.aff >= 50).length;
   set('people', pq + sk, pq ? '' : 'y');
-  const ring = $('qRing'); if (ring) { const n = S.queue.length; ring.setAttribute('stroke-dashoffset', 182.2 * (1 - n / Q_MAX)); ring.parentNode.parentNode.classList.toggle('empty', !n && !['dead', 'retired', 'left'].includes(h.act)); }
+  const ring = $('qRing'); if (ring) { const n = S.queue.length; ring.setAttribute('stroke-dashoffset', 182.2 * (1 - n / Q_MAX)); ring.parentNode.parentNode.classList.toggle('empty', !n && !['dead', 'retired', 'left'].includes(h.act)); ring.parentNode.parentNode.dataset.q = Math.min(n, Q_MAX); }   // v17.29：任務方塊下方 4 格進度
 }
 // 大事件：整頁劇情
 const BIG_Q = new Set(['draft2', 'kidnap', 'love', 'propose', 'retire', 'scandal', 'family', 'draft', 'rvPoach', 'plague', 'crisis', 'reveal', 'raid', 'tStrat', 'aLeave', 'aPoach', 'aScandal', 'aBreak', 'aBully', 'aReport']);
@@ -777,7 +785,7 @@ function evPage(){
     ${(() => { const lv = h.trust >= 70 ? 2 : h.trust >= 40 ? 1 : 0, hs = HINT[q.key] ? HINT[q.key](q.data || {}, h) : null;
       const note = !hs ? '' : `<div class="evh">${lv === 2 ? `信任 ${Math.round(h.trust)}：${pron(h)}把話都說清楚了` : lv === 1 ? `信任 ${Math.round(h.trust)}：${pron(h)}只透露了大概` : `信任 ${Math.round(h.trust)}：${pron(h)}沒跟你說心裡話，看不出後果（信任 40 以上才會說）`}</div>`;
       return note + `<div class="evo">${q.opts.map((o, i) => `<button class="opt2" data-ea="${i}"><span>${esc(o)}</span>${hs && lv && hs[lv - 1][i] ? `<small class="${lv === 2 ? 'c' : ''}">${esc(hs[lv - 1][i].replace(/他/g, pron(h)))}</small>` : ''}</button>`).join('')}</div>`; })()}
-    <div class="evh" id="evCd" style="color:#ff9a9a"></div><button class="evl" data-ea="-1">已讀不回（讓${pron(h)}自己決定）</button><button class="evl" id="evLater">先回到畫面，晚點再回答</button></div>`;
+    <div class="evh" id="evCd" style="color:#b03a30"></div><button class="evl" data-ea="-1">已讀不回（讓${pron(h)}自己決定）</button><button class="evl" id="evLater">先回到畫面，晚點再回答</button></div>`;
   $('evp').classList.add('on'); $('evp').scrollTop = 0; if ($('evFace')) drawFace($('evFace'), EV_EXPR[q.key] || exprOf(h));
   $('evp').querySelectorAll('[data-ea]').forEach(b => b.onclick = () => { $('evp').classList.remove('on'); if (S.q === q) answer(+b.dataset.ea); });
   $('evLater').onclick = () => $('evp').classList.remove('on');
@@ -810,7 +818,7 @@ const STAGE_C = ['#8b93a7', '#6fcf97', '#59a8ff', '#c99aff', '#f2c14e'];
 function infamyView(){
   const v = Math.round(S.infamy || 0), ac = (S.accomp || []).slice().reverse();
   return `<div class="sec">惡名（地下風評：事務所對外做了多少壞事）</div><div class="card" style="border-color:#6a2a2e;background:#24181c">
-    <div class="row"><b style="color:${v >= 60 ? '#ff7b7b' : v >= 30 ? '#ffb347' : '#c9cfdb'};font-size:15px">${v >= 60 ? '惡名昭彰' : v >= 30 ? '小有惡名' : '有些傳聞'}</b><span>${v} / 100</span></div>
+    <div class="row"><b style="color:${v >= 60 ? '#ff7b7b' : v >= 30 ? '#ffb347' : '#6b4e33'};font-size:15px">${v >= 60 ? '惡名昭彰' : v >= 30 ? '小有惡名' : '有些傳聞'}</b><span>${v} / 100</span></div>
     <div class="xbar" style="margin-top:6px;background:#3a2a2e"><i style="width:${clamp(v, 2, 100)}%;background:#d0505a"></i></div>
     <div class="k" style="font-size:12px;margin-top:6px">${S.underworld ? '你和地下商會有往來，地下委託會一直送來。' : '目前和地下世界沒有往來。'}惡名會隨時間慢慢下降；60 以上，事務所的稱號會變成地下版本，70 以上可能被王國稽查。</div>
     ${ac.length ? `<details style="margin-top:6px"><summary class="k" style="font-size:12.5px;cursor:pointer">共犯紀錄（${ac.length}）</summary><div style="font-size:12.5px;margin-top:4px;line-height:1.6">${ac.map(x => `${ym(x.d)}：${esc(x.t)}`).join('<br>')}</div></details>` : ''}
@@ -945,13 +953,13 @@ function renderSheet(){
     const w = h.wish, wp = !w ? 0 : w.k === 'money' ? h.wallet / w.t : (w.k === 'zone' || w.k === 'cnt') ? w.p / w.t : w.k === 'steady' ? (S.day - Math.max(w.from || 0, S.planSet || -99)) / 10 : w.p ? 1 : 0;
     html += w ? `<div class="card" style="background:#2a2418;border-color:#6a5420"><div class="row"><span style="font-size:12px;color:var(--gold)">心願</span><span class="k" style="font-size:12px">剩 ${Math.max(0, w.until - S.day)} 個月</span></div><div style="font-size:14.5px;margin-top:2px">${esc(w.n)}</div><div class="xbar" style="margin-top:6px;background:#3a3420"><i style="width:${clamp(wp * 100, 3, 100)}%;background:var(--gold)"></i></div></div>` : `<div class="card k" style="font-size:13px">目前沒有特別的心願</div>`;
     const cs = chipsOf(h);
-    html += `<div class="sec">近況</div><div class="tags" style="margin-bottom:8px">${cs.map(([k, t]) => `<span class="tag ${k === 'g' ? 'g' : ''}" style="${k === 'r' ? 'border-color:var(--red);color:#ff9a9a' : k === '' ? 'border-color:#4a5470;color:var(--muted)' : ''}">${t}</span>`).join('') || '<span class="k" style="font-size:12.5px">一切如常</span>'}</div>
+    html += `<div class="sec">近況</div><div class="tags" style="margin-bottom:8px">${cs.map(([k, t]) => `<span class="tag ${k === 'g' ? 'g' : ''}" style="${k === 'r' ? 'border-color:var(--red);color:#b03a30' : k === '' ? 'border-color:#8a6a46;color:var(--muted)' : ''}">${t}</span>`).join('') || '<span class="k" style="font-size:12.5px">一切如常</span>'}</div>
       <details class="card" style="line-height:1.7"><summary class="k" style="font-size:12.5px;cursor:pointer">看${pron(h)}現在的樣子（完整描述）</summary><div style="margin-top:6px">${describe(h)}</div></details>`;
     const tg = saveTarget(h), known = h.revealed || h.said === h.goal;
     const showG = h.revealed ? h.goal : h.said;
     html += `<div class="sec">人生目標</div><div class="card"><div class="row"><b>${GOALS[showG].n}</b><span class="k" style="font-size:12px">${h.revealed ? '你已經看清楚了' : `${pron(h)}自己說的`}</span></div><div class="k" style="font-size:12px">${GOALS[showG].d}</div>
       ${!h.revealed && h.clues ? `<div class="dg o" style="font-size:12px;margin-top:4px">你的觀察：有 ${h.clues} 件事跟${pron(h)}說的不太一樣</div>` : ''}
-      ${tg && known ? `<div class="row" style="font-size:12.5px;margin-top:6px"><span>${tg.n}</span><span>${fmt(Math.min(h.wallet, tg.t))} / ${fmt(tg.t)}</span></div><div style="height:6px;background:#3a4359;border-radius:3px;margin-top:4px;overflow:hidden"><i style="display:block;height:6px;background:var(--green);width:${Math.min(100, h.wallet / tg.t * 100)}%"></i></div>` : ''}
+      ${tg && known ? `<div class="row" style="font-size:12.5px;margin-top:6px"><span>${tg.n}</span><span>${fmt(Math.min(h.wallet, tg.t))} / ${fmt(tg.t)}</span></div><div style="height:6px;background:#c9a466;border-radius:3px;margin-top:4px;overflow:hidden"><i style="display:block;height:6px;background:var(--green);width:${Math.min(100, h.wallet / tg.t * 100)}%"></i></div>` : ''}
       ${h.goal === 'filial' && known ? `<div class="k" style="font-size:12px;margin-top:4px">已經寄回老家 ${fmt(h.sentHome || 0)} 金</div>` : ''}
       <div class="k" style="font-size:12px;margin-top:4px">對小孩的想法：${h.partner || h.married ? KIDW[h.kidWish] : '還沒聊過'}${h.house ? ' · 有自己的房子' : ''}</div>
       <div class="k" style="font-size:12px;margin-top:2px">${pron(h)}的錢包：${fmt(h.wallet)} 金</div></div>`;
@@ -1041,7 +1049,7 @@ function renderSheet(){
   }
   if (sheetT === 'gear') {
     { const up = upkeep() + (S.loan ? Math.min(60, S.loan) : 0), mo = up > 0 ? Math.floor(Math.max(0, S.gold) / up) : 99;
-      html += `<div class="gbar"><span>金庫 <b style="color:var(--gold)">${fmt(S.gold)}</b></span><span>每月開銷 <b style="color:#ff9a9a">-${fmt(up)}</b></span><span class="${mo < 6 ? 'dg r' : 'k'}">不賺錢還撐 ${mo >= 99 ? '很久' : mo + ' 個月'}</span></div>`; }
+      html += `<div class="gbar"><span>金庫 <b style="color:var(--gold)">${fmt(S.gold)}</b></span><span>每月開銷 <b style="color:#b03a30">-${fmt(up)}</b></span><span class="${mo < 6 ? 'dg r' : 'k'}">不賺錢還撐 ${mo >= 99 ? '很久' : mo + ' 個月'}</span></div>`; }
     if (SS('gear')) html += shopView(h);
     if (SS('own')) { const bs = (h.buys || []).slice(-20).reverse();
       html += `<div class="k" style="font-size:12px;margin:4px 0 8px">${pron(h)}會用自己的錢買裝備、藥水、看病、進修，買多少看${pron(h)}的人生目標（${GOALS[h.goal].n}）。${pron(h)}的錢包：${fmt(h.wallet)} 金</div>`;
@@ -1068,7 +1076,7 @@ function renderSheet(){
   if (lifeIs('log')) {
     const rg = regrets(h), hp = happyOf(rg), worst = rg.filter(r => r.lv).sort((a, b) => b.lv - a.lv)[0], wn = (h.mem || []).filter(m => m.k === 'wishOk').length;
     html += `<div class="card" style="margin-top:4px"><div class="row k" style="font-size:12px"><span>18 歲</span><span>現在 ${Math.floor(h.age)} 歲</span><span>50 歲</span></div><div class="lifebar"><i style="width:${clamp((h.age - 18) / 32 * 100, 2, 100)}%"></i></div>
-      <div class="tags" style="margin-top:4px"><span class="tag g">幸福感 ${hp}</span>${worst ? `<span class="tag" style="border-color:var(--red);color:#ff9a9a">遺憾：${worst.n.replace(/^沒有/, '沒').slice(0, 10)}</span>` : ''}<span class="tag b">心願達成 ${wn} 次</span></div></div>`;
+      <div class="tags" style="margin-top:4px"><span class="tag g">幸福感 ${hp}</span>${worst ? `<span class="tag" style="border-color:var(--red);color:#b03a30">遺憾：${worst.n.replace(/^沒有/, '沒').slice(0, 10)}</span>` : ''}<span class="tag b">心願達成 ${wn} 次</span></div></div>`;
     html += `<div class="sec">${h.name}的人生</div>`;
     const LF = [['all', '全部', null], ['glory', '榮耀', '#f2c14e'], ['hurt', '受傷', '#ff7b7b'], ['love', '感情', '#e88aa8'], ['gain', '收穫', '#6fcf97']], lf = S.lifeF || 'all', lc = (LF.find(x => x[0] === lf) || [])[2];
     html += `<div class="ff2">${LF.map(([k, n, c]) => `<button class="${lf === k ? 'on' : ''}" data-lf="${k}">${c ? `<i style="display:inline-block;width:8px;height:8px;border-radius:4px;background:${c};margin-right:5px"></i>` : ''}${n}</button>`).join('')}</div>`;
@@ -1081,14 +1089,14 @@ function renderSheet(){
     const grp = (keys, t, c, empty) => { const xs = ms.filter(([m]) => keys ? keys.includes(m.k) : !GOOD.includes(m.k) && !BAD.includes(m.k));
       return `<div class="sec" style="color:${c}">${t}（${xs.length}）</div>` + (xs.length ? xs.map(([m, t2]) => `<div class="memc" style="border-left-color:${c}"><div class="k" style="font-size:11.5px">${ym(m.d)}</div><div>「${esc(t2)}」</div></div>`).join('') : `<div class="k" style="font-size:12.5px;margin-bottom:8px">${empty}</div>`); };
     const g = ms.filter(([m]) => GOOD.includes(m.k)).length, bd = ms.filter(([m]) => BAD.includes(m.k)).length;
-    html += `<div class="card" style="margin-top:4px;font-size:13px;line-height:1.6">${h.name}記得的事會影響${pron(h)}怎麼看你。感激 <b style="color:#8fe0b0">${g}</b> 件、心結 <b style="color:#ff9a9a">${bd}</b> 件。${bd > g ? `<br><span class="dg o">${pron(h)}對你有點心結，信任比較難建立。</span>` : g > bd ? `<br><span class="dg g">${pron(h)}記得你對${pron(h)}的好。</span>` : ''}</div>`;
+    html += `<div class="card" style="margin-top:4px;font-size:13px;line-height:1.6">${h.name}記得的事會影響${pron(h)}怎麼看你。感激 <b style="color:#2f7a3a">${g}</b> 件、心結 <b style="color:#b03a30">${bd}</b> 件。${bd > g ? `<br><span class="dg o">${pron(h)}對你有點心結，信任比較難建立。</span>` : g > bd ? `<br><span class="dg g">${pron(h)}記得你對${pron(h)}的好。</span>` : ''}</div>`;
     html += grp(GOOD, '感激你的事', '#6fcf97', '還沒有') + grp(BAD, '心裡的結', '#ff7b7b', '還沒有，很好') + grp(null, '人生的記憶', '#59a8ff', '還沒有特別的回憶');
   }
   if (lifeIs('regret')) {
     const rg = regrets(h), hp = happyOf(rg), TIP = ['讓' + pron(h) + '多自己做決定：放寬「自己接任務」、少硬排' + pron(h) + '不想做的事', '多排休息，別讓' + pron(h) + '連續工作太久', '多回應' + pron(h) + '說的話，少「已讀不回」，偶爾關心一下', '讓' + pron(h) + '交朋友：請客、帶朋友一起出任務', '照顧' + pron(h) + '的心情：心願、稱讚、請喝一杯'];
-    html += `<div class="card" style="margin-top:4px;text-align:center"><div class="k" style="font-size:12px">如果${pron(h)}的人生現在結束，幸福感會是</div><div class="px" style="font-size:40px;color:${hp >= 80 ? '#8fe0b0' : hp >= 60 ? '#ffc46e' : '#ff9a9a'}">${hp}</div><div class="k" style="font-size:12px">每個遺憾扣 10～20 分，結局時會寫進勇者牆</div></div>`;
+    html += `<div class="card" style="margin-top:4px;text-align:center"><div class="k" style="font-size:12px">如果${pron(h)}的人生現在結束，幸福感會是</div><div class="px" style="font-size:40px;color:${hp >= 80 ? '#2f7a3a' : hp >= 60 ? '#a8681a' : '#b03a30'}">${hp}</div><div class="k" style="font-size:12px">每個遺憾扣 10～20 分，結局時會寫進勇者牆</div></div>`;
     html += rg.map((r, i) => { const c = ['#6fcf97', '#ffb347', '#ff7b7b'][r.lv];
-      return `<div class="rgc"><div class="row"><b style="font-size:14px">${r.n}</b><span style="font-size:12px;color:${c}">${['沒有遺憾', '有點遺憾', '很遺憾'][r.lv]}</span></div><div class="pips" style="margin:6px 0"><i class="on" style="background:${c}"></i><i class="${r.lv >= 1 ? 'on' : ''}" style="${r.lv >= 1 ? 'background:' + c : ''}"></i><i class="${r.lv >= 2 ? 'on' : ''}" style="${r.lv >= 2 ? 'background:' + c : ''}"></i></div><div class="k" style="font-size:12.5px">${r.why}</div>${r.lv ? `<div style="font-size:12.5px;margin-top:4px;color:#c9cfdb">怎麼改善：${TIP[i]}</div>` : ''}</div>`; }).join('');
+      return `<div class="rgc"><div class="row"><b style="font-size:14px">${r.n}</b><span style="font-size:12px;color:${c}">${['沒有遺憾', '有點遺憾', '很遺憾'][r.lv]}</span></div><div class="pips" style="margin:6px 0"><i class="on" style="background:${c}"></i><i class="${r.lv >= 1 ? 'on' : ''}" style="${r.lv >= 1 ? 'background:' + c : ''}"></i><i class="${r.lv >= 2 ? 'on' : ''}" style="${r.lv >= 2 ? 'background:' + c : ''}"></i></div><div class="k" style="font-size:12.5px">${r.why}</div>${r.lv ? `<div style="font-size:12.5px;margin-top:4px;color:#6b4e33">怎麼改善：${TIP[i]}</div>` : ''}</div>`; }).join('');
   }
   if (sheetT === 'people' && SS('wall')) {
     html += `<div class="sec">歷代勇者</div>`;
@@ -1096,7 +1104,7 @@ function renderSheet(){
     else html += `<div class="wline">` + [...S.wall].map((w, i) => { const ec = /戰死|離世/.test(w.end) ? '#ff7b7b' : /離開/.test(w.end) ? '#ffb347' : /傳奇/.test(w.end) ? '#c9b6ff' : '#6fcf97';
       return `${i ? `<div class="wrel">${esc(w.rel || '公會介紹的新人')}</div>` : ''}<div class="wc"><span class="wa">${esc(w.name.slice(0, 1))}</span><div style="flex:1;min-width:0"><div class="row"><b class="px" style="font-weight:400;font-size:16px">${esc(w.name)}</b><span class="tag" style="border-color:${ec};color:${ec}">${esc(w.end)}</span></div>
         <div class="k" style="font-size:12px">第 ${w.gen} 代 · ${esc(w.cls)} · Lv${w.lv} · ${w.age} 歲</div>${w.happy != null ? `<div class="row" style="font-size:12px;margin-top:4px"><span>幸福感</span><span>${w.happy}</span></div><div class="xbar"><i style="width:${w.happy}%;background:${w.happy >= 80 ? '#6fcf97' : w.happy >= 60 ? '#ffb347' : '#ff7b7b'}"></i></div>` : ''}
-        <div style="font-size:12.5px;margin-top:4px;color:#c9cfdb">${esc(w.why)}</div></div></div>`; }).join('') + `<div class="wrel">${esc(h.rel || '')}</div><div class="wc now"><span class="wa" style="background:var(--gold);color:#12161f">${esc(h.name.slice(0, 1))}</span><div><b class="px" style="font-weight:400;font-size:16px">${esc(h.name)}</b><div class="k" style="font-size:12px">第 ${h.gen} 代 · 現在 · Lv${h.lv} · ${Math.floor(h.age)} 歲</div></div></div></div>`;
+        <div style="font-size:12.5px;margin-top:4px;color:#6b4e33">${esc(w.why)}</div></div></div>`; }).join('') + `<div class="wrel">${esc(h.rel || '')}</div><div class="wc now"><span class="wa" style="background:var(--gold);color:#12161f">${esc(h.name.slice(0, 1))}</span><div><b class="px" style="font-weight:400;font-size:16px">${esc(h.name)}</b><div class="k" style="font-size:12px">第 ${h.gen} 代 · 現在 · Lv${h.lv} · ${Math.floor(h.age)} 歲</div></div></div></div>`;
   }
   if (sheetT === 'office') {
     const rk = rankOf(), nx = RANKS[rk + 1];
@@ -1104,8 +1112,8 @@ function renderSheet(){
     html += `<div class="rankc"><div class="rb3"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#12161f" stroke-width="2" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/></svg></div><div style="flex:1;min-width:0">
       <div style="font-size:12px;color:#e0c89a">等級 ${rk + 1} / ${RANKS.length}<span class="stg">${STAGES[stageOf(rk)]}階段</span></div><div class="px" style="font-size:21px">${rankName(rk)}</div>
       <div class="lad" aria-label="15 級階梯">${RANKS.map((_, i) => `<i class="${i <= rk ? 'on' : ''}${i === rk ? ' cur' : ''}${i && i % 3 === 0 ? ' gap' : ''}" style="--c:${STAGE_C[stageOf(i)]}" title="${RANKS[i][1]}"></i>`).join('')}</div>
-      ${nx ? `<div style="font-size:12px;color:#c9cfdb;margin-top:6px">升格「${nx[1]}」還需要：</div><div class="rq">${rankReq(rk + 1)}</div><div style="font-size:12px;color:#8fe0b0;margin-top:5px">下一級：${(UNLOCK_TXT[rk + 1] || '委託報酬變高').replace(/^[，。]/, '')}</div>` : '<div style="font-size:12px;color:#c9cfdb;margin-top:6px">已經是最高等級</div>'}</div></div>`;
-    html += `<div class="tiles"><div class="tile"><b style="color:var(--gold);font-size:16px">${fmt(S.gold)}</b><span>金庫</span></div><div class="tile"><b style="color:var(--blue);font-size:16px">${fmt(Math.round(S.fame))}</b><span>名聲</span></div><div class="tile"><b style="color:${S.rep >= 60 ? '#8fe0b0' : S.rep >= 35 ? '#ffc46e' : '#ff9a9a'};font-size:16px">${Math.round(S.rep)}</b><span>口碑</span></div><div class="tile"><b style="color:#ff9a9a;font-size:16px">-${fmt(upkeep() + (S.loan ? Math.min(60, S.loan) : 0))}</b><span>每月開銷</span></div></div>`;
+      ${nx ? `<div style="font-size:12px;color:#6b4e33;margin-top:6px">升格「${nx[1]}」還需要：</div><div class="rq">${rankReq(rk + 1)}</div><div style="font-size:12px;color:#2f7a3a;margin-top:5px">下一級：${(UNLOCK_TXT[rk + 1] || '委託報酬變高').replace(/^[，。]/, '')}</div>` : '<div style="font-size:12px;color:#6b4e33;margin-top:6px">已經是最高等級</div>'}</div></div>`;
+    html += `<div class="tiles"><div class="tile"><b style="color:var(--gold);font-size:16px">${fmt(S.gold)}</b><span>金庫</span></div><div class="tile"><b style="color:var(--blue);font-size:16px">${fmt(Math.round(S.fame))}</b><span>名聲</span></div><div class="tile"><b style="color:${S.rep >= 60 ? '#2f7a3a' : S.rep >= 35 ? '#a8681a' : '#b03a30'};font-size:16px">${Math.round(S.rep)}</b><span>口碑</span></div><div class="tile"><b style="color:#b03a30;font-size:16px">-${fmt(upkeep() + (S.loan ? Math.min(60, S.loan) : 0))}</b><span>每月開銷</span></div></div>`;
     html += `<div class="k" style="font-size:12px;margin:-2px 2px 4px">名聲來自事務所任務、委託、魔王、寶物、心願和守村；醜聞會扣。每升一級，報酬約 +12%。年度配額每個階段多 1 件，旗下藝人完成的委託也算。</div>`;
     if (S.infamySeen) html += infamyView();
     html += finView();
@@ -1117,7 +1125,7 @@ function renderSheet(){
     if (SS('fac')) {
     html += `<div class="sec">事務所設施（金庫 ${fmt(S.gold)}）</div><div class="fgrid">`;
     Object.keys(OFFICE).forEach(k => { const l = S.office[k] || 0, O = OFFICE[k], c = officeCost(k, l);
-      html += `<div class="fac"><div class="row"><b style="font-size:14px">${O.n}</b><span class="pips">${[0, 1, 2, 3, 4].map(i => `<i class="${i < l ? 'on' : i >= officeMax() ? 'lk' : ''}"></i>`).join('')}</span></div><div class="k" style="font-size:12px">${l ? O.d(l) : '還沒蓋'}</div>${l < officeMax() ? `<div style="font-size:11.5px;color:#8fe0b0">下一級：${O.d(l + 1)}</div><button class="btn" data-up="${k}" ${S.gold < c ? 'disabled' : ''}>${l ? '升級' : '蓋'} ${fmt(c)}</button>` : `<button class="btn" disabled>${l >= 5 ? '已滿級' : officeMax() < 4 ? '升上「王室御用經紀」才能再升' : '升上「英雄之家」才能再升'}</button>`}</div>`; });
+      html += `<div class="fac"><div class="row"><b style="font-size:14px">${O.n}</b><span class="pips">${[0, 1, 2, 3, 4].map(i => `<i class="${i < l ? 'on' : i >= officeMax() ? 'lk' : ''}"></i>`).join('')}</span></div><div class="k" style="font-size:12px">${l ? O.d(l) : '還沒蓋'}</div>${l < officeMax() ? `<div style="font-size:11.5px;color:#2f7a3a">下一級：${O.d(l + 1)}</div><button class="btn" data-up="${k}" ${S.gold < c ? 'disabled' : ''}>${l ? '升級' : '蓋'} ${fmt(c)}</button>` : `<button class="btn" disabled>${l >= 5 ? '已滿級' : officeMax() < 4 ? '升上「王室御用經紀」才能再升' : '升上「英雄之家」才能再升'}</button>`}</div>`; });
     html += '</div>';
     }
   }
@@ -1140,7 +1148,7 @@ function renderSheet(){
       ${(() => { let a = null; try { a = JSON.parse(localStorage.getItem(ARCH_KEY) || 'null'); } catch (e) {} return a && a.js ? `<div class="li col"><div class="tx"><b>清除前的進度</b><small>改版清除舊紀錄時先收起來的：第 ${a.gen || 1} 代「${esc(a.name)}」，${ym(a.day || 0)}。找回會取代現在這一局（現在這一局會先放進備份）</small></div><button class="btn${archArm ? ' warn' : ''}" id="bArch" style="width:100%;margin-top:8px">${archArm ? '再按一次確定找回' : '找回清除前的進度'}</button></div>` : ''; })()}
       <div class="li col"><div class="tx"><b>存檔搬家</b><small id="saveMsg">匯出會得到一串文字，到別的裝置按「匯入」貼上即可</small></div>
         <div class="grid2" style="margin-top:8px"><button class="btn" id="bExp">匯出</button><button class="btn" id="bImpShow">匯入</button></div>
-        <textarea id="saveTxt" rows="4" style="width:100%;margin-top:8px;background:#161b27;color:var(--text);border:1px solid #3a4359;border-radius:10px;padding:8px;font-size:12px;display:none" aria-label="存檔文字"></textarea>
+        <textarea id="saveTxt" rows="4" style="width:100%;margin-top:8px;background:#f3e0b2;color:var(--text);border:1px solid #c9a466;border-radius:10px;padding:8px;font-size:12px;display:none" aria-label="存檔文字"></textarea>
         <div class="grid2" id="saveBtns" style="margin-top:6px;display:none"><button class="btn" id="bCopy">複製</button><button class="btn pri" id="bImp">確定匯入</button></div></div></div>`;
     { const inApp = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || navigator.standalone);   // v17.28：從主畫面打開
       html += `<div class="sec">App</div><div class="grp">
@@ -1149,8 +1157,8 @@ function renderSheet(){
     html += `<div class="sec">說明</div><div class="grp">
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">怎麼玩</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div></details></div>
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">信任與提示</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div></details></div></div>`;
-    html += `<div class="sec" style="color:#ff9a9a">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
-    html += `<div class="stFoot">孤勇者 v17.28 · 只有你一個人在測試</div>`;
+    html += `<div class="sec" style="color:#b03a30">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
+    html += `<div class="stFoot">孤勇者 v17.29 · 只有你一個人在測試</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });

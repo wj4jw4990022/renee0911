@@ -182,7 +182,7 @@ function drawVilMini(now){
   if (hm === 'vil' && V.x != null) { ctx.fillStyle = '#ff7b7b'; ctx.beginPath(); ctx.arc(x0 + V.x * k, y + mh / 2, 2, 0, 7); ctx.fill(); }
   // 勇者在屋裡：門口上方冒一個小泡泡（畫在夜色之後，晚上也看得清楚）
   if (V.inside && hm === 'vil') { const wx = VD[V.inside], wy = V_BASE - 24 + Math.sin(now / 500) * 1.5, sx = 180 + (wx - cam.x) * cam.z, sy = SH / 2 + (wy - cam.y) * cam.z, ic = INSIDE_IC[V.inside] || '…';
-    ctx.fillStyle = 'rgba(16,20,30,.8)'; ctx.beginPath(); ctx.arc(sx + 14, sy - 6, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#f2c14e'; ctx.font = '13px DotGothic16, sans-serif'; const tt = ic === 'z' ? (Math.floor(now / 600) % 2 ? 'z' : 'Zz') : ic; ctx.fillText(tt, sx + 14 - ctx.measureText(tt).width / 2, sy - 1); }
+    ctx.fillStyle = 'rgba(16,20,30,.8)'; ctx.beginPath(); ctx.arc(sx + 14, sy - 6, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#f2c14e'; ctx.font = '13px Cubic11, sans-serif'; const tt = ic === 'z' ? (Math.floor(now / 600) % 2 ? 'z' : 'Zz') : ic; ctx.fillText(tt, sx + 14 - ctx.measureText(tt).width / 2, sy - 1); }
 }
 function vilMiniHit(sx, sy){ const { x0, x1, y, h: mh } = MINI; if (sy > y + mh + 8 || sx < x0 - 6 || sx > x1 + 6) return false; V.pan = clamp((sx - x0) / (x1 - x0) * WW, 0, WW); V.panT = performance.now(); return true; }
 function drawFar(now){
@@ -192,14 +192,14 @@ function drawFar(now){
   ctx.fillStyle = '#b9a27a'; ctx.fillRect(166, 0, 28, Hh);
   drawBld(ctx, 'castle', 138, 0, 84, 88, 'day');
   [[146, 110], [196, 120], [146, 170], [198, 186], [150, 226], [196, 238]].forEach(([x, y], i) => drawBld(ctx, 'cottage', x - 2, y, 22, 20, 'day', { roof:['#7a4a3a', '#4f7fb0', '#c0563f'][i % 3], wall:'#c8a070' }));
-  ctx.font = fz(10) + 'px DotGothic16, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('王都', 168, 96);
+  ctx.font = fz(10) + 'px Cubic11, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('王都', 168, 96);
   ZONES.forEach((Z, z) => { if (Z.map !== 'far') return; const [x0, y0, x1, y1] = Z.rect, w = x1 - x0, hh = y1 - y0;
     ctx.fillStyle = Z.c; ctx.fillRect(x0, y0, w, hh);
     if (z === 3) { ctx.fillStyle = '#8a7a6a'; ctx.fillRect(x0 + 10, y0 + 60, 120, 2); for (let k = 14; k < 130; k += 6) ctx.fillRect(x0 + k, y0 + 59, 2, 4); [[20, 30], [80, 70], [40, 95]].forEach(([x, y]) => drawBld(ctx, 'mine', x0 + x, y0 + y, 22, 16, 'day')); }
     if (z === 4) { ctx.fillStyle = '#3d6f9e'; ctx.fillRect(x0, y0, 34, hh); ctx.fillStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 6; i++) ctx.fillRect(x0 + 30 + Math.sin(now / 600 + i) * 3, y0 + 12 + i * 20, 6, 2); }
     if (z === 5) [[60, 40], [10, 60], [100, 70]].forEach(([x, y]) => drawBld(ctx, 'mountain', x0 + x, y0 + y, 48, 50, 'day'));
     if (z === 6) drawBld(ctx, 'darkcastle', x0 + 32, y0 + 2, 76, 90, 'day');
-    ctx.font = fz(10) + 'px DotGothic16, sans-serif'; ctx.fillStyle = z === 5 ? 'rgba(40,50,70,.8)' : 'rgba(255,255,255,.7)'; ctx.fillText(Z.n, x0 + 6, y1 - 6);
+    ctx.font = fz(10) + 'px Cubic11, sans-serif'; ctx.fillStyle = z === 5 ? 'rgba(40,50,70,.8)' : 'rgba(255,255,255,.7)'; ctx.fillText(Z.n, x0 + 6, y1 - 6);
   });
   if (zoneOpen(6) && !S.boss2Done) { const [x0, y0] = ZONES[6].rect; drawMonster(ctx, 'abyss', x0 + 116, y0 + 118, 'idle', Math.floor(now / 260) % 4, false, true); }
 }
@@ -216,7 +216,7 @@ function drawOut(now){
   [[184,'#c0563f'],[222,'#4f7fb0'],[260,'#c0563f'],[330,'#8a5aa0'],[296,'#e0a83a']].forEach(([x, c]) => drawBld(ctx, 'cottage', x - 1, 238, 26, 24, bm, { roof:c }));
   ROCKS.forEach(([x, y]) => drawBld(ctx, 'rock', x, y, 14, 10, 'day'));
   TREES.forEach(([x, y]) => drawBld(ctx, 'tree', x - 11, y - 16, 22, 28, 'day'));
-  ctx.font = fz(10) + 'px DotGothic16, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.font = fz(10) + 'px Cubic11, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.55)';
   ctx.fillText('森林', 8, 206); ctx.fillText('草原', 330, 206); ctx.fillText('荒地', 330, 86); ctx.fillText('村子', 178, 266);
   if (!h.bossKill) drawMonster(ctx, 'boneking', 173, 44, 'idle', Math.floor(now / 260) % 4, false, false);
   const hr = hourOf();
@@ -236,7 +236,7 @@ function drawThings(now, view){
   if (mt.elite && ZONES[mt.elite.z].map === view) { const e = mt.elite, a = .35 + Math.sin(now / 260) * .15; ctx.fillStyle = `rgba(242,193,78,${a})`; ctx.beginPath(); ctx.ellipse(e.x, e.y + 4, monHalf(zoneMon(e.z)) + 4, 5, 0, 0, 7); ctx.fill(); drawMonster(ctx, zoneMon(e.z), e.x, e.y + 4, 'idle', Math.floor(now / 200) % 4, true, true); }
   if (mt.lost && ZONES[mt.lost.z].map === view) { const l = mt.lost; ctx.fillStyle = '#59a8ff'; ctx.fillRect(l.x - 3, l.y - 10, 6, 7); ctx.fillStyle = '#e8b98a'; ctx.fillRect(l.x - 2, l.y - 14, 5, 4); ctx.fillStyle = '#fff'; if (Math.floor(now / 400) % 2) { ctx.font = '10px sans-serif'; ctx.fillText('!', l.x + 4, l.y - 14); } }
   if (mt.caravan) { const x = CARX, y = 150; ctx.fillStyle = '#e8dcc0'; ctx.fillRect(x - 12, y - 14, 24, 10); ctx.fillStyle = '#8a5a3a'; ctx.fillRect(x - 12, y - 4, 24, 4); ctx.fillStyle = '#3a2a1e'; ctx.fillRect(x - 9, y, 5, 5); ctx.fillRect(x + 4, y, 5, 5); ctx.fillStyle = '#c0a060'; ctx.fillRect(x + 14, y - 8, 8, 6);
-    ctx.font = fz(9) + 'px DotGothic16, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('商隊', x - 10, y - 17); }
+    ctx.font = fz(9) + 'px Cubic11, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('商隊', x - 10, y - 17); }
 }
 function drawWeather(now){
   const W = 360, Hh = SH, w = S.weather, mo = S.day % 12;
@@ -303,6 +303,7 @@ function drawMap(now){
   if (talkFx && (typeof pref === 'undefined' || pref.fx) && hm === view && now - talkFx.t < 2400 && h.alpha > 0 && !heroHidden(h)) { const [hx1, hy1] = view === 'vil' ? villagePos(h) : [h.x, h.y], sx = 180 + (hx1 - cam.x) * cam.z, sy = SH / 2 + (hy1 - cam.y) * cam.z, a = (now - talkFx.t) / 2400;
     ctx.globalAlpha = Math.min(1, (1 - a) * 1.6); ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = talkFx.em.c; ctx.fillText(talkFx.em.t, sx - 6, sy - 26 * cam.z - a * 10);
     ctx.font = 'bold 11.5px sans-serif'; talkFx.items.forEach((it, i) => { ctx.fillStyle = 'rgba(16,20,30,.75)'; const w = ctx.measureText(it.t).width; ctx.fillRect(sx + 12, sy - 24 - i * 16 - a * 22 - 11, w + 8, 15); ctx.fillStyle = it.c; ctx.fillText(it.t, sx + 16, sy - 24 - i * 16 - a * 22); }); ctx.globalAlpha = 1; }
+  drawFx(now, h, hm, view);   // v17.29
   if (bub) drawBubble(bub[0], 180 + (bub[1] - cam.x) * cam.z, SH / 2 + (bub[2] - cam.y) * cam.z - (cam.z - 1) * 10);
   drawWeather(now);
   // 晨昏與夜晚
@@ -622,7 +623,7 @@ function faceURL(h, expr){ if (!h) return ''; const e = expr || exprOf(h), key =
 const pimg = (h, expr) => h ? `<img class="pimg" src="${faceURL(h, expr)}" alt="">` : '';
 // 在地圖上畫一個人（取代舊的 drawHero）
 const NAME_C = { hero:'#f2c14e', artist:'#9fd0ff', friend:'#bff0cf', npc:'rgba(255,255,255,.8)' };
-function nameTag(c, t, x, y, kind){ c.font = fz(8) + 'px DotGothic16, sans-serif'; const w = c.measureText(t).width; c.fillStyle = 'rgba(16,20,30,.55)'; c.fillRect(x - w / 2 - 2, y - 7, w + 4, 9); c.fillStyle = NAME_C[kind] || NAME_C.npc; c.fillText(t, x - w / 2, y); }
+function nameTag(c, t, x, y, kind){ c.font = fz(8) + 'px Cubic11, sans-serif'; const w = c.measureText(t).width; c.fillStyle = 'rgba(16,20,30,.55)'; c.fillRect(x - w / 2 - 2, y - 7, w + 4, 9); c.fillStyle = NAME_C[kind] || NAME_C.npc; c.fillText(t, x - w / 2, y); }
 function drawSprite(c, h, x, y, lying, now, opt){
   let kind = 'idle', f = Math.floor(now / 220) % 4;
   const moving = opt ? opt.moving : Math.abs((h.tx ?? h.x) - h.x) > .6 || Math.abs((h.ty ?? h.y) - h.y) > .6;
@@ -1217,7 +1218,7 @@ function mTxt(h){ const o = h.mission, ph = mPhase(h), hr = hourOf(), w = mWin(o
 let RES = null;   // 地圖中間的結果橫幅
 // 小人（觀眾、擡擔架的村民、考官）
 function pxPerson(x, y, c, k, now){ const b = Math.round(Math.sin(now / 260 + k) * 1); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(x - 3, y, 7, 1); ctx.fillStyle = c; ctx.fillRect(x - 3, y - 7 + b, 6, 7); ctx.fillStyle = ['#e8b98a', '#c8966a', '#f0c8a0'][k % 3]; ctx.fillRect(x - 2, y - 11 + b, 5, 4); ctx.fillStyle = ['#4a2a1a', '#2a2a30', '#8a5a2a', '#c8a040'][k % 4]; ctx.fillRect(x - 2, y - 12 + b, 5, 2); }
-function pxSay(x, y, t){ ctx.font = fz(8) + 'px DotGothic16, sans-serif'; const w = ctx.measureText(t).width + 6; ctx.fillStyle = '#f1ece0'; ctx.fillRect(x - w / 2, y - 9, w, 10); ctx.fillStyle = '#161b27'; ctx.fillText(t, x - w / 2 + 3, y - 1); }
+function pxSay(x, y, t){ ctx.font = fz(8) + 'px Cubic11, sans-serif'; const w = ctx.measureText(t).width + 6; ctx.fillStyle = '#f1ece0'; ctx.fillRect(x - w / 2, y - 9, w, 10); ctx.fillStyle = '#161b27'; ctx.fillText(t, x - w / 2 + 3, y - 1); }
 // 結算外面包一層：記下前後的差別做成橫幅；勇者的感想留到晚上才說；決定要不要村口迎接、擡擔架
 function resolveMission(){
   const h = H(), o = h.mission || {}, g0 = S.gold, f0 = S.fame, lv0 = h.lv, live = !offline, k = mKind(o);
@@ -1236,8 +1237,8 @@ function drawResBanner(now){
     if (!RES) return; const k = (now - RES.t) / 4200; if (k > 1) { RES = null; return; }
     const a = k < .08 ? k / .08 : k > .8 ? (1 - k) / .2 : 1, w = 236, x = 180 - w / 2, y = SH * .3;
     ctx.globalAlpha = a; ctx.fillStyle = 'rgba(16,20,30,.88)'; ctx.fillRect(x, y, w, 52); ctx.fillStyle = RES.ok ? '#f2c14e' : '#ff7b7b'; ctx.fillRect(x, y, w, 3);
-    ctx.font = '15px "Noto Sans TC", sans-serif'; const t1 = RES.mini ? '今天收工' : RES.ok ? '委託完成！' : '委託失敗……'; ctx.fillText(t1, 180 - ctx.measureText(t1).width / 2, y + 21);
-    ctx.font = '11px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#f1ece0'; const t2 = RES.mini ? `${RES.n} · 打倒 ${RES.kills} 隻` : RES.n.length > 18 ? RES.n.slice(0, 17) + '…' : RES.n; ctx.fillText(t2, 180 - ctx.measureText(t2).width / 2, y + 35);
+    ctx.font = '15px Cubic11, sans-serif'; const t1 = RES.mini ? '今天收工' : RES.ok ? '委託完成！' : '委託失敗……'; ctx.fillText(t1, 180 - ctx.measureText(t1).width / 2, y + 21);
+    ctx.font = '11px Cubic11, sans-serif'; ctx.fillStyle = '#f1ece0'; const t2 = RES.mini ? `${RES.n} · 打倒 ${RES.kills} 隻` : RES.n.length > 18 ? RES.n.slice(0, 17) + '…' : RES.n; ctx.fillText(t2, 180 - ctx.measureText(t2).width / 2, y + 35);
     const t3 = RES.mini ? `今天賺了 ${fmt(RES.earn)} 金` : RES.ok ? `事務所 ${RES.gold >= 0 ? '+' : ''}${fmt(RES.gold)} 金 · 名聲 ${RES.fame >= 0 ? '+' : ''}${RES.fame}${RES.lv ? ' · 升級了！' : ''}` : `名聲 ${RES.fame >= 0 ? '+' : ''}${RES.fame}${RES.hurt ? ' · 受傷了' : ''}`;
     ctx.fillStyle = '#a3abbd'; ctx.fillText(t3, 180 - ctx.measureText(t3).width / 2, y + 48); ctx.globalAlpha = 1;
   } catch (e) { if (!scnErr++) console.error(e); }
@@ -1400,7 +1401,7 @@ function drawWorldMini(now){
     if (px != null) { ctx.fillStyle = '#ff7b7b'; ctx.beginPath(); ctx.arc(x0 + px * k, y + mh / 2, 2, 0, 7); ctx.fill(); }
     // 勇者在屋裡：門口上方冒一個小泡泡（畫在夜色之後）
     if (V.inside && hm === 'vil') { const wx = VD[V.inside], wy = V_BASE - 24 + Math.sin(now / 500) * 1.5, sx = 180 + (wx - cam.x) * cam.z, sy = SH / 2 + (wy - cam.y) * cam.z, ic = INSIDE_IC[V.inside] || '…';
-      ctx.fillStyle = 'rgba(16,20,30,.8)'; ctx.beginPath(); ctx.arc(sx + 14, sy - 6, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#f2c14e'; ctx.font = '13px DotGothic16, sans-serif'; const tt = ic === 'z' ? (Math.floor(now / 600) % 2 ? 'z' : 'Zz') : ic; ctx.fillText(tt, sx + 14 - ctx.measureText(tt).width / 2, sy - 1); }
+      ctx.fillStyle = 'rgba(16,20,30,.8)'; ctx.beginPath(); ctx.arc(sx + 14, sy - 6, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#f2c14e'; ctx.font = '13px Cubic11, sans-serif'; const tt = ic === 'z' ? (Math.floor(now / 600) % 2 ? 'z' : 'Zz') : ic; ctx.fillText(tt, sx + 14 - ctx.measureText(tt).width / 2, sy - 1); }
   } catch (e) { console.error(e); }
 }
 // 鏡頭：整條路高度剛好塞滿畫面，左右跟著勇者（或玩家滑到的地方）
@@ -1632,10 +1633,10 @@ function pWin(x, y, w, hh, now, curtain){ const hr = hourOf() % 24, night = hr >
   pR(x - 1, y - 1, w + 2, hh + 2, '#3a2a1c'); pR(x, y, w, hh, night ? '#1b2340' : '#8ec6f0');
   if (night) { pR(x + w - 6, y + 2, 4, 4, '#f3e6a6'); if (Math.floor(now / 600) % 2) pR(x + 2, y + 3, 1, 1, '#fff'); } else pR(x + 3, y + 3, 5, 2, '#fff');
   pR(x + w / 2 - .5, y, 1, hh, '#3a2a1c'); if (curtain) { pR(x, y, w / 2, hh, '#8a3a4a'); pR(x + w / 2, y, w / 2, hh, '#7a3242'); } }
-function pZ(x, y, now){ const t = Math.floor(now / 500) % 3; ctx.fillStyle = '#cfd8ff'; ctx.font = '6px DotGothic16, sans-serif'; ctx.fillText('z', x, y - t); if (t > 0) { ctx.font = '8px DotGothic16, sans-serif'; ctx.fillText('Z', x + 4, y - 4 - t); } }
+function pZ(x, y, now){ const t = Math.floor(now / 500) % 3; ctx.fillStyle = '#cfd8ff'; ctx.font = '6px Cubic11, sans-serif'; ctx.fillText('z', x, y - t); if (t > 0) { ctx.font = '8px Cubic11, sans-serif'; ctx.fillText('Z', x + 4, y - 4 - t); } }
 function pBubble(x, y, now, kind){ const b = Math.sin(now / 300) * .8; pR(x, y + b, 12, 9, '#f1ece0'); pR(x - 2, y + 8 + b, 2, 2, '#f1ece0'); pR(x - 4, y + 10 + b, 1, 1, '#f1ece0');
   if (kind === 'heart') { ctx.fillStyle = '#e0607a'; [[3, 2, 2, 2], [7, 2, 2, 2], [2, 3, 8, 2], [3, 5, 6, 1], [4, 6, 4, 1], [5, 7, 2, 1]].forEach(([a, c, w, hh]) => ctx.fillRect(x + a, y + b + c, w, hh)); }
-  else { ctx.fillStyle = '#5a6a8a'; ctx.font = '7px DotGothic16, sans-serif'; ctx.fillText(kind, x + 3, y + 7 + b); } }
+  else { ctx.fillStyle = '#5a6a8a'; ctx.font = '7px Cubic11, sans-serif'; ctx.fillText(kind, x + 3, y + 7 + b); } }
 function pShadow(x, y){ pR(x - 6, y - 26, 12, 26, '#0c0c14'); pR(x - 4, y - 32, 8, 7, '#0c0c14'); }
 // 床：租屋是破床、自己買的房子是大床；病床白色
 function pBed(kind){ if (kind === 'clinic') { pR(8, 34, 48, 4, '#e8eef2'); pR(8, 38, 48, 3, '#9aa4b8'); pR(9, 41, 2, 5, '#9aa4b8'); pR(53, 41, 2, 5, '#9aa4b8'); pR(8, 28, 3, 13, '#b8c2d0'); return; }
@@ -1665,7 +1666,7 @@ const PIP_DRAW = {
     pR(0, 32, 100, 4, '#8a5a3a'); pR(0, 36, 100, 10, '#6a4228'); [[10, 28], [26, 28], [80, 28]].forEach(([x, y]) => { pR(x, y, 4, 4, '#e8c060'); pR(x, y - 1, 4, 1, '#fff'); });
     pR(70, 10, 20, 12, '#2a1a10'); pR(72, 12, 4, 8, '#a04040'); pR(78, 12, 4, 8, '#4a8a4a'); pR(84, 12, 4, 8, '#c0a040');
     drawSprite(ctx, h, 40, 46, false, now, { moving:false, expr:h.mood < 35 ? 'sad' : 'happy' }); pxPerson(60, 46, '#6a5a8a', 2, now);
-    const up = Math.floor(now / 700) % 2; pR(46, 28 - up * 3, 4, 4, '#e8c060'); pR(46, 27 - up * 3, 4, 1, '#fff'); if (up) { ctx.fillStyle = '#f3c86a'; ctx.font = '7px DotGothic16, sans-serif'; ctx.fillText('♪', 52, 14); } },
+    const up = Math.floor(now / 700) % 2; pR(46, 28 - up * 3, 4, 4, '#e8c060'); pR(46, 27 - up * 3, 4, 1, '#fff'); if (up) { ctx.fillStyle = '#f3c86a'; ctx.font = '7px Cubic11, sans-serif'; ctx.fillText('♪', 52, 14); } },
   clinic(h, now){ pR(0, 0, 100, 46, '#dfe6ea'); pR(0, 46, 100, 8, '#b8c2c8'); pR(70, 8, 10, 10, '#fff'); pR(74, 9, 2, 8, '#d04a4a'); pR(71, 12, 8, 2, '#d04a4a');
     pBed('clinic'); pLie(h, 22, 38, now, h.mood < 35 ? 0 : 1); pR(62, 30, 1, 16, '#9aa4b8'); pR(60, 26, 5, 5, '#c8e0f0'); pxPerson(80, 46, '#f4f4f4', 1, now); },
   trial(h, now){ PIP_DRAW.clinic(h, now); pR(66, 36, 8, 10, '#8a6a4a'); const b = Math.floor(now / 250) % 3; pR(68, 30, 4, 6, '#8ad06a'); pR(69 + b % 2, 28 - b, 1, 1, '#c8f0a0'); pR(70 - b % 2, 26 - b, 1, 1, '#c8f0a0'); },
@@ -1677,7 +1678,7 @@ const PIP_DRAW = {
     const f = Math.floor(now / 150) % 3; pR(40, 40, 10, 2, '#5a3a22'); pR(42, 36 - f, 6, 4 + f, '#f08a30'); pR(44, 34 - f, 2, 3, '#f3d060');
     pLie(h, 24, 46, now, h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1); if (h.mood >= 70) pBubble(26, 10, now, 'heart'); },
   spy(h, now){ pR(0, 0, 100, 54, '#16141e'); pR(0, 44, 100, 10, '#22202a'); pR(10, 10, 14, 34, '#1e1c28'); pR(72, 6, 18, 38, '#1e1c28'); const x = 50 + Math.sin(now / 800) * 8; pShadow(x, 44);
-    ctx.fillStyle = '#f3c86a'; ctx.font = '12px DotGothic16, sans-serif'; ctx.fillText('?', x - 3, 9 + Math.sin(now / 300)); },
+    ctx.fillStyle = '#f3c86a'; ctx.font = '12px Cubic11, sans-serif'; ctx.fillText('?', x - 3, 9 + Math.sin(now / 300)); },
   gone(h, now){ PIP_DRAW.spy(h, now); },
   ug(h, now){ pR(0, 0, 100, 54, '#0e0e16'); pR(0, 44, 100, 10, '#1a1a22'); pR(0, 4, 30, 40, '#18161e'); pR(70, 0, 30, 44, '#18161e'); pR(48, 4, 2, 40, '#3a3a40');
     const fl = Math.floor(now / 180) % 7 ? 1 : .4; ctx.globalAlpha = .25 * fl; ctx.fillStyle = '#f0c060'; ctx.beginPath(); ctx.moveTo(49, 8); ctx.lineTo(30, 44); ctx.lineTo(68, 44); ctx.fill(); ctx.globalAlpha = 1; pR(45, 4, 8, 5, '#f3c86a');
@@ -1690,7 +1691,7 @@ const PIP_DRAW = {
     drawSprite(ctx, h, 60, 48, false, now, { moving:false, expr:'happy' }); pxPerson(76, 48, '#7a6a5a', 0, now); pxPerson(86, 48, '#9a5a6a', 1, now); },
   ep(h, now, c){ const room = c.room || 'home'; (room === 'home' ? (H2 => { pRoom(H2, now); pBed(H2.house ? 'house' : 'rent'); }) : PIP_DRAW[room] ? (H2 => PIP_DRAW[room](H2, now)) : (H2 => pRoom(H2, now)))(h);
     if (room === 'home') drawSprite(ctx, h, 50, 46, false, now, { moving:false });
-    const n = npc(c.npc); if (n && n.alive) { const k = Math.min(1, (now - c.t0) / 900), x = Math.round(94 - 22 * k); drawSprite(ctx, n, x, 46, false, now, { moving:k < 1, left:true }); if (k >= 1 && c.tag) { ctx.font = '6px DotGothic16, sans-serif'; const w = ctx.measureText(c.tag).width + 4; pR(x - w / 2, 4, w, 8, '#f1ece0'); ctx.fillStyle = '#161b27'; ctx.fillText(c.tag, x - w / 2 + 2, 10); } } },
+    const n = npc(c.npc); if (n && n.alive) { const k = Math.min(1, (now - c.t0) / 900), x = Math.round(94 - 22 * k); drawSprite(ctx, n, x, 46, false, now, { moving:k < 1, left:true }); if (k >= 1 && c.tag) { ctx.font = '6px Cubic11, sans-serif'; const w = ctx.measureText(c.tag).width + 4; pR(x - w / 2, 4, w, 8, '#f1ece0'); ctx.fillStyle = '#161b27'; ctx.fillText(c.tag, x - w / 2 + 2, 10); } } },
 };
 function pipCap(h, c){ const n = h.name, p = h.married && h.partner && npc(h.partner), mood = h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1;
   switch (c.k) {
@@ -1722,7 +1723,7 @@ function drawPip(now){
     try { (PIP_DRAW[c.k] || PIP_DRAW.home)(h, now, c); } catch (e) { if (!scnErr++) console.error(e); }
     ctx.restore(); ctx.globalAlpha = a;
     ctx.fillStyle = '#1a1424'; ctx.fillRect(bx, by + 108, W0, 22);
-    ctx.fillStyle = '#e8dcb0'; ctx.font = '11px DotGothic16, sans-serif'; const t = pipCap(h, c); ctx.fillText(t, 180 - ctx.measureText(t).width / 2, by + 123);
+    ctx.fillStyle = '#e8dcb0'; ctx.font = '11px Cubic11, sans-serif'; const t = pipCap(h, c); ctx.fillText(t, 180 - ctx.measureText(t).width / 2, by + 123);
     if (c.k === 'ep') { ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(bx, by + H0 - 2, W0 * Math.max(0, 1 - dt / PIP_EP_MS), 2); }
     ctx.restore();
   } catch (e) { if (!scnErr++) console.error(e); }
@@ -1857,7 +1858,7 @@ function drawScene(now, view){
     if (s.t === 'search' || s.t === 'probe') s.pts.forEach((p, i) => { if (i < s.found) { ctx.fillStyle = 'rgba(111,207,151,.9)'; ctx.fillRect(p[0] - 1, p[1] - 3, 3, 3); return; }
       const a = .5 + .5 * Math.sin(now / 220 + i); ctx.fillStyle = s.t === 'probe' ? `rgba(159,208,255,${a})` : `rgba(255,240,170,${a})`;
       ctx.fillRect(p[0] - 1, p[1] - 5, 2, 6); ctx.fillRect(p[0] - 3, p[1] - 3, 6, 2);
-      if (s.t === 'probe' && i === s.found) { ctx.font = fz(9) + 'px DotGothic16, sans-serif'; ctx.fillStyle = '#9fd0ff'; ctx.fillText('?', p[0] - 2, p[1] - 9 - Math.sin(now / 300) * 1.5); } });
+      if (s.t === 'probe' && i === s.found) { ctx.font = fz(9) + 'px Cubic11, sans-serif'; ctx.fillStyle = '#9fd0ff'; ctx.fillText('?', p[0] - 2, p[1] - 9 - Math.sin(now / 300) * 1.5); } });
     if (s.t === 'escort' && s.cart && !s.fav) drawBld(ctx, 'cart', s.cart[0] - 12, s.cart[1] - 16, 24, 18, 'day');
     if (s.examiner) { pxPerson(s.sx - 34, s.sy, '#3f6ea0', 2, now); ctx.fillStyle = '#5a4a3a'; ctx.fillRect(s.sx - 29, s.sy - 16, 1, 16); ctx.fillStyle = '#f2c14e'; ctx.fillRect(s.sx - 28, s.sy - 16, 5, 3); }   // 公會考官
     if (s.fav) { const n = npc(s.fav); if (n && n.alive) { const p = s.t === 'escort' && s.cart ? [s.cart[0] - 2, s.cart[1] + 2] : [s.sx - 22, s.sy + 2]; drawSprite(ctx, n, p[0], p[1], false, now, { moving:s.t === 'escort' && !s.down, left:false }); } }   // 拜託的村民
@@ -1884,7 +1885,7 @@ function drawScnHero(now, hx, hy){
     // 越危險越常被打中
     const rate = [.15, .45, .9][di] + (lose ? .4 : 0);
     if (s.tg && !s.tg.dead && !s.down) { if (!s.hitT || now - s.hitT > 900) { if (Math.random() < rate) s.hitT = now; else s.hitT = now - 400; }
-      const k = (now - s.hitT) / 900; if (k < .7) { ctx.globalAlpha = 1 - k; ctx.fillStyle = '#ff7b7b'; ctx.font = fz(9) + 'px DotGothic16, sans-serif'; ctx.fillText('-' + (di + 1 + (lose ? 1 : 0)), hx + 6, hy - 20 - k * 10); ctx.globalAlpha = 1; } }
+      const k = (now - s.hitT) / 900; if (k < .7) { ctx.globalAlpha = 1 - k; ctx.fillStyle = '#ff7b7b'; ctx.font = fz(9) + 'px Cubic11, sans-serif'; ctx.fillText('-' + (di + 1 + (lose ? 1 : 0)), hx + 6, hy - 20 - k * 10); ctx.globalAlpha = 1; } }
   } catch (e) { if (!scnErr++) console.error(e); }
 }
 // 地圖下方的任務小卡（螢幕座標，畫在夜色之後）
@@ -1897,7 +1898,7 @@ function drawVilShow(now){
     const cols = ['#c0563f', '#3f6ea0', '#5a9a5a', '#c87aa0', '#d8a02e', '#7a6ac0'];
     if (ag === 'endorse' || ag === 'variety') {   // 台下觀眾
       for (let i = 0; i < 12; i++) { const x = bx - 30 + (i % 6) * 12 + (i >= 6 ? 6 : 0), y = 134 + (i >= 6 ? 8 : 0); person(x, y, cols[i % 6], i);
-        if (ag === 'variety' && (Math.floor(now / 700) + i) % 9 === 0) { ctx.fillStyle = '#fff'; ctx.font = fz(8) + 'px DotGothic16, sans-serif'; ctx.fillText('哈', x - 3, y - 15); } }
+        if (ag === 'variety' && (Math.floor(now / 700) + i) % 9 === 0) { ctx.fillStyle = '#fff'; ctx.font = fz(8) + 'px Cubic11, sans-serif'; ctx.fillText('哈', x - 3, y - 15); } }
       if (ag === 'endorse') { drawBld(ctx, 'sign', bx + 16, 82, 16, 14, 'day'); }
       else person(bx + 14, 96, '#3a3a46', 9);   // 主持人
     }
@@ -1922,7 +1923,7 @@ Object.assign(BLD_ART, {
   sign(P){ const { W, H } = P; P.rect(2, 0, W - 3, H - 6, '#f2e2b0'); P.rect(2, 0, W - 3, 1, '#c89a5a'); P.ell(W / 2 - .5, (H - 6) / 2, 3, 3, '#f2c14e'); P.set(W / 2 - 1, (H - 6) / 2 - 1, '#fff6d0'); P.rect(4, H - 6, 4, H - 1, '#6a4428'); P.rect(W - 5, H - 6, W - 5, H - 1, '#6a4428'); },
 });
 function drawBubble(t, x, y){
-  ctx.font = '11px "Noto Sans TC", sans-serif';
+  ctx.font = '11px Cubic11, sans-serif';
   const w = ctx.measureText(t).width + 12, bx = clamp(x - w / 2, 2, 358 - w);
   ctx.fillStyle = '#f1ece0'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, y - 16, w, 18, 8) : ctx.rect(bx, y - 16, w, 18); ctx.fill();
   ctx.fillRect(clamp(x - 2, bx + 4, bx + w - 8), y + 2, 4, 3);
@@ -1936,3 +1937,45 @@ function drawFace(c, force){
 }
 function drawLying(c){ if (!c) return; const g = c.getContext('2d'); g.fillStyle = '#a9a59e'; g.fillRect(1, 3, 6, 6); g.fillStyle = '#55524c'; g.fillRect(0, 2, 3, 8); g.fillStyle = '#7e8a88'; g.fillRect(7, 3, 9, 7); g.fillStyle = '#5a5650'; g.fillRect(16, 4, 6, 2); g.fillRect(16, 7, 6, 2); g.fillStyle = '#2a2826'; g.fillRect(10, 10, 8, 1); }
 
+
+// ================= v17.29：回饋特效（點點英雄式：跳字往上飄、Lv UP 橫幅、星星、光圈） =================
+function fxText(t, x, y, col, size){
+  ctx.font = `${size}px Cubic11, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#3b2616';
+  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1], [0, 2]]) ctx.fillText(t, Math.round(x) + dx, Math.round(y) + dy);
+  ctx.fillStyle = col; ctx.fillText(t, Math.round(x), Math.round(y)); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+function drawFx(now, h, hm, view){
+  if (!FXQ.length) return;
+  let sx = 180, sy = SH * .5;
+  try { if (hm === view && h.alpha > 0 && !heroHidden(h)) { const [hx1, hy1] = view === 'vil' ? villagePos(h) : [h.x, h.y]; sx = 180 + (hx1 - cam.x) * cam.z; sy = SH / 2 + (hy1 - cam.y) * cam.z; } } catch (e) {}
+  sx = clamp(sx, 50, 310); sy = clamp(sy, 70, SH - 20);
+  ctx.save();
+  for (let i = FXQ.length - 1; i >= 0; i--) {
+    const f = FXQ[i], a = (now - f.t) / f.dur;
+    if (a >= 1 || a < 0) { FXQ.splice(i, 1); continue; }
+    if (f.kind === 'lv') {
+      // 腳下光圈（一格一格往外擴）
+      const rr = 10 + Math.floor(a * 6) * 4; ctx.globalAlpha = Math.max(0, 1 - a * 1.2); ctx.strokeStyle = '#ffe14d'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(sx, sy + 2, rr * 1.6, rr * .5, 0, 0, Math.PI * 2); ctx.stroke();
+      // 星星
+      ctx.globalAlpha = 1; ctx.fillStyle = '#fff6a8';
+      for (let k = 0; k < 6; k++) { const ang = k * 1.05 + 0.4, d = 22 + (k % 3) * 9, on = Math.floor(now / 140 + k) % 2;
+        if (!on || a > .85) continue; const x = Math.round(sx + Math.cos(ang) * d * 1.3), y = Math.round(sy - 34 + Math.sin(ang) * d * .8);
+        ctx.fillRect(x - 1, y - 4, 2, 8); ctx.fillRect(x - 4, y - 1, 8, 2); }
+      // 橫幅：先彈一下，最後淡掉
+      const pop = a < .08 ? 1.25 : a < .14 ? .95 : 1, y = sy - 76 - Math.min(a, .2) * 30, w = 78 * pop, hh = 22 * pop;
+      ctx.globalAlpha = a > .8 ? (1 - a) / .2 : 1;
+      ctx.fillStyle = 'rgba(255,214,90,.35)'; ctx.fillRect(sx - w / 2 - 6, y - hh / 2 - 6, w + 12, hh + 12);
+      ctx.fillStyle = '#4a2f1b'; ctx.fillRect(sx - w / 2 - 2, y - hh / 2 - 2, w + 4, hh + 4);
+      ctx.fillStyle = '#e0582a'; ctx.fillRect(sx - w / 2, y - hh / 2, w, hh); ctx.fillStyle = '#ff9d2e'; ctx.fillRect(sx - w / 2, y - hh / 2, w, hh / 2);
+      ctx.fillStyle = '#ffe14d'; ctx.fillRect(sx - w / 2, y - hh / 2, w, 2);
+      fxText('Lv UP!', sx, y + 1, '#fff', Math.round(15 * pop));
+    } else {
+      const col = f.kind === 'fame' ? '#9fd0ff' : f.kind === 'bad' ? '#ff7a6a' : '#ffe14d';
+      const x = sx + 18 + (f.n - 1) * 14, y = sy - 40 - f.n * 14 - Math.min(a, .6) / .6 * 22;
+      ctx.globalAlpha = a > .7 ? (1 - a) / .3 : 1;
+      fxText(f.text, x, y, col, 12);
+    }
+  }
+  ctx.restore();
+}

@@ -303,3 +303,13 @@ function makeNpcs(){
   return n;
 }
 
+
+// ================= v17.29：回饋特效（跳字、Lv UP），畫在地圖上，見 map.js 的 drawFx =================
+const FXQ = [];
+function fxPop(text, kind = 'gold'){
+  if (typeof offline !== 'undefined' && offline) return;            // 背景補算的日子不演
+  if (typeof pref !== 'undefined' && !pref.fx) return;              // 跟設定裡的「互動飄字」一起開關
+  const now = performance.now(), live = FXQ.filter(f => f.kind !== 'lv' && now - f.t < f.dur).length;
+  FXQ.push({ t:now, text, kind, dur:kind === 'lv' ? 2300 : 1500, n:live % 3 });
+  if (FXQ.length > 12) FXQ.shift();
+}

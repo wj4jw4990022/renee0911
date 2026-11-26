@@ -17,6 +17,7 @@
 | `js/ui.js` | 介面：上方資訊、對話、底部選單各分頁、設定 |
 | `js/main.js` | 存檔、主迴圈、開始遊戲（要最後載入） |
 | `manifest.webmanifest`、`icons/` | 加到主畫面用的名稱、圖示（v17.28） |
+| `fonts/` | 俐方體11號（Cubic 11）點陣字，SIL Open Font License（見 `fonts/Cubic_11-OFL.txt`） |
 | `sw.js` | App 模式：有網路拿最新版，沒網路用上次存下的（v17.28） |
 
 注意：
