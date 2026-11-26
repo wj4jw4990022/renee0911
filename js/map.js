@@ -1450,9 +1450,37 @@ function wildGround(){ if (WGROUND) return WGROUND; const W0 = Math.ceil(WW - VW
   seg(CAP.x0, CAP.x1, '#8a9a6a', '#c4a77a', '#6f9a48', 99);
   paveIso(g, Math.round(CAP.x0 - VW) - 4, Math.round(CAP.x1 - VW) + 18, CAP.x0 - VW);   // 王都：和村子一樣的菱形石板路
   return WGROUND = c; }
+// v17.40：草原、森林、荒地改成正面 Kenney Q 版（ART.wild，design-wip 的 design/wild/wild.py）。每區預先拼成一條長畫布：
+// 後方地面＋背景物（腳底對齊 V_BASE 附近）、土路（V_ROAD～V_ROAD_B）、路下方的草邊和小東西
+const WSTRIP = {};
+function zoneStrip(z){
+  if (WSTRIP[z]) return WSTRIP[z];
+  const [x0, , x1] = ZONES[z].rect, W = Math.round(x1 - x0) + 14, c = document.createElement('canvas'); c.width = W; c.height = VH; const g = c.getContext('2d');
+  let sd = 1234 + z * 97; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647, pk = a => a[Math.floor(rnd() * a.length)];
+  const T = n => rideCanvas(n, 'wild'), put = (n, x, b) => { const cv = T(n); g.drawImage(cv, Math.round(x), Math.round(b) - cv.height); };
+  const tiles = (rowY, names) => { for (let x = 0; x < W; x += 16) g.drawImage(T(typeof names === 'function' ? names() : names), x, rowY); };
+  const K = z === 2 ? { g:() => pk(['s0', 's0', 's0', 's1']), rT:'sT', rM:'sM', rB:'sB' } : z === 1 ? { g:() => pk(['fg0', 'fg0', 'fg0', 'fg1']), rT:'frT', rM:'frM', rB:'frB' } : { g:() => pk(['g0', 'g0', 'g0', 'g0', 'g0', 'g1', 'g1', 'g2']), rT:'rT', rM:'rM', rB:'rB' };
+  for (let y = 92; y < V_ROAD; y += 16) tiles(y, K.g);
+  const items = [];   // [名稱, x, 腳底 y]，最後照腳底排序再畫（後面的先畫）
+  if (z === 0) {
+    items.push(['farm', W * .12, V_BASE + 2], ['field', W * .42, V_BASE - 6], ['hay', W * .42 + 84, V_BASE - 2], ['hay', W * .42 + 96, V_BASE + 2], ['fence', W * .72, V_BASE + 8], ['fence', 2, V_BASE + 8]);
+    for (let x = 6; x < W - 16; x += 18 + rnd() * 22) { if (Math.abs(x - W * .12 - 24) < 34 || (x > W * .42 - 14 && x < W * .42 + 110)) continue; items.push([pk(['tree', 'tree', 'stree', 'bush', 'atree']), x, V_BASE + 1 + rnd() * 4]); }
+  } else if (z === 1) {
+    for (let i = 0, x = -6; x < W; x += 13, i++) items.push([['treeD', 'treeD', 'atreeD', 'treeD', 'streeD'][i % 5], x, 92 + (i * 5) % 7]);
+    for (let i = 0, x = 4; x < W; x += 17, i++) items.push([['treeM', 'streeM', 'treeM', 'atreeM', 'treeM', 'satreeM'][i % 6], x, 104 + (i * 3) % 5]);
+    for (let x = 4; x < W - 16; x += 16 + rnd() * 20) items.push([pk(['tree', 'tree', 'stree', 'bush', 'mush', 'atree', 'log', 'stump', 'bush']), x, V_BASE + 1 + rnd() * 3]);
+  } else {
+    for (let x = 6; x < W - 16; x += 22 + rnd() * 30) items.push([pk(['pillar', 'pillar2', 'cactus', 'cactus', 'rock', 'skull', 'pillar']), x, V_BASE - 8 + rnd() * 11]);
+  }
+  items.sort((a, b) => a[2] - b[2]).forEach(([n, x, b]) => put(n, x, b));
+  tiles(V_ROAD - 6, K.rT); tiles(V_ROAD + 6, K.rM); tiles(V_ROAD + 18, K.rM); tiles(V_ROAD_B - 8, K.rB);
+  for (let y = V_ROAD_B + 8; y < VH; y += 16) tiles(y, K.g);
+  for (let x = 10; x < W - 16; x += 40 + rnd() * 50) put(z === 2 ? pk(['rock', 'cactus', 'skull']) : z === 1 ? pk(['mush', 'bush', 'tree', 'sprout']) : pk(['mush', 'bush', 'sprout']), x, VH + 2 + rnd() * 4);
+  return WSTRIP[z] = c; }
 // 每區的遠景
 function drawZoneBack(z, x0, x1, bm){
   const w = x1 - x0, at = k => x0 + w * k;
+  if (z <= 2 && ART.wild) { if (z === 2) { ctx.fillStyle = 'rgba(240,190,120,.3)'; ctx.fillRect(x0, 0, w + 14, 92); } ctx.drawImage(zoneStrip(z), x0, 0); return; }   // v17.40
   if (z === 0) { drawBld(ctx, 'field', at(.2), 88, 44, 30, 'day'); drawBld(ctx, 'field', at(.62), 90, 40, 28, 'day'); drawBld(ctx, 'cottage', at(.42), 92, 26, 24, bm, { roof:'#c0563f' }); }
   else if (z === 1) for (let x = x0 + 4, i = 0; x < x1 - 10; x += 19, i++) drawBld(ctx, 'tree', x, 78 + (i % 3) * 6, 22, 34, 'day');
   else if (z === 2) { drawBld(ctx, 'ruins', at(.3), 88, 44, 30, 'day'); drawBld(ctx, 'rock', at(.6), 106, 16, 12, 'day'); drawBld(ctx, 'rock', at(.8), 104, 20, 14, 'day'); ctx.fillStyle = '#a08a60'; ctx.fillRect(at(.05), 70, 50, 48); ctx.fillStyle = '#8a7650'; ctx.fillRect(at(.05), 70, 50, 4); }
@@ -1591,11 +1619,11 @@ function drawRide(now, h, x, y){
 // v17.39：側面 Q 版的馬、馬車（design/rides）。x 是對齊點（騎馬＝勇者的位置，其他＝圖的中間），y 是腳底；left＝朝左（左右翻轉）
 const RIDE_CACHE = new Map(), RIDE_AX = 11, RIDE_LIFT = [1, 1, 0, 1];
 let RIDE_FRONT = null, RIDE_HA = 1;
-function rideCanvas(name){ let cv = RIDE_CACHE.get(name); if (cv) return cv; const R = ART.ride[name];
+function rideCanvas(name, src = 'ride'){ const ck = src + ':' + name; let cv = RIDE_CACHE.get(ck); if (cv) return cv; const R = ART[src][name];
   cv = document.createElement('canvas'); cv.width = R.w; cv.height = R.h; const g = cv.getContext('2d');
   for (let i = 0; i < R.px.length; i++) { const ch = R.px[i]; if (ch === ' ') continue; g.fillStyle = R.pal[ART.mch.indexOf(ch)]; g.fillRect(i % R.w, Math.floor(i / R.w), 1, 1); }
-  RIDE_CACHE.set(name, cv); return cv; }
-function drawRideSpr(c, name, x, y, left, ax){ if (!ART.ride || !ART.ride[name]) return; const cv = rideCanvas(name), t = c.getTransform(), p = Math.max(1, Math.round(t.a)), w = cv.width * p, hh = cv.height * p;
+  RIDE_CACHE.set(ck, cv); return cv; }
+function drawRideSpr(c, name, x, y, left, ax, src){ src = src || (ART.ride && ART.ride[name] ? 'ride' : 'wild'); if (!ART[src] || !ART[src][name]) return; const cv = rideCanvas(name, src), t = c.getTransform(), p = Math.max(1, Math.round(t.a)), w = cv.width * p, hh = cv.height * p;
   const a = (ax ?? cv.width / 2) * p, sx = Math.round(t.a * x + t.e), sy = Math.round(t.d * y + t.f);
   c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
   if (left) { c.translate(sx, 0); c.scale(-1, 1); } c.drawImage(cv, left ? -Math.round(a) : sx - Math.round(a), sy - hh, w, hh); c.restore(); }
@@ -1989,7 +2017,8 @@ function scnGoal(h){
 function drawScene(now, view){
   try {
     const s = SCN; if (!s || s.off || ZONES[s.z].map !== view) return;
-    if (s.prop) drawBld(ctx, s.prop, s.sx - 22, V_ROAD - 31, 44, 30, 'day');   // 田、遺跡等放在路邊，不擋路
+    if (s.prop && s.z <= 2 && ART.wild && (s.prop === 'field' || s.prop === 'ruins')) drawRideSpr(ctx, s.prop === 'field' ? 'field' : 'pillar', s.sx, V_ROAD - 2, false);   // v17.40：新風格
+    else if (s.prop) drawBld(ctx, s.prop, s.sx - 22, V_ROAD - 31, 44, 30, 'day');   // 田、遺跡等放在路邊，不擋路
     if (s.t === 'search' || s.t === 'probe') s.pts.forEach((p, i) => { if (i < s.found) { ctx.fillStyle = 'rgba(111,207,151,.9)'; ctx.fillRect(p[0] - 1, p[1] - 3, 3, 3); return; }
       const a = .5 + .5 * Math.sin(now / 220 + i); ctx.fillStyle = s.t === 'probe' ? `rgba(159,208,255,${a})` : `rgba(255,240,170,${a})`;
       ctx.fillRect(p[0] - 1, p[1] - 5, 2, 6); ctx.fillRect(p[0] - 3, p[1] - 3, 6, 2);
