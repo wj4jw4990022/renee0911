@@ -333,10 +333,10 @@ function eventView(h){
   const mo = S.day % 12, until = m => (m - mo + 12) % 12, reg = S.tour && S.tour.y === curY();
   const ev3 = [['武鬥大會報名', 7, reg ? '<span class="dg g">已報名</span>' : h.lv < 3 ? `四年一次・勇者 Lv3 才能報名` : '四年一次，會問你要不要報名', 1], ['武鬥大會', 9, reg ? `<span class="dg g">${esc(h.name)}會出賽</span>` : '四年一次・沒報名就不會出賽', 1], ['年度勇者大賞', 11, stageOf() >= 1 ? '五個獎項，也有「最操事務所」' : '事務所到「地方」階段才會入圍']];
   const th = (S.tHist || []).slice(-6).reverse(), ah = (S.awHist || []).slice(-6).reverse(), champs = (S.tHist || []).filter(t => t.me).length, wins = (S.awHist || []).reduce((a, t) => a + t.won, 0);
-  return `<div class="sec" style="margin-top:2px">接下來</div><div class="svgrid" style="grid-template-columns:repeat(3,minmax(0,1fr))">${ev3.map(([n, m, t, tour]) => { const u = tour ? monthsToTour(m) : until(m); return `<div class="svc" style="text-align:center;gap:3px"><span class="k" style="font-size:11.5px">${n}</span><b class="px" style="font-size:22px;color:${u === 0 ? 'var(--gold)' : 'var(--text)'}">${u === 0 ? '本月' : u >= 12 ? Math.floor(u / 12) + ' 年' + (u % 12 ? ' ' + u % 12 + ' 個月' : '') : u + ' 個月'}</b><span style="font-size:11px;line-height:1.35">${t}</span></div>`; }).join('')}</div>
-    <div class="tiles" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="tile"><b style="color:var(--gold)">${champs}</b><span>武鬥大會冠軍</span></div><div class="tile"><b style="color:var(--blue)">${wins}</b><span>大賞得獎數</span></div></div>
-    <div class="sec">武鬥大會紀錄</div><div class="card">${th.length ? th.map(t => `<div class="kv"><span>第 ${t.y} 年 · ${esc(t.hero)}</span><span class="${t.me ? 'dg g' : 'k'}">${['首輪淘汰', '四強', '亞軍', '冠軍'][t.place]}${t.me ? '' : '（冠軍：' + esc(t.champ) + '）'}</span></div>`).join('') : '<div class="k">還沒參加過</div>'}</div>
-    <div class="sec">年度勇者大賞紀錄</div><div class="card">${ah.length ? ah.map(t => `<div class="kv"><span>第 ${t.y} 年 · ${esc(t.hero)}</span><span>${t.won} 座${t.harsh ? ' · <span class="dg r">最操事務所</span>' : ''}</span></div>`).join('') : '<div class="k">還沒頒過獎</div>'}</div>`;
+  const EIC = ['對手', '對手', '代表作'];   // v17.83 新版（design/ui/草圖_旗下與生平.png）
+  return `<div class="sec2 f16 mu">接下來</div><div class="ev3">${ev3.map(([n, m, t, tour], i) => { const u = tour ? monthsToTour(m) : until(m); return `<div class="pb${u === 0 ? ' au' : ''}"${TIPA(EIC[i], n, t.replace(/<[^>]+>/g, ''))}>${IC(EIC[i], 3)}<b class="f14">${n}</b><span class="num">${IC('時間', 2)}<b>${u === 0 ? '本月' : u >= 12 ? Math.floor(u / 12) + ' 年' + (u % 12 ? ' ' + u % 12 + ' 月' : '') : u + ' 月'}</b></span><small class="mu">${t}</small></div>`; }).join('')}</div>
+    <div class="g2n"><span class="pb num"${TIPA('對手', '武鬥大會冠軍', '')}>${IC('對手', 2)}<b>${champs}</b><small class="f14 mu">冠軍</small></span><span class="pb num"${TIPA('代表作', '大賞得獎數', '')}>${IC('代表作', 2)}<b>${wins}</b><small class="f14 mu">大賞得獎</small></span></div>
+    <div class="sec2 f16 mu">比賽紀錄</div>${th.length || ah.length ? `<div class="pb nwl">${th.map(t => `<div>${IC('對手', 2)}<span class="f16">第 ${t.y} 年武鬥大會・${esc(t.hero)}</span><span class="pb ns etag ${t.me ? 'g' : 'p'}">${['首輪淘汰', '四強', '亞軍', '冠軍'][t.place]}</span></div>`).join('')}${ah.map(t => `<div>${IC('代表作', 2)}<span class="f16">第 ${t.y} 年勇者大賞・${esc(t.hero)}</span><span class="pb ns etag ${t.won ? 'g' : 'p'}">${t.won} 座${t.harsh ? '・最操' : ''}</span></div>`).join('')}</div>` : '<div class="pb ofc f14 mu">還沒有比賽紀錄</div>'}`;
 }
 function lifeColor(t){ return /冠軍|打倒|最佳|心願達成|傳說|守住|擊退/.test(t) ? '#f2c14e' : /重傷|倒下|跛|死|逃跑|醜聞|後遺症|分開|失戀/.test(t) ? '#ff7b7b' : /在一起|結婚|出生|求婚|戀/.test(t) ? '#e88aa8' : /找到|轉職|痊癒|朋友|買/.test(t) ? '#6fcf97' : '#59a8ff'; }
 // v12.5：底部徽章與排程進度
@@ -997,15 +997,15 @@ function drawArtists(now, view, hm){
 const mbar = (n, v, c) => `<div><span>${n}<b style="color:var(--text);font-weight:500">${Math.round(v)}</b></span><div class="xbar"><i style="width:${clamp(v, 2, 100)}%;background:${c}"></i></div></div>`;
 function artistCard(a){
   const h = H(), op = artExp === a.uid, st = artStatus(a);
-  let o = `<div class="card ac${op ? ' open' : ''}" id="ac_${a.uid}"><button class="arw" data-aexp="${a.uid}" aria-expanded="${op}">
-      <span class="av cav">${pimg(a)}<i class="dot ${st[0]}"></i></span>
-      <span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:6px"><b style="font-size:14.5px">${esc(a.name)}</b><span class="chip ${st[0] === 'g' ? 'g' : st[0] === 'y' ? 'o' : 'r'}"><span class="sic">${st[1]}</span>${st[2]}</span></span>
-        <span class="k" style="font-size:12px;display:block">${jobName(a)} Lv${a.lv} · ${A_POLICY[a.policy]}</span>
-        <span class="mbs"><i><b style="width:${clamp(a.mood, 2, 100)}%;background:var(--green)"></b></i><i><b style="width:${clamp(a.stress, 2, 100)}%;background:var(--red)"></b></i><i><b style="width:${clamp(a.trust, 2, 100)}%;background:var(--blue)"></b></i></span></span>
-      <span class="k" style="font-size:14px;flex:none">${op ? '︿' : '﹀'}</span></button>
-    <div class="ml1">${a.mlog ? esc(a.mlog) : '還沒有這個月的消息'}</div>`;
+  const SC = { g:['g', '#43c878'], y:['y', '#f7c94a'], r:['r', '#e84537'] }[st[0]] || ['g', '#43c878'];   // v17.83 新版（design/ui/草圖_旗下與生平.png）
+  let o = `<div class="pb ac2${op ? ' open' : ''}" id="ac_${a.uid}"><button class="arw2" data-aexp="${a.uid}" aria-expanded="${op}">
+      <span class="acav">${pimg(a)}<i class="acdot" style="background:${SC[1]}"></i></span>
+      <span class="acm"><span class="acn"><b class="f22">${esc(a.name)}</b><span class="pb ns etag ${SC[0]}">${st[2]}</span></span>
+        <span class="acr"><span class="num s mu">${IC('戰力', 1)}<b class="f14">${jobName(a)} Lv${a.lv}</b></span><span class="pb ns etag p">${A_POLICY[a.policy]}</span></span>
+        <span class="acb">${[['心情', a.mood, '#43c878'], ['壓力', a.stress, '#e84537'], ['信任', a.trust, '#59a8ff']].map(([ic, v, c]) => `<span>${IC(ic, 1)}<i class="pbar"><i style="width:${clamp(v, 2, 100)}%;background:${c}"></i></i></span>`).join('')}</span></span></button>
+    <div class="ml1 f14 mu">${a.mlog ? esc(a.mlog) : '還沒有這個月的消息'}</div>`;
   if (!op) return o + '</div>';
-  o += `<div class="subt">${[['st', '狀況'], ['plan', '安排'], ['hr', '人事']].map(([k, n]) => `<button data-asub="${k}" class="${artSub === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+  o += `<div class="acsub">${[['st', '狀況', '心情'], ['plan', '安排', '排程'], ['hr', '人事', '事務所']].map(([k, n, ic]) => `<button data-asub="${k}" class="pb ns${artSub === k ? ' g' : ''}">${IC(ic, 2)}<b class="f14">${n}</b></button>`).join('')}</div>`;
   if (artSub === 'st') {
     const kk = Object.keys(HEX).filter(k => aKnown(a, k)), known = kk.filter(k => Math.abs(a.hex[k] - 50) >= 10).map(k => hexWord(k, a.hex[k]).replace(/^比較/, ''));
     const nextK = Object.keys(HEX).filter(k => !aKnown(a, k)).sort((x, y) => HEX_REVEAL[x] - HEX_REVEAL[y])[0];
@@ -1017,10 +1017,11 @@ function artistCard(a){
   }
   if (artSub === 'plan') {
     const tl = k => talkLeft(h, A_TALK[k]);
-    o += `<div class="lbl">方針</div><div class="segc">${Object.entries(A_POLICY).map(([k, n]) => `<button data-apol="${a.uid}:${k}" class="${a.policy === k ? 'on' : ''}">${n}</button>`).join('')}</div>
-      <div class="lbl">抽成</div><div class="cutr"><button class="btn sm2" data-acut="${a.uid}:-5" ${a.cut <= 0 ? 'disabled' : ''} aria-label="降低抽成">−</button><b>${a.cut}%</b><button class="btn sm2" data-acut="${a.uid}:5" ${a.cut >= 60 ? 'disabled' : ''} aria-label="提高抽成">＋</button><span class="k" style="font-size:11.5px;flex:1">${a.cut > 35 ? '太高，他會不滿、容易被挖角' : a.cut < 20 ? '他很感激' : '還算合理'}</span></div>
-      <div class="lbl">互動（和${esc(h.name)}共用時間）</div><div class="acts">${[['cheer', '打氣'], ['meal', '請吃飯 30 金'], ['talk', '談談']].map(([k, n]) => `<button class="btn" data-atalk="${a.uid}:${k}" ${tl(k) || a.away ? 'disabled' : ''}>${n}${tl(k) ? `<small>還要 ${tl(k)} 個月</small>` : ''}</button>`).join('')}</div>
-      <div class="lbl">指派事務所任務</div>${S.agTasks.length && !a.task && !a.away ? `<div style="display:grid;gap:6px">${S.agTasks.map(t => `<button class="btn" style="text-align:left" data-aas="${a.uid}:${t.id}">${esc(t.n)}<small class="k" style="display:block;font-size:11px">名聲 +${t.fame}${t.D ? ` · 危險度 ${t.D}（他的戰力 ${Math.round(power(a))}）` : ''}${t.exam ? ' · 升格考核' : ''}</small></button>`).join('')}</div>` : `<div class="k" style="font-size:12.5px">${a.task ? `已指派「${esc(a.task.n)}」，下個月出發` : '現在沒有可以指派的任務'}</div>`}`;
+    const PIC = { safe:'金幣', fame:'名聲', rest:'休息', follow:'一起出任務' };
+    o += `<div class="lbl">方針</div><div class="apol">${Object.entries(A_POLICY).map(([k, n]) => `<button data-apol="${a.uid}:${k}" class="pb ns${a.policy === k ? ' g' : ''}">${IC(PIC[k], 2)}<b class="f14">${n}</b></button>`).join('')}</div>
+      <div class="lbl">抽成</div><div class="cutr"><button class="pb ns acut" data-acut="${a.uid}:-5" ${a.cut <= 0 ? 'disabled' : ''} aria-label="降低抽成">−</button><b class="f22">${a.cut}%</b><button class="pb ns acut" data-acut="${a.uid}:5" ${a.cut >= 60 ? 'disabled' : ''} aria-label="提高抽成">＋</button><span class="f14 mu" style="flex:1">${a.cut > 35 ? '太高，他會不滿、容易被挖角' : a.cut < 20 ? '他很感激' : '還算合理'}</span></div>
+      <div class="lbl">互動（和${esc(h.name)}共用時間）</div><div class="acts2">${[['cheer', '打氣', '上升', ''], ['meal', '請吃飯', '金幣', '30 金'], ['talk', '談談', '說話', '']].map(([k, n, ic, sub]) => `<button class="pb ns" data-atalk="${a.uid}:${k}" ${tl(k) || a.away ? 'disabled' : ''}>${IC(ic, 2, tl(k) || a.away)}<span><b class="f16">${n}</b>${tl(k) ? `<small>還要 ${tl(k)} 月</small>` : sub ? `<small>${sub}</small>` : ''}</span></button>`).join('')}</div>
+      <div class="lbl">指派事務所任務</div>${S.agTasks.length && !a.task && !a.away ? `<div class="aas">${S.agTasks.map(t => `<button class="pb ns" data-aas="${a.uid}:${t.id}">${IC('事務所', 2)}<span><b class="f16">${esc(t.n)}</b><small>${IC('名聲', 1)}+${t.fame}${t.D ? ` · 危險度 ${t.D}（他的戰力 ${Math.round(power(a))}）` : ''}${t.exam ? ' · 升格考核' : ''}</small></span>${IC('加號', 2)}</button>`).join('')}</div>` : `<div class="k" style="font-size:12.5px">${a.task ? `已指派「${esc(a.task.n)}」，下個月出發` : '現在沒有可以指派的任務'}</div>`}`;
   }
   if (artSub === 'hr') {
     const sw = canSwap(a.uid);
@@ -1035,8 +1036,8 @@ function artistCard(a){
 }
 function artistView(){
   const n = artistSlots(), rk = rankOf(), L = AR().length;
-  let o = `<div class="sec">旗下藝人 ${L} / ${n} 位 · 每位每月月費 +25 金</div><div class="slotbar">${[0, 1, 2].map(i => `<i class="${i < L ? 'on' : i >= n ? 'lk' : ''}"></i>`).join('')}</div>`;
-  if (!n) return o + `<div class="card k" style="font-size:13px;line-height:1.7">升上「${RANKS[UNLOCK.artist1][1]}」才能收旗下藝人。<br>名聲 ${fmt(S.fame)} / ${fmt(RANKS[UNLOCK.artist1][0])}${rk < 3 ? '，還要通過進入地方階段的考核' : ''}。<br>名額：地方名經紀 1 位、王都經紀公司 2 位、傳說經紀人 3 位。</div>`;
+  let o = `<div class="arh"><b class="f16 mu">旗下藝人</b>${[0, 1, 2].map(i => `<span class="pb ns aslot${i < L ? ' on' : i >= n ? ' lk' : ''}"${TIPA(i < n ? '人際' : '鎖', i < L ? '名額（有人）' : i < n ? '名額（空的）' : '名額（還沒開放）', '名額：地方名經紀 1 位、王都經紀公司 2 位、傳說經紀人 3 位')}>${IC(i < L ? '人際' : i < n ? '加號' : '鎖', 2)}</span>`).join('')}<span class="num s cr"${TIPA('下降', '月費', '每位旗下藝人每月 25 金')}>${IC('下降', 1)}<b class="f14">25/月・每位</b></span></div>`;
+  if (!n) return o + `<div class="pb ofc f14 mu" style="line-height:1.7">升上「${RANKS[UNLOCK.artist1][1]}」才能收旗下藝人。<br>名聲 ${fmt(S.fame)} / ${fmt(RANKS[UNLOCK.artist1][0])}${rk < 3 ? '，還要通過進入地方階段的考核' : ''}。<br>名額：地方名經紀 1 位、王都經紀公司 2 位、傳說經紀人 3 位。</div>`;
   o += AR().map(artistCard).join('') || `<div class="card k" style="font-size:13px">還沒有旗下藝人。從下面挑一位簽約吧。</div>`;
   if (L < n) {
     const p = artistPool(), nx = 6 - (S.day - (S.aPoolDay || 0));
@@ -1051,17 +1052,18 @@ function artistView(){
 }
 function teamView(){
   const hs = allHeroes(); hs.forEach(uidOf);
-  if (hs.length < 2) return `<div class="card k" style="font-size:13px;line-height:1.7">事務所現在只有${esc(H().name)}一位勇者。<br>有了旗下藝人之後，這裡會顯示大家之間的關係：師徒、好搭檔、競爭對手、戀人、不合。</div>`;
-  let o = `<div class="sec">勇者之間的交情</div><div class="grp">`;
+  if (hs.length < 2) return `<div class="pb ofc f14 mu" style="line-height:1.7">事務所現在只有${esc(H().name)}一位勇者。<br>有了旗下藝人之後，這裡會顯示大家之間的關係：師徒、好搭檔、競爭對手、戀人、不合。</div>`;
+  let o = `<div class="sec2 f16 mu">勇者之間的交情</div>`;   // v17.83 新版（design/ui/草圖_人際分頁.png）
   for (let i = 0; i < hs.length; i++) for (let j = i + 1; j < hs.length; j++) {
-    const x = hs[i], y = hs[j], r = relGet(x.uid, y.uid), v = Math.round(r.v || 0), c = v >= 30 ? 'var(--green)' : v <= -30 ? 'var(--red)' : '#8b93a7';
+    const x = hs[i], y = hs[j], r = relGet(x.uid, y.uid), v = Math.round(r.v || 0), cl = v >= 30 ? 'cg' : v <= -30 ? 'cr' : '';
     const a = x === H() ? y : x, other = a === x ? y : x;
     const tn = r.t === 'love' && r.secret ? '偷偷交往' : REL_N[r.t] || (v >= 30 ? '處得不錯' : v <= -30 ? '有點摩擦' : '普通');
-    o += `<div class="pr2"><div class="nm"><b style="font-weight:500">${esc(x.name)}${x === H() ? '（主力）' : ''} ↔ ${esc(y.name)}${y === H() ? '（主力）' : ''}</b><div class="k" style="font-size:11.5px">${tn} · 交情 ${v}</div></div>
-      <div class="rbx"><i style="${v >= 0 ? `left:50%;width:${v / 2}%` : `right:50%;width:${-v / 2}%`};background:${c}"></i></div>
-      ${v < 0 ? `<button class="btn sm2" data-med="${a.uid}:${other.uid}" ${talkLeft(H(), 'heart') ? 'disabled' : ''}>調解</button>` : ''}</div>`;
+    const ic = { mentor:'幫忙', partner:'一起出任務', rival:'對手', love:'戀人', clash:'對手' }[r.t] || (v >= 30 ? '心情' : '空心');
+    o += `<div class="pb tmr"><span class="tmf">${pimg(x)}<b class="f14">${esc(x.name)}</b></span><span class="tmi">${IC(ic, 2)}</span><span class="tmf">${pimg(y)}<b class="f14">${esc(y.name)}</b></span>
+      <div class="tmm"><b class="f16 ${cl}">${tn}</b><div class="tmb"><span class="rbx2"><i style="${v >= 0 ? `left:50%;width:${v / 2}%;background:#43c878` : `right:50%;width:${-v / 2}%;background:#e84537`}"></i></span><b class="f14 mu">${v}</b></div></div>
+      ${v < 0 ? `<button class="pb au tmed" data-med="${a.uid}:${other.uid}" ${talkLeft(H(), 'heart') ? 'disabled' : ''} aria-label="調解">${IC('說話', 2)}</button>` : ''}</div>`;
   }
-  o += `</div><div class="k" style="font-size:12px;margin:4px 2px 8px">一起出任務會拉近距離；都想當主力、待遇差太多會拉遠。調解用的是「談談」，和主力共用時間。</div>`;
+  o += `<div class="f14 mu" style="margin:4px 2px 8px">一起出任務會拉近距離；調解用「談談」（和主力共用時間）</div>`;
   return o;
 }
 function renderSheet(){
@@ -1103,7 +1105,8 @@ function renderSheet(){
   }
   if (sheetT === 'people' && SS('team')) html += teamView();
   if (sheetT === 'people' && SS('news')) { const nw = (S.news || []).slice().reverse();
-    html += `<div class="sec" style="margin-top:2px">村子近況（最近 ${nw.length} 則）</div>` + (nw.length ? `<div class="card">${nw.map(x => `<div class="kv" style="padding:5px 0"><span style="min-width:0">${esc(x.t)}</span><span class="k" style="flex:none;margin-left:8px">${S.day - x.d <= 0 ? '這個月' : (S.day - x.d) + ' 個月前'}</span></div>`).join('')}</div>` : '<div class="card k">最近很平靜</div>'); }
+    const nic = t => /病好|康復|出院/.test(t) ? '打勾' : /病|受傷|過世|離世|倒下/.test(t) ? '生病' : /交往|結婚|告白|喜歡/.test(t) ? '戀人' : /金獅|銀月|對手|雷恩|凱爾|亞斯|蒂娜/.test(t) ? '對手' : /大賞|武鬥|冠軍|獎/.test(t) ? '代表作' : /退休|出生|長大/.test(t) ? '心情' : '近況';   // v17.83
+    html += `<div class="sec2 f16 mu">村子近況</div>` + (nw.length ? `<div class="pb nwl">${nw.map(x => `<div>${IC(nic(x.t), 2)}<span class="f16">${esc(x.t)}</span><small class="mu">${S.day - x.d <= 0 ? '這個月' : (S.day - x.d) + ' 月前'}</small></div>`).join('')}</div>` : '<div class="pb ofc f14 mu">最近很平靜</div>'); }
   if (sheetT === 'people' && SS('ledger')) {   // v17.67：人情帳新版，一組一張卡
     const owe = S.npcs.filter(n => n.alive && n.owe), fav = S.queue.filter(it => it.favor), comps = S.npcs.filter(canComp), helped = (h.mem || []).filter(m => m.k === 'helped').slice(-5).reverse();
     const pa = h.partner && npc(h.partner), sick = S.npcs.filter(n => n.alive && (n.sick || 0) > S.day && n.aff >= 35);
@@ -1205,25 +1208,24 @@ function renderSheet(){
   if (lifeIs('mem')) {
     const GOOD = ['saved', 'gift', 'wishOk', 'familyOk', 'backed'], BAD = ['forced', 'used', 'wishFail', 'familyNo', 'familyLate', 'betrayed'];
     const ms = [...(h.mem || [])].reverse().map(m => [m, memText(m)]).filter(x => x[1]);
-    const grp = (keys, t, c, empty) => { const xs = ms.filter(([m]) => keys ? keys.includes(m.k) : !GOOD.includes(m.k) && !BAD.includes(m.k));
-      return `<div class="sec" style="color:${c}">${t}（${xs.length}）</div>` + (xs.length ? xs.map(([m, t2]) => `<div class="memc" style="border-left-color:${c}"><div class="k" style="font-size:11.5px">${ym(m.d)}</div><div>「${esc(t2)}」</div></div>`).join('') : `<div class="k" style="font-size:12.5px;margin-bottom:8px">${empty}</div>`); };
+    const grp = (keys, t, ic, cl, empty) => { const xs = ms.filter(([m]) => keys ? keys.includes(m.k) : !GOOD.includes(m.k) && !BAD.includes(m.k));   // v17.83 新版
+      return `<div class="mmh">${IC(ic, 2)}<b class="f16 ${cl}">${t}</b><b class="f16 mu">×${xs.length}</b></div>` + (xs.length ? `<div class="pb nwl">${xs.map(([m, t2]) => `<div><span class="f16">${esc(t2)}</span><small class="mu">${ym(m.d)}</small></div>`).join('')}</div>` : `<div class="f14 mu" style="margin:0 2px 6px">${empty}</div>`); };
     const g = ms.filter(([m]) => GOOD.includes(m.k)).length, bd = ms.filter(([m]) => BAD.includes(m.k)).length;
-    html += `<div class="card" style="margin-top:4px;font-size:13px;line-height:1.6">${h.name}記得的事會影響${pron(h)}怎麼看你。感激 <b style="color:#2f7a3a">${g}</b> 件、心結 <b style="color:#b03a30">${bd}</b> 件。${bd > g ? `<br><span class="dg o">${pron(h)}對你有點心結，信任比較難建立。</span>` : g > bd ? `<br><span class="dg g">${pron(h)}記得你對${pron(h)}的好。</span>` : ''}</div>`;
-    html += grp(GOOD, '感激你的事', '#6fcf97', '還沒有') + grp(BAD, '心裡的結', '#ff7b7b', '還沒有，很好') + grp(null, '人生的記憶', '#59a8ff', '還沒有特別的回憶');
+    html += `<div class="f14 mu" style="margin:2px 2px 4px">${h.name}記得的事會影響${pron(h)}怎麼看你${bd > g ? `<b class="co">，${pron(h)}對你有點心結</b>` : g > bd ? `<b class="cg">，${pron(h)}記得你對${pron(h)}的好</b>` : ''}</div>`;
+    html += grp(GOOD, '感激你的事', '信任', 'cg', '還沒有') + grp(BAD, '心裡的結', '壓力', 'cr', '還沒有，很好') + grp(null, '人生的記憶', '生平', 'cp', '還沒有特別的回憶');
   }
   if (lifeIs('regret')) {
     const rg = regrets(h), hp = happyOf(rg), TIP = ['讓' + pron(h) + '多自己做決定：放寬「自己接任務」、少硬排' + pron(h) + '不想做的事', '多排休息，別讓' + pron(h) + '連續工作太久', '多回應' + pron(h) + '說的話，少「已讀不回」，偶爾關心一下', '讓' + pron(h) + '交朋友：請客、帶朋友一起出任務', '照顧' + pron(h) + '的心情：心願、稱讚、請喝一杯'];
-    html += `<div class="card" style="margin-top:4px;text-align:center"><div class="k" style="font-size:12px">如果${pron(h)}的人生現在結束，幸福感會是</div><div class="px" style="font-size:40px;color:${hp >= 80 ? '#2f7a3a' : hp >= 60 ? '#a8681a' : '#b03a30'}">${hp}</div><div class="k" style="font-size:12px">每個遺憾扣 10～20 分，結局時會寫進勇者牆</div></div>`;
-    html += rg.map((r, i) => { const c = ['#6fcf97', '#ffb347', '#ff7b7b'][r.lv];
-      return `<div class="rgc"><div class="row"><b style="font-size:14px">${r.n}</b><span style="font-size:12px;color:${c}">${['沒有遺憾', '有點遺憾', '很遺憾'][r.lv]}</span></div><div class="pips" style="margin:6px 0"><i class="on" style="background:${c}"></i><i class="${r.lv >= 1 ? 'on' : ''}" style="${r.lv >= 1 ? 'background:' + c : ''}"></i><i class="${r.lv >= 2 ? 'on' : ''}" style="${r.lv >= 2 ? 'background:' + c : ''}"></i></div><div class="k" style="font-size:12.5px">${r.why}</div>${r.lv ? `<div style="font-size:12.5px;margin-top:4px;color:#6b4e33">怎麼改善：${TIP[i]}</div>` : ''}</div>`; }).join('');
+    const hc = hp >= 70 ? 'cg' : hp >= 40 ? 'co' : 'cr', hb = hp >= 70 ? '#43c878' : hp >= 40 ? '#f08a3c' : '#e84537';   // v17.83 新版
+    html += `<div class="pb ofc rgh"${TIPA('心情', '幸福感', '每個遺憾扣 10～20 分，結局時會寫進勇者牆')}><div class="ofr">${IC('心情', 3)}<b class="f22 ${hc}" style="font-size:30px">${hp}</b><span class="f14 mu">如果現在結束，${pron(h)}的幸福感</span></div><span class="pbar"><i style="width:${clamp(hp, 2, 100)}%;background:${hb}"></i></span></div>`;
+    html += rg.map((r, i) => `<div class="pb rgc2"><div class="rgt">${r.lv ? IC('打叉', 2) : IC('打勾', 2)}<b class="f16">${r.n}</b><span class="lv3"${TIPA('危險', ['沒有遺憾', '有點遺憾', '很遺憾'][r.lv], '')}>${[0, 1, 2].map(k => `<i class="${k < r.lv + (r.lv ? 1 : 0) ? 'on' : ''}"></i>`).join('')}</span></div><div class="f14 mu">${r.why}</div>${r.lv ? `<div class="f14 cg rgf">${IC('上升', 1)}<b>${TIP[i]}</b></div>` : ''}</div>`).join('');
   }
   if (sheetT === 'people' && SS('wall')) {
-    html += `<div class="sec">歷代勇者</div>`;
-    if (!S.wall.length) html += '<div class="k">還沒有前人。你現在帶的是第一代。</div>';
-    else html += `<div class="wline">` + [...S.wall].map((w, i) => { const ec = /戰死|離世/.test(w.end) ? '#ff7b7b' : /離開/.test(w.end) ? '#ffb347' : /傳奇/.test(w.end) ? '#c9b6ff' : '#6fcf97';
-      return `${i ? `<div class="wrel">${esc(w.rel || '公會介紹的新人')}</div>` : ''}<div class="wc"><span class="wa">${esc(w.name.slice(0, 1))}</span><div style="flex:1;min-width:0"><div class="row"><b class="px" style="font-weight:400;font-size:16px">${esc(w.name)}</b><span class="tag" style="border-color:${ec};color:${ec}">${esc(w.end)}</span></div>
-        <div class="k" style="font-size:12px">第 ${w.gen} 代 · ${esc(w.cls)} · Lv${w.lv} · ${w.age} 歲</div>${w.happy != null ? `<div class="row" style="font-size:12px;margin-top:4px"><span>幸福感</span><span>${w.happy}</span></div><div class="xbar"><i style="width:${w.happy}%;background:${w.happy >= 80 ? '#6fcf97' : w.happy >= 60 ? '#ffb347' : '#ff7b7b'}"></i></div>` : ''}
-        <div style="font-size:12.5px;margin-top:4px;color:#6b4e33">${esc(w.why)}</div></div></div>`; }).join('') + `<div class="wrel">${esc(h.rel || '')}</div><div class="wc now"><span class="wa" style="background:var(--gold);color:#12161f">${esc(h.name.slice(0, 1))}</span><div><b class="px" style="font-weight:400;font-size:16px">${esc(h.name)}</b><div class="k" style="font-size:12px">第 ${h.gen} 代 · 現在 · Lv${h.lv} · ${Math.floor(h.age)} 歲</div></div></div></div>`;
+    if (!S.wall.length) html += '<div class="pb ofc f14 mu">還沒有前人。你現在帶的是第一代。</div>';   // v17.83 新版：一代一張卡，中間的線寫怎麼接班
+    else html += `<div class="wl2">` + [...S.wall].map((w, i) => { const ec = /戰死|離世/.test(w.end) ? 'r' : /離開/.test(w.end) ? 'o' : /傳奇/.test(w.end) ? 'p' : 'g', hc = w.happy >= 70 ? 'cg' : w.happy >= 40 ? 'co' : 'cr';
+      return `${i ? `<div class="wlk f14">${esc(w.rel || '公會介紹的新人')}</div>` : ''}<div class="pb wc2"><span class="wav">${IC('歷代', 2)}</span><div><div class="enm"><b class="f22">${esc(w.name)}</b><span class="pb ns etag ${ec}">${esc(w.end)}</span></div>
+        <div class="f14 mu">第 ${w.gen} 代・${esc(w.cls)}・Lv${w.lv}・${w.age} 歲</div>${w.happy != null ? `<span class="num s">${IC('心情', 1)}<b class="f16 ${hc}">幸福 ${w.happy}</b></span>` : ''}
+        <div class="f14">${esc(w.why)}</div></div></div>`; }).join('') + `<div class="wlk f14">${esc(h.rel || '')}</div><div class="pb wc2 now"><span class="wav">${pimg(h)}</span><div><div class="enm"><b class="f22">${esc(h.name)}</b><span class="pb ns etag y">現在</span></div><div class="f14 mu">第 ${h.gen} 代・${jobName(h)}・Lv${h.lv}・${Math.floor(h.age)} 歲</div></div></div></div>`;
   }
   if (sheetT === 'office') {   // v17.68：事務所新版（design/ui/草圖_事務所.png）
     const rk = rankOf(), nx = RANKS[rk + 1];
@@ -1279,7 +1281,7 @@ function renderSheet(){
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.81</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.82</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });

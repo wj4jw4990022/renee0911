@@ -2163,7 +2163,7 @@ function makeCands(){
 }
 function nextGen(i){
   const n = S.cands[i], old = H(); n.rel = (n.tag || '').replace(/（.*）/g, ''); delete n.tag;
-  S.hero = n; S.gen = n.gen; S.cands = null; S.q = null; S.qq = []; S.plan = 0; S.cut = 30; S.paused = false;
+  S.hero = n; S.gen = n.gen; S.cands = null; S.q = null; S.qq = []; S.queue = [];   /* v17.82：換新勇者時，排程上的任務全部取消 */ S.plan = 0; S.cut = 30; S.paused = false;
   if (n.joined != null) {   // v16：從旗下藝人接班，保留年紀；當藝人的時間算一半的相處
     S.artists = AR().filter(x => x !== n); const born = S.day - Math.floor((S.day - n.joined) / 2); n.age0 = n.age - (S.day - born) / 12; n.born = born; n.act = 'idle'; n.alpha = 1; n.talked = {}; n.mission = null; n.task = null;
   } else { n.born = S.day; n.age = START_AGE; }
