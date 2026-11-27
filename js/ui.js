@@ -883,16 +883,26 @@ const HINT = {
   tStrat:(d, h) => [['比較不容易受傷', '一般打法', '比較容易贏，也容易重傷'], ['戰力 ×0.9，輸了兩成會受傷', '戰力 ×1，輸了四成會受傷', '戰力 ×1.15，輸了七成會受傷、更容易重傷']],
 };
 let evShown = null;
+// v17.76 大事件的大圖：全身 Q 版（16×16 放大 3 倍）放左下，表情泡泡（放大 2 倍）放右上（不蓋臉），整張用 CSS 放大
+function evFig(c, h, e){ if (!c || !h) return; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, c.width, c.height);
+  g.drawImage(kenCanvas(h, 'idle', 0, e), KEN_OX, KEN_OY + 1, 16, 16, 2, 30, 48, 48);
+  const nm = e !== 'normal' && EMO_OF[e]; if (nm) { const s = emoStrip(nm); if (s) { const i = s.e.n > 1 ? ART_STILL(s) : 0; g.drawImage(s.cv, i * s.e.w, 0, s.e.w, s.e.h, 90 - s.e.w * 2, 0, s.e.w * 2, s.e.h * 2); } } }
 function evPage(){
   const q = S.q; if (!q || !BIG_Q.has(q.key) || evShown === q || offline || $('end').classList.contains('on') || $('dying').classList.contains('on')) return;
   evShown = q; const sb = evSubject(q), h = sb || H(), sys0 = q.text.startsWith('（'), [tt, bg0] = EVT[q.key] || ['大事', '#22283a'], bg = sb ? '#16303a' : bg0;
-  $('evp').innerHTML = `<div class="evs" style="background:${bg}">${sb ? `<div class="evav" aria-hidden="true">${pimg(sb, EV_EXPR[q.key])}</div>` : `<canvas id="evFace" width="20" height="20" aria-label="${esc(h.name)}的表情"></canvas>`}<div class="evt" style="${sb ? 'background:rgba(20,60,70,.92);border-color:#4fb3c8' : ''}">${sb ? '旗下' : '主力'} · ${esc(h.name)} · ${tt} · 剩 ${Math.max(0, q.until - S.day) + 1} 個月回答</div></div>
-    <div class="evb"><div class="evbox">${sys0 ? '' : `<span class="evn px">${esc(h.name)}</span>`}<div>${esc(sys0 ? q.text.replace(/^（|）$/g, '') : q.text)}</div></div>
-    ${(() => { const lv = h.trust >= 70 ? 2 : h.trust >= 40 ? 1 : 0, hs = HINT[q.key] ? HINT[q.key](q.data || {}, h) : null;
-      const note = !hs ? '' : `<div class="evh">${lv === 2 ? `信任 ${Math.round(h.trust)}：${pron(h)}把話都說清楚了` : lv === 1 ? `信任 ${Math.round(h.trust)}：${pron(h)}只透露了大概` : `信任 ${Math.round(h.trust)}：${pron(h)}沒跟你說心裡話，看不出後果（信任 40 以上才會說）`}</div>`;
-      return note + `<div class="evo">${q.opts.map((o, i) => `<button class="opt2" data-ea="${i}"><span>${esc(o)}</span>${hs && lv && hs[lv - 1][i] ? `<small class="${lv === 2 ? 'c' : ''}">${esc(hs[lv - 1][i].replace(/他/g, pron(h)))}</small>` : ''}</button>`).join('')}</div>`; })()}
-    <div class="evh" id="evCd" style="color:#b03a30"></div><button class="evl" id="evLater">先回到畫面，晚點再回答</button></div>`;
-  $('evp').classList.add('on'); $('evp').scrollTop = 0; if ($('evFace')) drawFace($('evFace'), EV_EXPR[q.key] || exprOf(h), true);
+  // v17.76 大事件新版（design-wip design/ui/草圖_大事件.png）：事件色場景＋大大的勇者＋表情泡泡；粗框紙卡、金框選項、和主畫面一樣的倒數條
+  const tot = qTot(q), rem = q.rem != null ? q.rem : tot, lv = h.trust >= 70 ? 2 : h.trust >= 40 ? 1 : 0, hs = HINT[q.key] ? HINT[q.key](q.data || {}, h) : null;
+  $('evp').innerHTML = `<div class="evs" style="background:${bg}">
+      <div class="pb evtag"${TIPA('驚嘆', tt, sb ? '旗下藝人的大事' : '要你做決定的大事')}>${IC('驚嘆', 2)}<b>${tt}・${esc(h.name)}</b></div>
+      <div class="pb evdue"${TIPA('時間', '還能想多久', '過了這幾個月沒回答，' + pron(h) + '會自己決定')}>${IC('時間', 2)}<b>剩 ${Math.max(0, q.until - S.day) + 1} 月</b></div>
+      <canvas id="evFig" width="90" height="78" aria-label="${esc(h.name)}"></canvas></div>
+    <div class="evb">
+      <div class="pb ns evbox">${sys0 ? '' : `<span class="evn">${esc(h.name)}</span>`}<div>${esc(sys0 ? q.text.replace(/^（|）$/g, '') : q.text)}</div></div>
+      ${hs ? `<div class="evh"><span class="num s"${TIPA('信任', '信任 ' + Math.round(h.trust), '信任 40 以上才會說後果，70 以上會說清楚')}>${IC('信任', 2)}<b>${Math.round(h.trust)}</b></span><span class="mu f14">${['看不出後果', '只透露大概', '把話說清楚了'][lv]}</span></div>` : ''}
+      <div class="evo">${q.opts.map((o, i) => `<button class="pb au opt2" data-ea="${i}"><b>${esc(o)}</b>${hs && lv && hs[lv - 1][i] ? `<small class="${lv === 2 ? 'cg' : 'co'}">${esc(hs[lv - 1][i].replace(/他/g, pron(h)))}</small>` : ''}</button>`).join('')}</div>
+      <div class="qtime evq"${TIPA('時間', '限時回答', `時間到了，${pron(h)}會自己決定`)}>${IC('時間', 2)}<span class="pbar"><i id="evBar" style="width:${rem / tot * 100}%"></i></span><b id="evCd">${Math.ceil(rem / 1000)} 秒</b></div>
+      <button class="pb ns evl" id="evLater">晚點再回答</button></div>`;
+  $('evp').classList.add('on'); $('evp').scrollTop = 0; evFig($('evFig'), h, EV_EXPR[q.key] || exprOf(h));
   $('evp').querySelectorAll('[data-ea]').forEach(b => b.onclick = () => { $('evp').classList.remove('on'); if (S.q === q) answer(+b.dataset.ea); });
   $('evLater').onclick = () => $('evp').classList.remove('on');
 }
@@ -1266,7 +1276,7 @@ function renderSheet(){
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.75</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.76</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });

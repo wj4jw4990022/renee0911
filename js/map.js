@@ -1824,7 +1824,8 @@ function qTick(){
     if (q.rem == null) { q.rem = q.dl ? clamp(q.dl - now, 0, tot) : tot; delete q.dl; }   // 舊存檔的 dl（到期時刻）換成剩多少
     if (!document.hidden && (big || (!sheetT && !S.paused))) q.rem -= dt;
     const left = Math.max(0, Math.ceil(q.rem / 1000));
-    const a = document.getElementById('evCd'); if (a) a.textContent = `${left} 秒內沒回覆，${pron(H())}會自己決定`;
+    const a = document.getElementById('evCd'); if (a) a.textContent = `${left} 秒`;
+    const a2 = document.getElementById('evBar'); if (a2) a2.style.width = clamp(q.rem / tot * 100, 0, 100) + '%';
     const b = document.getElementById('qCd'); if (b) b.textContent = `${left} 秒`;
     const c = document.getElementById('qBar'); if (c) c.style.width = clamp(q.rem / tot * 100, 0, 100) + '%';
     if (q.rem <= 0) { $('evp').classList.remove('on'); answer(-1); save(); renderAll(); }
