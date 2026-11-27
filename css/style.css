@@ -889,3 +889,45 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 #app .chat, #app:not(.chatx) .chat { height:276px; }
 #app:not(.chatx) .chat:has(#replies.asking) { height:370px; }
 #app #shB.sm > * { zoom:.8; }
+/* v17.75 出發卡新版（design-wip design/ui/草圖_出發卡.png） */
+.co { color:#c46a12; }
+#mission .box { padding:0 0 calc(14px + env(safe-area-inset-bottom) / var(--z, 1)); gap:0; background:var(--paper2); border-top:3px solid var(--ol); border-radius:0; max-height:94%; }
+#mission .mh { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--wood); border-bottom:3px solid var(--ol); color:#fff3d6; font-size:22px; text-shadow:0 2px 0 #3b2616; }
+#mission .mh .rsp { flex:1; }
+#mission .mx { width:40px; height:40px; min-width:0; padding:0; font-size:20px; color:var(--text); text-shadow:none; filter:none; }
+#mission .mbd { display:flex; flex-direction:column; gap:10px; padding:12px 14px 4px; }
+#mission .mcard { cursor:default; }
+#mission .mcard .qch { gap:6px; padding:4px 10px; font-size:16px; }
+#mission .mcard .qch .rsp, #mission .mdg .rsp { flex:1; }
+#mission .mgap { width:14px; }
+#mission .mdue { display:inline-flex; align-items:center; gap:5px; } #mission .mdue.r b { color:#ffc8be; }
+#mission .mcard .qcb { min-height:0; gap:8px; padding:8px 12px 10px; }
+#mission .mcard .qcr { display:flex; align-items:center; gap:18px; }
+#mission .mdg { gap:6px !important; }
+#mission .mdg > span { display:inline-flex; gap:3px; align-items:center; }
+#mission .mwin { font-size:22px; }
+#mission .mlate { display:flex; align-items:center; gap:6px; }
+#mission .msec { margin:2px 2px -4px; }
+#mission .mparty { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+#mission .mslot { position:relative; display:flex; align-items:center; gap:10px; padding:8px 10px; min-height:84px; }
+#mission .mslot > div { display:flex; flex-direction:column; gap:4px; min-width:0; }
+#mission .mslot.me { background-color:#e8def6; }
+#mission .mslot.e { justify-content:center; flex-direction:column; gap:4px; border:3px dashed #b08a55; }
+#mission .mfc { width:52px; height:52px; flex:none; background:#cdbd9c; border:2px solid var(--ol); overflow:hidden; }
+#mission .mfc.s { width:34px; height:34px; }
+#mission .mfc .pimg { border-radius:0; }
+#mission .mrm { position:absolute; right:6px; top:6px; width:30px; height:30px; padding:0; display:flex; align-items:center; justify-content:center; }
+#mission .mpicks { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+#mission .mpick { display:flex; align-items:flex-start; gap:6px; padding:6px; text-align:left; min-width:0; color:var(--text); }
+#mission .mpick > span:last-child { display:flex; flex-direction:column; gap:2px; min-width:0; }
+#mission .mpick > span:last-child > b:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#mission .mpick .num { gap:3px; }
+#mission .mcard .qcn { font-size:22px; }
+#mission .mpick.g { background-color:#d6f0d6; }
+#mission .mst { display:flex; flex-wrap:wrap; gap:8px; }
+#mission .mchip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; font-size:16px; }
+#mission .msay { display:flex; align-items:center; gap:10px; }
+#mission .mbub { padding:6px 14px; background-color:#fffaf0; }
+#mission .mgo { display:flex; align-items:center; justify-content:center; gap:10px; min-height:52px; margin-top:6px; background-color:var(--gold); font-size:22px; color:var(--text); }
+#mission .mgo:disabled { background-color:#dcd2be; }
+#mission .mslot.g { background-color:#d6f0d6; }

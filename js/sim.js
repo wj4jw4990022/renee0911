@@ -787,35 +787,41 @@ function openMission(o, keep){
   const showComp = canFightComp(o), cm = showComp ? compMul(mComp) : 1, De = o.D / cm;
   const r = ratio(h, De), d = danger(r), fd = feelDanger(h, De), win = o.D ? Math.round(winP(r) * 100) : 100;
   const etaEnd = (() => { const e = etaList(); return e.length ? e[e.length - 1] + (S.queue[S.queue.length - 1].days || 1) : S.day + 1 + (h.act === 'mission' ? h.actDays : 0); })();
-  const lateWarn = o.until && etaEnd > o.until ? `<div class="dg r" style="font-size:12.5px">排在目前的排程後面，大約 ${etaEnd - S.day} 個月後才輪到，會趕不上期限</div>` : '';
   const cn = mComp && npc(mComp);
   const fear = cn && d.i >= 1 ? pickS([`有${cn.name}在，我比較放心。`, `${cn.name}也一起去的話，應該沒問題`]) : fd.i === 2 ? (h.trait === 'brave' ? '九死一生？聽起來很刺激！' : h.trust > 60 ? '這趟……老實說我有點怕。但你說去，我就去。' : '你是想害死我嗎？') : fd.i === 1 ? pick(['有點難，但應該還行', '我會小心的']) : pick(['小事一樁！', '輕鬆啦']);
   const Z = o.z >= 0 ? ZONES[o.z] : null, st = [h.sta < 25 ? ['r', '很累'] : h.sta < 50 ? ['o', '有點累'] : ['g', '精神好'], h.bedDays > 0 ? ['r', '養傷中'] : hasP(h, 'lame') ? ['o', '跛腳'] : hasP(h, 'scar') ? ['o', '有舊傷'] : null, [h.pots ? '' : 'o', `藥水 ×${h.pots}`], fd.i !== d.i ? ['o', fd.i < d.i ? '他太有自信了' : '他太擔心了'] : null].filter(Boolean);
   const comps = showComp ? S.npcs.filter(canComp) : [];
+  // v17.75 出發卡新版（design-wip design/ui/草圖_出發卡.png）：木條標題＋任務卡（同任務頁）＋出發的人＋狀況圖示＋他說的話＋金色「排進排程」
+  const ST_IC = { '很累':'體力', '有點累':'體力', '精神好':'體力', '養傷中':'生病', '跛腳':'生病', '有舊傷':'生病' };
+  const stIc = t => ST_IC[t] || (t.startsWith('藥水') ? '照顧' : '驚嘆'), stTx = t => t.startsWith('藥水') ? t.replace('藥水 ', '') : t;
+  const left = o.until ? o.until - S.day : null, dur = durTxt(h, o).replace(/ ?個月/, ' 月');
+  const pct = o.ag ? Math.round((o.share || .1) * 100) : S.cut;
+  const who = (n, cls) => `<span class="mfc${cls ? ' ' + cls : ''}">${pimg(n)}</span>`;
   $('mBox').innerHTML = `
-    <div style="width:40px;height:4px;border-radius:2px;background:#8a6a46;align-self:center"></div>
-    <div style="border-radius:16px;overflow:hidden;border:1px solid ${o.boss || o.boss2 ? '#7a5ac8' : '#343e55'};background:#fbf0d2">
-      <div style="height:64px;background:${Z ? Z.c : '#8a6a46'};position:relative"><span style="position:absolute;left:10px;top:10px;padding:2px 9px;border-radius:9px;background:rgba(18,22,31,.85);font-size:12px;color:#fff3d6">${typeTag(o)}${Z ? Z.n : '村子'} · ${durTxt(H(), o)}</span>${o.until ? `<span style="position:absolute;right:10px;top:10px;padding:2px 9px;border-radius:9px;background:rgba(18,22,31,.85);font-size:12px;color:#fff3d6" class="${o.until - S.day <= 1 ? 'dg r' : ''}">${dueTxt(o.until)}</span>` : ''}</div>
-      <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px">
-        <div class="k" style="font-size:12px">${o.ag ? '事務所任務' : o.boss || o.boss2 ? '村長的懸賞' : '冒險者公會的委託'}</div>
-        <div class="px" style="font-size:20px">${o.n}</div>
-        <div style="font-size:13px;color:#6b4e33">${o.ag ? `事務所得到：名聲 +${o.fame}、<b style="color:var(--gold)">${fmt(o.gold)}</b> 金 · ${pron(h)}只拿 ${Math.round((o.share || .1) * 100)}%` : `報酬 <b style="color:var(--gold)">${fmt(o.reward)}</b> 金（你抽 ${S.cut}%）`}</div>
-        ${o.ag ? `<div class="k" style="font-size:12px">${AGT[o.ag].d}</div>` : ''}
-        ${o.D ? `<div class="seg" style="margin-top:2px"><i class="${d.i === 0 ? 'on' : ''}" style="background:#6fcf97"></i><i class="${d.i === 1 ? 'on' : ''}" style="background:#ffb347"></i><i class="${d.i === 2 ? 'on' : ''}" style="background:#ff7b7b"></i></div><div class="row"><b class="dg ${d.k}" style="font-size:14px">${d.n}</b><span style="font-size:13px">勝率約 <b>${win}%</b></span></div>` : '<div class="dg g" style="font-size:13px">不用打，但不一定合他的胃口</div>'}
+    <div class="mh">${IC('任務', 2)}<b>出發前</b><span class="rsp"></span><button class="pb mx" id="mNo" aria-label="關閉">✕</button></div>
+    <div class="mbd">
+    <div class="pb qc2 mcard${o.ag ? ' ag' : ''}${o.boss || o.boss2 ? ' boss' : ''}">
+      <div class="qch"><span${TIPA(o.ag ? '事務所' : '任務', o.ag ? '事務所任務' : o.boss || o.boss2 ? '村長的懸賞' : '冒險者公會的委託', o.ag ? AGT[o.ag].d : typeTag(o) + (Z ? Z.n : '村子'))}>${IC(o.ag ? '事務所' : '任務', 2)}</span><b>${Z ? Z.n : '村子'}</b><span class="mgap"></span>${IC('時間', 2)}<b>${dur}</b><span class="rsp"></span>${left != null ? `<span class="${left <= 1 ? 'mdue r' : 'mdue'}">${IC('時間', 2)}<b>剩 ${Math.max(0, left)} 月</b></span>` : ''}</div>
+      <div class="qcb">
+        <div class="qcn f22">${esc(o.n)}</div>
+        <div class="qcr">${o.ag ? `<span class="num"${TIPA('名聲')}>${IC('名聲', 2)}<b>+${o.fame}</b></span>` : ''}<span class="num"${TIPA('金幣', '報酬', o.ag ? '事務所拿到的錢' : '委託的報酬')}>${IC('金幣', 2)}<b>${fmt(o.ag ? o.gold : o.reward)}</b></span><span class="num s mu"${TIPA('事務所', o.ag ? pron(h) + '拿多少' : '你抽成', o.ag ? `${pron(h)}只拿 ${pct}%，其他歸事務所` : `你從報酬裡抽 ${pct}%`)}>${IC('事務所', 1)}<b>${pct}%</b></span></div>
+        <div class="qcr mdg">${o.D ? `<span${TIPA('危險', d.n, '照他現在的戰力' + (cn ? `，加上${cn.name}` : ''))}>${d.i === 0 ? `<b class="cg f16">安全</b>` : Array.from({ length:d.i + 1 }, () => IC('危險', 2)).join('')}</span><span class="rsp"></span><b class="mwin ${d.i === 0 ? 'cg' : d.i === 1 ? 'co' : 'cr'}">勝率 ${win}%</b>` : `${IC('心情', 2)}<b class="cg f16">不用打</b>`}</div>
       </div>
     </div>
-    ${lateWarn}
-    <div><div class="row" style="margin-bottom:8px"><b style="font-size:14px">出發成員</b><span class="k" style="font-size:12px">${showComp ? '同伴越強勝率越高，但同伴也可能受傷' : '這個任務一個人去'}</span></div>
-      <div class="party">
-        <div class="pslot"><div class="pf" style="background:${CLS[h.cls].col}"><canvas id="mface" width="20" height="20" style="width:30px;height:30px;image-rendering:pixelated"></canvas></div><b style="font-size:13.5px">${h.name}</b><span style="font-size:11.5px;color:#6a4fb0">戰力 ${Math.round(power(h))}</span></div>
-        ${showComp ? (cn ? `<button class="pslot c" data-cmp=""><div class="pf" style="background:#3a4a3a">${cn.name.slice(0, 1)}</div><b style="font-size:13.5px">${cn.name}</b><span style="font-size:11.5px;color:#2f7a3a">+${Math.round(cn.pw * 100)}%${compCost(cn) ? ` · 傭金 ${fmt(compCost(cn))}` : ''}</span><span style="position:absolute;right:8px;top:6px;font-size:11px" class="k">換掉</span></button>` : `<div class="pslot e"><span style="font-size:24px">+</span><span style="font-size:12.5px">從下面選同伴</span></div>`) : `<div class="pslot e"><span style="font-size:12.5px">不需要同伴</span></div>`}
-      </div>
-      ${showComp ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${comps.map(n => `<button class="cmp ${mComp === n.id ? 'on' : ''}" data-cmp="${n.id}">${n.name} <span class="dg g">+${Math.round(n.pw * 100)}%</span>${compCost(n) ? `<span class="k">（${fmt(compCost(n))}）</span>` : ''}</button>`).join('') || '<span class="k" style="font-size:12px">交情到「朋友」以上的人，才願意陪著出任務</span>'}</div>` : ''}
+    ${o.until && etaEnd > o.until ? `<div class="mlate cr f14">${IC('時間', 2)}<b>大約 ${etaEnd - S.day} 個月後才輪到，會趕不上期限</b></div>` : ''}
+    <div class="msec f14 mu">出發</div>
+    <div class="mparty">
+      <div class="pb mslot me">${who(h)}<div><b class="f22">${esc(h.name)}</b><span class="num"${TIPA('戰力')}>${IC('戰力', 2)}<b>${Math.round(power(h))}</b></span></div></div>
+      ${!showComp ? `<div class="mslot e f16 mu">一個人去</div>`
+        : cn ? `<div class="pb mslot g">${who(cn)}<div><b class="f22">${esc(cn.name)}</b><span class="num s cg"${TIPA('戰力', '同伴', '同伴越強勝率越高，但同伴也可能受傷')}>${IC('戰力', 2)}<b>+${Math.round(cn.pw * 100)}%</b></span>${compCost(cn) ? `<span class="num s"${TIPA('金幣', '傭金', '出發時付給' + cn.name)}>${IC('金幣', 2)}<b>${fmt(compCost(cn))}</b></span>` : ''}</div><button class="pb ns mrm" data-cmp="" aria-label="拿掉同伴">${IC('刪除', 2)}</button></div>`
+        : `<div class="mslot e"${TIPA('一起出任務', '同伴', '同伴越強勝率越高，但同伴也可能受傷')}>${IC('加號', 3)}<span class="f16 mu">選同伴</span></div>`}
     </div>
-    <div class="tags">${st.map(([c, t]) => `<span class="tag ${c === 'g' ? 'g' : ''}" style="${c === 'r' ? 'border-color:var(--red);color:#b03a30' : c === '' ? 'border-color:#8a6a46;color:var(--muted)' : ''}">${t}</span>`).join('')}</div>
-    <div class="say"><div class="av" style="width:36px;height:36px;border-radius:18px">${h.name.slice(0, 1)}</div><div class="m">${fear}</div></div>
-    <div style="display:flex;gap:10px"><button class="btn" id="mNo" style="min-height:52px;padding:0 18px">先不要</button><button class="btn" id="mGo" style="flex:1;min-height:52px;background:var(--gold);color:#12161f;border:none;font-weight:700;font-size:16px" ${S.queue.length >= Q_MAX ? 'disabled' : ''}>${S.queue.length >= Q_MAX ? '排程滿了' : `排進排程${o.D ? `（勝率 ${win}%）` : ''}`}</button></div>`;
-  drawFace($('mface'), d.i === 2 ? -1 : 0);
+    ${showComp ? (comps.length ? `<div class="mpicks">${comps.map(n => `<button class="pb mpick${mComp === n.id ? ' g' : ''}" data-cmp="${mComp === n.id ? '' : n.id}">${who(n, 's')}<span><b class="f16">${esc(n.name)}</b><b class="f16 cg">+${Math.round(n.pw * 100)}%</b>${compCost(n) ? `<span class="num s">${IC('金幣', 1)}<b class="f14">${fmt(compCost(n))}</b></span>` : ''}</span></button>`).join('')}</div>`
+      : `<div class="f14 mu">交情到「朋友」以上的人，才願意陪著出任務</div>`) : ''}
+    <div class="mst">${st.map(([c, t]) => `<span class="pb ns mchip"${TIPA(stIc(t), stTx(t), '他現在的狀況')}>${IC(stIc(t), 2)}<b class="${c === 'r' ? 'cr' : c === 'o' ? 'co' : c === 'g' ? 'cg' : ''}">${esc(stTx(t))}</b></span>`).join('')}</div>
+    <div class="msay">${who(h, 's')}<div class="pb ns mbub f16">${esc(fear)}</div></div>
+    <button class="pb au mgo" id="mGo" ${S.queue.length >= Q_MAX ? 'disabled' : ''}>${IC('排程', 2)}<b>${S.queue.length >= Q_MAX ? '排程滿了' : '排進排程'}</b></button>
+    </div>`;
   $('mission').classList.add('on'); S.paused = true;
   $('mNo').onclick = closeMission; $('mGo').onclick = () => enqueue(o);
   $('mBox').querySelectorAll('[data-cmp]').forEach(b => b.onclick = () => { mComp = b.dataset.cmp || null; openMission(o, true); });
