@@ -432,7 +432,7 @@ function drawMap(now){
   drawPip(now);
   // v17.11：地圖只有一條路，右側只留「跟拍」：按了鏡頭回到勇者身上
   if (drawMap.k !== 'road') { drawMap.k = 'road';
-    $('mtabs').innerHTML = `<button class="zbtn on" data-follow="1" aria-label="鏡頭回到勇者身上"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span>跟拍</span></button>`;
+    $('mtabs').innerHTML = `<button class="pb mbig" data-follow="1" aria-label="鏡頭回到勇者身上">${IC('跟拍', 2)}</button>`;   // v17.58：大圖示
     $('mtabs').querySelector('[data-follow]').onclick = e => { e.stopPropagation(); V.pan = null; V.drag = null; toast(`鏡頭跟著${H().name}`); }; }
 }
 // 點地圖
@@ -1812,16 +1812,22 @@ Object.assign(BLD_ART, {
   stop(P){ const { W, H } = P; P.rect(W / 2 - 1, 6, W / 2, H - 1, '#5a4a3a'); P.rect(1, 0, W - 2, 8, '#f2e2b0'); P.ell(W / 2 - .5, 4, 2.5, 2, '#3f6ea0'); },
 });
 
-// ================= v17.14：急報（所有整頁大事件）現實 20 秒沒回覆，勇者自己決定 =================
-const URGENT_MS = 20000;
+// ================= v17.14：急報（整頁大事件）20 秒；v17.58：一般問題也改成限時 15 秒（拿掉「已讀不回」），時間到勇者自己決定 =================
+// 一般問題只在看著主畫面時倒數（打開選單、暫停、切到別的 App 時停住）；剩多少存在 q.rem（毫秒），重開頁面接著倒數
+const URGENT_MS = 20000, ASK_MS = 15000;
+let qLast = Date.now();
 function qTick(){
+  const now = Date.now(), dt = Math.min(1000, now - qLast); qLast = now;
   try {
-    if (!S || !S.q || !BIG_Q.has(S.q.key) || offline) return;
-    const q = S.q; if (!q.dl) q.dl = Date.now() + URGENT_MS;   // 輪到這個問題時才開始倒數
-    const left = Math.max(0, Math.ceil((q.dl - Date.now()) / 1000));
+    if (!S || !S.q || offline) return;
+    const q = S.q, big = BIG_Q.has(q.key), tot = big ? URGENT_MS : ASK_MS;
+    if (q.rem == null) { q.rem = q.dl ? clamp(q.dl - now, 0, tot) : tot; delete q.dl; }   // 舊存檔的 dl（到期時刻）換成剩多少
+    if (!document.hidden && (big || (!sheetT && !S.paused))) q.rem -= dt;
+    const left = Math.max(0, Math.ceil(q.rem / 1000));
     const a = document.getElementById('evCd'); if (a) a.textContent = `${left} 秒內沒回覆，${pron(H())}會自己決定`;
-    const b = document.getElementById('qCd'); if (b) b.textContent = `剩 ${left} 秒`;
-    if (Date.now() >= q.dl) { $('evp').classList.remove('on'); answer(-1); save(); renderAll(); }
+    const b = document.getElementById('qCd'); if (b) b.textContent = `${left} 秒`;
+    const c = document.getElementById('qBar'); if (c) c.style.width = clamp(q.rem / tot * 100, 0, 100) + '%';
+    if (q.rem <= 0) { $('evp').classList.remove('on'); answer(-1); save(); renderAll(); }
   } catch (e) { console.error(e); }
 }
 setInterval(qTick, 250);

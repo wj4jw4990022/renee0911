@@ -102,7 +102,7 @@ function answer(i){
   S.q = null;
   const st = H().st; if (st) { if (i >= 0) st.heard++; else st.ignored++; }
   if (i >= 0) addMsg('me', q.opts[i]);
-  else sys('（你沒有回）');
+  else sys(`（來不及回，${H().name}自己決定了）`);
   try { (QH[q.key] || (() => {}))(i, q.data); } catch (e) { console.error(e); }
   if (!S.q && S.qq.length) { const n = S.qq.shift(); n.until = S.day + 2; S.q = n; (n.text.startsWith('（') ? sys : say)(n.text); }
   renderReplies(); renderAll();
@@ -1214,7 +1214,7 @@ function dayEnd(){
   h.carefulNext = 0; h.ownToday = 0; h.earnToday = 0;
   S.coach = S.coachUntil > S.day + 1;
   // 問題過期
-  if (S.q && S.day + 1 > S.q.until) answer(-1);
+  if (S.q && S.day + 1 > S.q.until && offline) answer(-1);   // v17.58：開著遊戲時改成限時 15 秒（map.js qTick），只有離線補跑時才照天數過期
 }
 // ================= v8：配角的人生 =================
 // 有職位的人過世或退休後，會有人接手（同一個 id，功能不中斷）

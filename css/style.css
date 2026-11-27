@@ -583,3 +583,82 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 .tipbox .tar { position:absolute; top:-11px; width:0; height:0; margin-left:-8px; border:8px solid transparent; border-bottom-color:var(--ol); border-top:0; }
 .tipbox.up .tar { top:auto; bottom:-11px; border-bottom:0; border-top:8px solid var(--ol); }
 [data-tip] { cursor:pointer; }
+
+/* ================= v17.58 主畫面新版（design/ui/草圖_主畫面.png） ================= */
+#app .rbar { gap:8px; padding:6px 10px; min-height:52px; font-size:16px; color:#fff3d6; text-shadow:0 2px 0 #3b2616; }
+#app .rbar .mpill { display:flex; align-items:center; gap:14px; padding:3px 12px; border:3px solid transparent; border-image:var(--pb-au) 3; background:#3b2616; background-clip:padding-box; }
+#app .rbar .mpill b { font-size:16px; color:#fff3d6; }
+#app .mbtn { width:38px; height:38px; padding:0; display:flex; align-items:center; justify-content:center; position:relative; text-shadow:none; filter:drop-shadow(3px 3px 0 rgba(30,18,10,.6)); }
+#app .mbtn small { position:absolute; right:-6px; bottom:-8px; font-size:12px; background:var(--ol); color:#fff3d6; padding:0 3px; }
+#app .mbtn.on { background-color:var(--gold); }
+#app .hud { right:66px; }
+#app .cap.pb { display:flex; align-items:center; gap:8px; padding:4px 12px 4px 4px; border-radius:0; clip-path:none; box-shadow:none; border:3px solid transparent; border-image:var(--pb-dk) 3; background:var(--paper); background-clip:padding-box; max-width:78%; }
+#app #face { width:48px; height:48px; image-rendering:pixelated; background:#cfe6f5; flex:none; }
+#app .cap .hn { flex-direction:row; align-items:baseline; gap:8px; }
+#app .cap .hn b { font-size:18px; line-height:1.1; }
+#app .cap .hn span { font-size:14px; color:var(--muted); }
+#app .cap .bars { display:flex; gap:8px; margin-top:2px; }
+#app .bars .bi { display:flex; align-items:center; gap:3px; }
+#app .bars .bi > i { display:block; width:32px; height:9px; border:2px solid var(--ol); background:#e8dcc0; border-radius:0; overflow:hidden; }
+#app .bars .bi > i b { display:block; height:100%; }
+#app .bell.pb { right:10px; top:10px; width:48px; height:48px; border-radius:0; clip-path:none; }
+#app .bell #bellN { right:-9px; top:-9px; min-width:20px; height:20px; border-radius:0; border:2px solid var(--ol); background:var(--bad); color:#fff; font-size:13px; }
+#app .bell #bellN.on { display:flex; }
+#app .bell.open { background-color:#fff1cf; }
+#app .mtabs { top:72px; right:10px; }
+#app .mtabs .mbig { width:48px; height:48px; padding:0; display:flex; align-items:center; justify-content:center; }
+#app .stage .alerts { top:66px; right:10px; width:min(260px, 74%); }
+#app .act span { background:none; border:none; clip-path:none; padding:0; color:inherit; text-shadow:none; border-radius:0; }
+#app .act #actw { display:inline-flex; align-items:center; gap:8px; padding:3px 12px 3px 8px; font-size:16px; color:var(--text); background:var(--paper); max-width:100%; overflow:hidden; }
+#app .act #act { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#app .act { bottom:12px; right:16px; }
+/* 對話區：篩選圖示＋互動鈕一直都在 */
+#app .chat, #app:not(.chatx) .chat { height:228px; background:var(--paper2); border-top:3px solid var(--ol); }
+#app:not(.chatx) .chat:has(#replies.asking) { height:330px; }
+#app .chh, #app:not(.chatx) .chh { display:flex; align-items:center; gap:8px; padding:6px 12px 6px; }
+#app .ff, #app:not(.chatx) .ff { visibility:visible; flex:1; display:flex; gap:8px; overflow:visible; }
+#app .ff .fbtn { width:46px; height:38px; min-height:0; padding:0; display:flex; align-items:center; justify-content:center; font-size:16px; border-radius:0; clip-path:none; box-shadow:none; color:var(--text); filter:drop-shadow(3px 3px 0 var(--shd)); }
+#app .ff .fbtn.g { background-color:var(--ok); color:#fff; text-shadow:0 2px 0 var(--okd); }
+#app .tbtn { display:flex; align-items:center; gap:6px; height:38px; padding:0 12px; font-size:16px; filter:drop-shadow(3px 3px 0 var(--shd)); }
+#app .chH { height:14px; }
+#app #feed { padding:6px 14px 8px; gap:8px; }
+#app:not(.chatx) #feed { padding-top:14px; -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 22px); mask-image:linear-gradient(to bottom, transparent 0, #000 22px); }
+.msg { font-size:16px; line-height:1.45; white-space:pre-line; align-self:flex-start; max-width:86%; }
+.msg.hero, .msg.me { padding:5px 11px; border:3px solid transparent; border-image:var(--pb-dk) 3; background:#fffaf0; background-clip:padding-box; }
+.msg.hero.ask { background-color:#fff1cf; }
+.msg.me { align-self:flex-end; background-color:#cfe9b8; }
+.msg.sys { align-self:center; font-size:14px; color:var(--muted); text-align:center; max-width:100%; }
+.msg.ev { align-self:stretch; max-width:100%; padding:4px 0 8px; border-bottom:2px solid rgba(122,90,58,.25); }
+.msg.ev .evt { display:flex; align-items:center; gap:8px; }
+.msg.ev .evt b { font-size:16px; color:#a8681a; }
+.msg.ev.good .evt b { color:#2f7a3a; } .msg.ev.bad .evt b { color:#b03a30; }
+.msg.ev .evt .tm { margin-left:auto; font-size:14px; color:var(--muted); }
+.msg.ev .evb { padding-left:26px; }
+.msg.arep { align-self:stretch; max-width:100%; padding:6px 10px; border:3px solid transparent; border-image:var(--pb-dk) 3; background:#e7f0f7; background-clip:padding-box; cursor:pointer; font-size:14px; }
+.msg.arep .ah2 { display:flex; justify-content:space-between; gap:8px; color:#2f64a3; } .msg.arep .ar1 { color:#6b4e33; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#app .mrow .mav { width:28px; height:28px; border-radius:0; }
+/* 限時回答 */
+#app #replies, #app:not(.chatx) #replies { border-top:2px solid rgba(122,90,58,.3); padding:8px 12px 12px; }
+#app #replies:empty { display:none; }
+#app #replies.asking { display:flex; flex-direction:column; gap:10px; }
+.qask { font-size:16px; line-height:1.4; }
+.qopts3 { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+.qopts3.n1 { grid-template-columns:1fr; } .qopts3.n2, .qopts3.n4 { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.qopts3 button { min-height:46px; padding:4px 6px; font-size:16px; line-height:1.25; }
+.qtime { display:flex; align-items:center; gap:10px; }
+.qtime .pbar { flex:1; height:16px; }
+.qtime .pbar i { background:var(--gold); transition:width .25s linear; }
+.qtime b { font-size:16px; min-width:44px; text-align:right; }
+/* 底部五顆一樣大 */
+#app nav { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); padding:6px 4px 8px; background:var(--wood); border-top:3px solid var(--ol); }
+#app nav button { font-size:14px; gap:3px; color:#fff3d6; text-shadow:0 2px 0 #3b2616; min-height:54px; justify-content:center; }
+#app nav button.on { color:#fff; }
+#app nav button.on:before { content:''; position:absolute; top:-6px; left:28%; right:28%; height:4px; background:var(--gold); border-radius:0; }
+#app nav button.on .ic { filter:drop-shadow(0 0 0 #fff) brightness(1.15); }
+#app nav .bdg { top:2px; left:calc(50% + 10px); }
+#app .mtabs .mbig.pb { border:3px solid transparent; border-image:var(--pb-dk) 3; background:var(--paper); background-clip:padding-box; border-radius:0; }
+#app .cap .hn b, #app .msg b, #app .rbar b { font-weight:700; }
+#app .qopts3 button { padding:2px 3px; }
+#app .qopts3 { gap:8px; }
+#app .chH, #app.chatx .chH { display:flex; }
+#app .qopts3 button { font-size:15px; padding:2px 1px; }

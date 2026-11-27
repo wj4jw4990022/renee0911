@@ -13,6 +13,19 @@ const TIP = {
   '經驗':['經驗', '滿了就升級'], '下降':['每月開銷', '每個月固定花掉的錢'], '鎖':['還沒看出來', '相處久一點才知道'],
 };
 const TIPA = (n, nm, d) => { const t = TIP[n] || [nm || n, d || '']; return ` data-tip="${esc(n + '|' + (nm || t[0]) + '|' + (d || t[1]))}"`; };
+const setH = (el, html) => { if (el && el._h !== html) { el._h = html; el.innerHTML = html; } };   // 一樣就不重畫（圖示是 data URL，重畫會閃）
+document.querySelectorAll('[data-ic]').forEach(e => { e.outerHTML = IC(e.dataset.ic, +(e.dataset.sc || 1)); });
+$('pGold').setAttribute('data-tip', '金幣|金庫|事務所現在有的錢'); $('pFame').setAttribute('data-tip', '名聲|名聲|勇者的名氣，越高委託越好');
+// 「正在做什麼」前面的圖示
+function actIc(h, t){
+  if (/睡|休息|臥床|躺|擺爛|診所/.test(t)) return '休息';
+  if (h.act === 'hunt' || /打|魔王|對決/.test(t)) return '戰力';
+  if (h.act === 'mission') return '任務';
+  if (/路上|出發|馬車|傳送/.test(t)) return '商隊';
+  if (/大會|鬥技|比賽/.test(t)) return '代表作';
+  if (['gone', 'private', 'dying', 'strike'].includes(h.act)) return '驚嘆';
+  return '村子';
+}
 function showTip(el){
   const [n, nm, d] = el.dataset.tip.split('|'), bx = $('tipbox'), app = $('app').getBoundingClientRect(), r = el.getBoundingClientRect();
   bx.innerHTML = `<div class="tbr">${IC(n, 2)}<b>${esc(nm)}</b></div>${d ? `<div class="tbd">${esc(d)}</div>` : ''}<i class="tar"></i>`;
@@ -81,59 +94,61 @@ function renderTop(){
   const h = H(); renderAlerts(); fxMoney();
   updBadges(h);
   $('gold').textContent = fmt(S.gold); $('fame').textContent = fmt(Math.round(S.fame));
-  $('bars').innerHTML = [[h.sta, '#6fcf97'], [h.mood, '#f2c14e'], [h.stress, '#ff7b7b']].map(([v, c]) => `<i><b style="width:${clamp(v, 0, 100)}%;background:${c}"></b></i>`).join('');
-  $('date').textContent = `${ym(S.day)} · ${clockTxt(hourOf())}${{ rain:' · 雨', snow:' · 雪', storm:' · 颱風' }[S.weather] || ''}`;
-  const mk0 = menuMul(); $('bSpeed').textContent = !S.paused && mk0 < 1 ? (mk0 ? '慢' : '停') : 'x' + S.speed; $('bPause').textContent = S.paused ? '▶' : '⏸';
+  setH($('bars'), [['體力', h.sta, '#43c878'], ['心情', h.mood, '#f7c94a'], ['壓力', h.stress, '#e84537']].map(([n, v, c]) => `<span class="bi"${TIPA(n)}>${IC(n, 1)}<i><b style="width:${Math.round(clamp(v, 0, 100))}%;background:${c}"></b></i></span>`).join(''));
+  { const hr = hourOf(), H24 = Math.floor(hr) % 24; $('date').textContent = `${ym(S.day)} ${H24}:${String(Math.floor((hr % 1) * 6) * 10).padStart(2, '0')}${{ rain:' · 雨', snow:' · 雪', storm:' · 颱風' }[S.weather] || ''}`; }
+  const mk0 = menuMul(), sp = !S.paused && mk0 < 1 ? (mk0 ? '慢' : '停') : S.speed > 1 ? '×' + S.speed : '';
+  setH($('bSpeed'), IC('快轉', 2) + (sp ? `<small>${sp}</small>` : '')); setH($('bPause'), IC(S.paused ? '播放' : '暫停', 2)); $('bPause').classList.toggle('on', !!S.paused);
   $('hname').textContent = h.name;
-  $('hsub').textContent = `${jobName(h)} Lv${h.lv} · ${Math.floor(h.age)} 歲`;
-  $('act').textContent = '正在：' + (tourRound() >= 0 ? tourTxt() : vCarry() ? '受傷了，被擡回村子' : legTxt(h) ? legTxt(h) : vWalkTxt(h) ? vWalkTxt(h) : mPhase(h) && mPhase(h) !== 'work' && mPhase(h) !== 'slot' ? mTxt(h) : sleeping() ? (h.act === 'drink' ? '喝醉了，在酒館趴著睡' : '在家睡覺') : hourOf() >= 18.5 && ['idle', 'home'].includes(h.act) ? '晚上在村子裡放鬆' : hourOf() < 7 && h.act === 'hunt' ? '準備出門' : ACT_TXT(h));
-  if (mPhase(h) === 'work' && SCN && !SCN.off) $('act').textContent += ' · ' + scnCnt();   // v17.9：進度數字
-  { const z = h.act === 'hunt' && h.zone >= 0 ? h.zone : -1, m = h.act === 'mission' && h.mission ? h.mission : null, at = $('act').textContent; let extra = '';
+  $('hsub').textContent = `Lv${h.lv}`;
+  let at0 = (tourRound() >= 0 ? tourTxt() : vCarry() ? '受傷了，被擡回村子' : legTxt(h) ? legTxt(h) : vWalkTxt(h) ? vWalkTxt(h) : mPhase(h) && mPhase(h) !== 'work' && mPhase(h) !== 'slot' ? mTxt(h) : sleeping() ? (h.act === 'drink' ? '喝醉了，在酒館趴著睡' : '在家睡覺') : hourOf() >= 18.5 && ['idle', 'home'].includes(h.act) ? '晚上在村子裡放鬆' : hourOf() < 7 && h.act === 'hunt' ? '準備出門' : ACT_TXT(h));
+  if (mPhase(h) === 'work' && SCN && !SCN.off) at0 += ' · ' + scnCnt();   // v17.9：進度數字
+  { const z = h.act === 'hunt' && h.zone >= 0 ? h.zone : -1, m = h.act === 'mission' && h.mission ? h.mission : null, at = at0; let extra = '';
     if (z >= 0) { const d = danger(ratio(h, zD(z))); extra = ` · <span class="dg ${d.k}">${d.n}</span>`; }
     else if (m && m.days > 1) { const pg = clamp(1 - (h.actDays - 1 + S.t / DAY_SEC) / m.days, 0, 1); extra = `<i class="apg"><b style="width:${Math.round(pg * 100)}%"></b></i>`; }
     else if (m && m.z >= 0 && m.D) { const d = danger(ratio(h, m.D) * compMul(m.comp)); extra = ` · <span class="dg ${d.k}">${d.n}</span>`; }
-    $('act').innerHTML = esc(at) + extra; $('ztag').style.display = 'none'; }
-  drawFace($('face'));
+    setH($('act'), esc(at) + extra); setH($('actI'), IC(actIc(h, at), 2)); $('ztag').style.display = 'none'; }
+  drawFace($('face'), undefined, true);   // 表情泡泡放頭像右上角，不蓋臉
 }
 let feedN = 0;
-const FF = [['all', '全部'], ['hero', '他說的話'], ['ev', '大事'], ['vil', '村子']];
+const FF = [['all', '全部', ''], ['hero', '他說的話', '說話'], ['ev', '大事', '驚嘆'], ['vil', '村子', '村子']];   // v17.58：篩選只放圖示
 const ffOk = m => { const f = S.feedF || 'all'; return f === 'all' || (f === 'hero' ? m.k === 'hero' || m.k === 'me' : f === 'vil' ? m.g === '村子' : m.k.startsWith('ev') && m.g !== '村子'); };
 function renderFeed(){
   const f = $('feed'); const atBottom = f.scrollHeight - f.scrollTop - f.clientHeight < 40;
-  $('ff').innerHTML = FF.map(([k, n]) => `<button class="${(S.feedF || 'all') === k ? 'on' : ''}" data-ff="${k}">${n}</button>`).join('');
+  setH($('ff'), FF.map(([k, n, ic]) => `<button class="pb fbtn${(S.feedF || 'all') === k ? ' g' : ''}" data-ff="${k}" aria-label="${n}">${ic ? IC(ic, 2) : '全'}</button>`).join(''));
   $('ff').querySelectorAll('[data-ff]').forEach(b => b.onclick = () => { S.feedF = b.dataset.ff; renderFeed(); f.scrollTop = f.scrollHeight; });
-  const h = H(), col = CLS[h.cls].col, ini = esc(h.name.slice(0, 1)), list = S.msgs.filter(ffOk).slice(-50);
+  const h = H(), list = S.msgs.filter(ffOk).slice(-50);
   let askI = -1; if (S.q) for (let i = list.length - 1; i >= 0; i--) if (list[i].t === S.q.text) { askI = i; break; }
   const qDup = askI >= 0 && !$('app').classList.contains('chatx');   // v17.23：下方提問框已經寫了同一句，收合時對話裡就不再重複
   f.innerHTML = list.map((m, i) => {
     if (qDup && i === askI) return '';
-    if (m.k === 'hero') return `<div class="mrow"><span class="mav">${pimg(h)}</span><div class="m${i === askI ? ' ask' : ''}">${esc(m.t)}</div></div>`;
-    if (m.k === 'me') return `<div class="m me">${esc(m.t)}</div>`;
-    if (m.k === 'arep') { const op = arepOpen.has(m.d); return `<div class="m arep" data-arp="${m.d}" role="button" aria-expanded="${op}"><div class="ah2"><b style="font-weight:500">${esc(m.t)}</b><span>${op ? '收合' : '展開 ›'}</span></div>${op ? `<div class="ar2">${(m.L || []).map(esc).join('<br>')}</div>` : `<div style="color:#6b4e33;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((m.L || [])[0] || '')}</div>`}</div>`; }
-    if (m.k === 'sys') return `<div class="m sys">${esc(m.t)}</div>`;
-    return `<div class="m ${m.k}">${m.hr != null ? `<span class="tm">${clockTxt(m.hr)}</span>` : ''}<i class="evi">${/good/.test(m.k) ? '✓' : /bad/.test(m.k) ? '✕' : '!'}</i><b>${esc(m.g)}</b>${esc(m.t)}</div>`;
+    if (m.k === 'hero') return `<div class="mrow"><span class="mav">${pimg(h)}</span><div class="msg hero${i === askI ? ' ask' : ''}">${esc(m.t)}</div></div>`;
+    if (m.k === 'me') return `<div class="msg me">${esc(m.t)}</div>`;
+    if (m.k === 'arep') { const op = arepOpen.has(m.d); return `<div class="msg arep" data-arp="${m.d}" role="button" aria-expanded="${op}"><div class="ah2"><b>${esc(m.t)}</b><span>${op ? '收合' : '展開 ›'}</span></div>${op ? `<div class="ar2">${(m.L || []).map(esc).join('<br>')}</div>` : `<div class="ar1">${esc((m.L || [])[0] || '')}</div>`}</div>`; }
+    if (m.k === 'sys') return `<div class="msg sys">${esc(m.t)}</div>`;
+    const gd = /good/.test(m.k);
+    return `<div class="msg ${m.k}"><div class="evt">${IC(gd ? '打勾' : '驚嘆', 2)}<b>${esc(m.g)}</b>${m.hr != null ? `<span class="tm">${clockTxt(m.hr)}</span>` : ''}</div><div class="evb">${esc(m.t)}</div></div>`;
   }).join('');
   f.querySelectorAll('[data-arp]').forEach(b => b.onclick = () => { const d = +b.dataset.arp, st = f.scrollTop; arepOpen.has(d) ? arepOpen.delete(d) : arepOpen.add(d); renderFeed(); f.scrollTop = st; });
   if (atBottom || S.msgs.length !== feedN) f.scrollTop = f.scrollHeight;
   feedN = S.msgs.length;
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
+// v17.58：限時回答（拿掉「已讀不回」）。三個選項排一排，下面時鐘＋倒數條；時間到勇者自己決定（map.js qTick）
+const qTot = q => BIG_Q.has(q.key) ? URGENT_MS : ASK_MS;
 function renderReplies(){
   const r = $('replies'), h = H();
   if (S.q) {
-    const sys0 = S.q.text.startsWith('（'), left = Math.max(0, S.q.until - S.day) + 1;
+    const q = S.q, sys0 = q.text.startsWith('（'), tot = qTot(q), rem = q.rem ?? tot;
     r.className = 'asking';
-    r.innerHTML = `<div class="qwait"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="qt">${esc(sys0 ? S.q.text.replace(/^（|）$/g, '') : S.q.text)}</span>${BIG_Q.has(S.q.key) ? '<span id="qCd" style="flex:none;color:#b03a30">剩 20 秒</span>' : `<span style="flex:none">剩 ${left} 個月</span>`}</div>
-      <div class="qopts ${S.q.opts.length === 3 ? 'n3' : ''}">${S.q.opts.map((o, i) => `<button class="rb q" data-a="${i}">${esc(o)}</button>`).join('')}</div><button class="qghost" data-a="-1">已讀不回（讓${pron(h)}自己決定）</button>`;
+    r.innerHTML = `<div class="qask">${esc(sys0 ? q.text.replace(/^（|）$/g, '') : q.text)}</div>
+      <div class="qopts3 n${q.opts.length}">${q.opts.map((o, i) => `<button class="pb au" data-a="${i}">${esc(o)}</button>`).join('')}</div>
+      <div class="qtime"${TIPA('時間', '限時回答', `時間到了，${pron(h)}會自己決定`)}>${IC('時間', 2)}<span class="pbar"><i id="qBar" style="width:${rem / tot * 100}%"></i></span><b id="qCd">${Math.ceil(rem / 1000)} 秒</b></div>`;
     r.querySelectorAll('[data-a]').forEach(b => b.onclick = () => answer(+b.dataset.a));
     $('feed').scrollTop = $('feed').scrollHeight;
     evPage();
-  } else {
-    r.className = '';   // v17.22：互動收成一顆按鈕，點了打開開羅式選單
-    r.innerHTML = `<button class="ibtn" id="tOpen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>跟${esc(h.name)}互動 <small>${TALK.length} 種</small></button>`;
-    $('tOpen').onclick = openTalkMenu;
-  }
+  } else { r.className = ''; r.innerHTML = ''; }
 }
+$('tOpen').onclick = () => openTalkMenu();
 function renderAll(){ renderTop(); renderArow(); renderReplies(); if (sheetT) renderSheet(); }
 $('bell').onclick = e => { e.stopPropagation(); const on = $('alerts').classList.toggle('open'); $('bell').classList.toggle('open', on); };
 $('chH').onclick = () => $('chX').onclick();
@@ -809,7 +824,7 @@ function evPage(){
     ${(() => { const lv = h.trust >= 70 ? 2 : h.trust >= 40 ? 1 : 0, hs = HINT[q.key] ? HINT[q.key](q.data || {}, h) : null;
       const note = !hs ? '' : `<div class="evh">${lv === 2 ? `信任 ${Math.round(h.trust)}：${pron(h)}把話都說清楚了` : lv === 1 ? `信任 ${Math.round(h.trust)}：${pron(h)}只透露了大概` : `信任 ${Math.round(h.trust)}：${pron(h)}沒跟你說心裡話，看不出後果（信任 40 以上才會說）`}</div>`;
       return note + `<div class="evo">${q.opts.map((o, i) => `<button class="opt2" data-ea="${i}"><span>${esc(o)}</span>${hs && lv && hs[lv - 1][i] ? `<small class="${lv === 2 ? 'c' : ''}">${esc(hs[lv - 1][i].replace(/他/g, pron(h)))}</small>` : ''}</button>`).join('')}</div>`; })()}
-    <div class="evh" id="evCd" style="color:#b03a30"></div><button class="evl" data-ea="-1">已讀不回（讓${pron(h)}自己決定）</button><button class="evl" id="evLater">先回到畫面，晚點再回答</button></div>`;
+    <div class="evh" id="evCd" style="color:#b03a30"></div><button class="evl" id="evLater">先回到畫面，晚點再回答</button></div>`;
   $('evp').classList.add('on'); $('evp').scrollTop = 0; if ($('evFace')) drawFace($('evFace'), EV_EXPR[q.key] || exprOf(h), true);
   $('evp').querySelectorAll('[data-ea]').forEach(b => b.onclick = () => { $('evp').classList.remove('on'); if (S.q === q) answer(+b.dataset.ea); });
   $('evLater').onclick = () => $('evp').classList.remove('on');
