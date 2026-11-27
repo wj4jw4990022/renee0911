@@ -2122,16 +2122,15 @@ function endView(h, tag, rg, happy, cands){
     endScene($('endSc'), h);
     $('endNext').onclick = () => { endStep = 1; endView(h, tag, rg, happy, cands); $('end').scrollTop = 0; };
   } else {
-    const inh = [h.wpn ? ['戰力', WPN.n[h.wpn] + (WNAME[h.cls] || '武器')] : null, h.charms.length ? ['寶物', TREASURES[h.charms[0]].n] : null].filter(Boolean);
     $('end').innerHTML = `<div class="eh">${IC('歷代', 2)}<b>第 ${h.gen + 1} 代</b></div>
       <div class="ebd">
-        ${inh.length ? `<div class="einh"><span class="mu f16">繼承</span>${inh.map(([ic, t]) => `<span class="pb ns num s"${TIPA(ic, t, '上一代留下來的')}>${IC(ic, 2)}<b>${esc(t)}</b></span>`).join('')}</div>` : ''}
         ${S.rep < 30 ? `<div class="f14 cr">口碑太差，只有 ${S.rep < 15 ? 1 : 2} 個人願意來</div>` : ''}
         ${cands.map((c, i) => { const t0 = (c.tag || '').replace(/（.*）/g, ''), sub = ((c.tag || '').match(/（(.*?)）/g) || []).map(x => x.slice(1, -1)).join('・');
           return `<div class="pb ecand"><span class="eav">${pimg(c)}</span><div class="ecm">
             <div class="enm"><b class="f22">${esc(c.name)}</b><span class="pb ns etag p">${esc(t0)}</span></div>
             ${sub ? `<div class="f14 cr">${esc(sub)}</div>` : ''}
             <div class="etr"><span class="num s">${IC('戰力', 2)}<b>${CLS[c.cls].n}</b></span>${[c.trait, c.trait2].filter(Boolean).map(t => `<span class="num s"${TIPA('個性', TRAITS[t].n, TRAITS[t].d)}>${IC('個性', 2)}<b>${TRAITS[t].n}</b></span>`).join('')}</div>
+            ${c.heir ? `<div class="etr"><span class="f14 mu">繼承</span>${c.wpn ? `<span class="pb ns num s"${TIPA('戰力', '遺物', '上一代留下來的武器')}>${IC('戰力', 2)}<b class="f14">${WPN.n[c.wpn] + (WNAME[c.cls] || '武器')}</b></span>` : ''}${c.charms && c.charms.length ? `<span class="pb ns num s"${TIPA('寶物', TREASURES[c.charms[0]].n, '上一代留下來的傳家寶')}>${IC('寶物', 2)}<b class="f14">${TREASURES[c.charms[0]].n}</b></span>` : ''}</div>` : ''}
             <div class="etr"><span class="num s mu">${IC('心願', 2)}<b class="f14">自稱${GOALS[c.said].n}</b></span>${c.perks.map(p => `<span class="pb ns etag ${PERKS[p].bad ? 'r' : 'y'}"${TIPA('經驗', PERKS[p].n, PERKS[p].d || '')}>${PERKS[p].n}</span>`).join('')}</div>
           </div><button class="pb au epick" data-c="${i}">就是他</button></div>`; }).join('')}
       </div>`;
@@ -2159,7 +2158,7 @@ function makeCands(){
   if (S.fame >= 800) out.push({ tag:'慕名而來的新人', trust:60 });
   const keep = (S.rep < 15 ? 1 : S.rep < 30 ? 2 : 3) + (fanOk ? 1 : 0) + (S.fame >= 800 ? 1 : 0);
   const arC = AR().filter(a => !a.away && !a.bed).map(a => { const m = relGet(uidOf(h), uidOf(a)); a.tag = '旗下藝人' + (m.t === 'mentor' && m.jr === a.uid ? `（${h.name}的徒弟）` : ''); a.gen = h.gen + 1; return a; });
-  return [...arC, ...fameRecruit(out.slice(0, keep).map(o => { const n = newHero({ ...o, wpn:h.wpn, gen:h.gen + 1, charms:h.charms.length ? [h.charms[0]] : [] }); if (o.fanId) n.fanId = o.fanId; n.tag = o.tag + (S.rep < 35 ? '（聽過你的傳聞）' : ''); if (o.shadow) { n.stress = 35; n.trust = 70; } n.trust = clamp(n.trust + (S.rep - 60) / 2, 5, 95); return n; }))];
+  return [...arC, ...fameRecruit(out.slice(0, keep).map(o => { const heir = !!(o.master || o.kid), n = newHero({ ...o, wpn:heir ? h.wpn : 0, gen:h.gen + 1, charms:heir && h.charms.length ? [h.charms[0]] : [] });   /* v17.83：只有徒弟和孩子繼承遺物 */ if (heir && (h.wpn || h.charms.length)) n.heir = 1; if (o.fanId) n.fanId = o.fanId; n.tag = o.tag + (S.rep < 35 ? '（聽過你的傳聞）' : ''); if (o.shadow) { n.stress = 35; n.trust = 70; } n.trust = clamp(n.trust + (S.rep - 60) / 2, 5, 95); return n; }))];
 }
 function nextGen(i){
   const n = S.cands[i], old = H(); n.rel = (n.tag || '').replace(/（.*）/g, ''); delete n.tag;
