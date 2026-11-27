@@ -539,3 +539,47 @@ nav button.mid .bdg { top:-26px; }
 .eqi { image-rendering:pixelated; display:inline-block; vertical-align:middle; flex:none; }
 .slot .eqi { margin-right:2px; }
 .td.eqoff .eqi { filter:grayscale(1) brightness(.7); opacity:.45; }
+
+/* ================= v17.57 新介面零件（design-wip design/ui；風格：粗線外框缺角、陰影右下 6、字 14／16／22 一律粗體） ================= */
+:root { --ol:#3f2631; --paper:#fbf0d2; --paper2:#f3e0b2; --wood:#8a5a36; --wood2:#6a4228; --ok:#43c878; --okd:#25956a; --bad:#e84537; --shd:rgba(74,47,27,.59);
+  --pb-dk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' shape-rendering='crispEdges'%3E%3Cpath fill='%233f2631' d='M3 0h3v9H3zM0 3h9v3H0z'/%3E%3C/svg%3E");
+  --pb-au:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' shape-rendering='crispEdges'%3E%3Cpath fill='%23f2c14e' d='M3 0h3v9H3zM0 3h9v3H0z'/%3E%3C/svg%3E");
+  --pb-gy:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' shape-rendering='crispEdges'%3E%3Cpath fill='%23968c82' d='M3 0h3v9H3zM0 3h9v3H0z'/%3E%3C/svg%3E"); }
+body, button { font-weight:700; }
+.ic { image-rendering:pixelated; display:inline-block; vertical-align:middle; flex:none; }
+.ic.gy { filter:grayscale(1) opacity(.45); }
+/* 粗框區塊：3px 深色框、四角缺一格、右下陰影 */
+.pb { border:3px solid transparent; border-image:var(--pb-dk) 3; background:var(--paper); background-clip:padding-box; filter:drop-shadow(6px 6px 0 var(--shd)); }
+.pb.ns { filter:none; }
+.pb.g { background-color:var(--ok); } .pb.b { background-color:#bfe0f5; } .pb.p2 { background-color:var(--paper2); }
+.pb.au { border-image:var(--pb-au) 3; box-shadow:inset 0 0 0 2px var(--ol); }   /* 現在要按：金框＋內圈深線 */
+.pb.gy, .pb:disabled { border-image:var(--pb-gy) 3; background-color:#dcd2be; color:#968c82; opacity:1; }
+.pb.gy .ic, .pb:disabled .ic { filter:grayscale(1) opacity(.45); }
+button.pb { color:var(--text); font-family:inherit; }
+button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-shadow(4px 4px 0 var(--shd)); }
+.f14 { font-size:14px; } .f16 { font-size:16px; } .f22 { font-size:22px; line-height:1.1; }
+.mu { color:var(--muted); } .cg { color:#2f7a3a; } .cr { color:#b03a30; }
+/* 圖示＋數字：不寫字，點了看說明 */
+.num { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.num b { font-size:22px; line-height:1; }
+.num.s b { font-size:16px; }
+/* 木條標題列 */
+.wbar { background:var(--wood); border-bottom:3px solid var(--ol); color:#fbf0d2; }
+/* 分頁：大圖示＋一行小字，選中變綠 */
+.ptabs { display:flex; gap:10px; padding:4px 14px 12px; overflow-x:auto; scrollbar-width:none; flex:none; }
+.ptabs::-webkit-scrollbar { display:none; }
+.ptab { flex:1 0 58px; max-width:84px; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:14px; padding:4px 2px; position:relative; }
+.ptab.on { background-color:var(--ok); }
+.ptab i.rd { position:absolute; top:-4px; right:-4px; width:10px; height:10px; background:var(--bad); border:2px solid var(--ol); }
+/* 10 格程度條（口碑等） */
+.lv10 { display:flex; gap:2px; position:relative; } .lv10 i { flex:1; height:14px; border:2px solid var(--ol); }
+/* 長條 */
+.pbar { height:12px; border:2px solid var(--ol); background:#e8dcc0; position:relative; overflow:hidden; } .pbar i { position:absolute; left:0; top:0; bottom:0; }
+/* 說明框：圖示、名稱、一行說明；箭頭指著被點的圖示 */
+.tipbox { position:absolute; z-index:60; display:none; max-width:260px; padding:8px 12px; border:3px solid transparent; border-image:var(--pb-dk) 3; background:#fffaf0; background-clip:padding-box; filter:drop-shadow(4px 4px 0 var(--shd)); pointer-events:none; }
+.tipbox.on { display:block; }
+.tipbox .tbr { display:flex; align-items:center; gap:8px; font-size:16px; }
+.tipbox .tbd { font-size:14px; color:var(--muted); margin-top:4px; line-height:1.4; }
+.tipbox .tar { position:absolute; top:-11px; width:0; height:0; margin-left:-8px; border:8px solid transparent; border-bottom-color:var(--ol); border-top:0; }
+.tipbox.up .tar { top:auto; bottom:-11px; border-bottom:0; border-top:8px solid var(--ol); }
+[data-tip] { cursor:pointer; }

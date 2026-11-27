@@ -89,7 +89,12 @@ def folder(script):
         res[os.path.basename(f)[:-4]] = {'w':im.width, 'h':im.height, 'pal':rpal, 'px':''.join(s)}
     return res
 ride = folder(D + '/rides/rides.py'); wild = folder(D + '/wild/wild.py'); room = folder(D + '/rooms/rooms.py')   # v17.47：屋裡的小窗格
+# v17.57：介面圖示（design/ui/export_icons.py）。直接存成 PNG data URL，介面用 <img> 放大顯示
+ui = {}; UT = tempfile.mkdtemp(); subprocess.run([sys.executable, D + '/ui/export_icons.py', UT], check=True, stdout=subprocess.DEVNULL)
+for f in sorted(glob.glob(UT + '/*.png')):
+    im = Image.open(f).convert('RGBA'); b = io.BytesIO(); im.save(b, 'PNG', optimize=True)
+    ui[os.path.basename(f)[:-4]] = [im.width, im.height, 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()]
 out = '// 自動產生（tools/build_art.py），不要手改。圖檔來源：design-wip 分支 design/final、design/buildings、design/monsters、Kenney Tiny Dungeon（CC0）\n'
-out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl, 'bch':''.join(CH[:len(bpal)]), 'bpal':bpal, 'bld':bld, 'mch':''.join(CH), 'mon':mon, 'ride':ride, 'wild':wild, 'room':room}, ensure_ascii=False, separators=(',',':')) + ';\n'
+out += 'const ART = ' + json.dumps({'ch':''.join(CH[:len(pal)]), 'pal':pal, 'ken':ken, 'emo':emo, 'eq':eq, 'equrl':equrl, 'bch':''.join(CH[:len(bpal)]), 'bpal':bpal, 'bld':bld, 'mch':''.join(CH), 'mon':mon, 'ride':ride, 'wild':wild, 'room':room, 'ui':ui}, ensure_ascii=False, separators=(',',':')) + ';\n'
 open(os.path.dirname(os.path.abspath(__file__)) + '/../js/art.js', 'w').write(out)
 print('pal', len(pal), 'bytes', len(out))

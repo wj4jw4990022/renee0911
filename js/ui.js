@@ -2,6 +2,29 @@
 // 這幾個檔案共用同一個全域範圍，要照 index.html 裡的順序載入
 'use strict';
 // ================= 介面 =================
+// v17.57 新介面零件：圖示（ART.ui，設計稿 design/ui）、點圖示跳說明框
+// IC('金幣', 2) → 放大 2 倍的像素圖示；gray=1 變灰（不能按／空格）
+function IC(n, sc = 2, gray){ const u = ART.ui[n]; if (!u) return ''; return `<img class="ic${gray ? ' gy' : ''}" src="${u[2]}" width="${u[0] * sc}" height="${u[1] * sc}" alt="${n}" draggable="false">`; }
+// 說明框文字：圖示名 → [名稱, 一行說明]。畫面上只放圖示＋數字，點一下才看說明
+const TIP = {
+  '金幣':['金庫', '事務所現在有的錢'], '名聲':['名聲', '勇者的名氣，越高委託越好'], '心情':['心情', '太低會不想出門、亂發脾氣'], '體力':['體力', '出任務會消耗，休息補回來'],
+  '壓力':['壓力', '太高容易生病、出事'], '信任':['信任', '他有多相信你這個經紀人'], '戰力':['戰力', '武器加防具加等級的強度'], '防具':['防具', '越好越不容易受傷'],
+  '時間':['時間', '還剩多久'], '危險':['危險', '骷髏越多越可能回不來'], '口碑':['口碑', '外界對事務所的評價'], '代表作':['代表作', '旗下勇者拿過的大成就'],
+  '經驗':['經驗', '滿了就升級'], '下降':['每月開銷', '每個月固定花掉的錢'], '鎖':['還沒看出來', '相處久一點才知道'],
+};
+const TIPA = (n, nm, d) => { const t = TIP[n] || [nm || n, d || '']; return ` data-tip="${esc(n + '|' + (nm || t[0]) + '|' + (d || t[1]))}"`; };
+function showTip(el){
+  const [n, nm, d] = el.dataset.tip.split('|'), bx = $('tipbox'), app = $('app').getBoundingClientRect(), r = el.getBoundingClientRect();
+  bx.innerHTML = `<div class="tbr">${IC(n, 2)}<b>${esc(nm)}</b></div>${d ? `<div class="tbd">${esc(d)}</div>` : ''}<i class="tar"></i>`;
+  bx.classList.add('on'); const w = bx.offsetWidth, h = bx.offsetHeight, cx = r.left + r.width / 2 - app.left;
+  const x = clamp(cx - w / 2, 8, app.width - w - 8), below = r.bottom - app.top + h + 14 < app.height;
+  bx.style.left = x + 'px'; bx.style.top = (below ? r.bottom - app.top + 10 : r.top - app.top - h - 10) + 'px';
+  bx.classList.toggle('up', !below); bx.querySelector('.tar').style.left = clamp(cx - x, 12, w - 12) + 'px';
+}
+document.addEventListener('click', e => {   // 點有 data-tip 的東西＝看說明；點別的地方＝關掉
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (t) { e.stopPropagation(); showTip(t); } else $('tipbox').classList.remove('on');
+}, true);
 const ACT_TXT = h => ({
   idle:'在村子裡閒晃', rest:'在家休息', home:'正在回村子的路上', bed:`臥床養傷（還要 ${h.bedDays + 1} 個月）`, slack:'整天躺著擺爛', strike:'罷工中，不肯出門',
   drink:'在酒館', mission:`出任務：${h.mission ? h.mission.n : ''}${h.mission && h.mission.comp && npc(h.mission.comp) ? '（和' + npc(h.mission.comp).name + '）' : ''}（剩 ${h.actDays} 個月）`, gone:'不知道去了哪裡', private:'失聯中', side:'在接外快（沒經過你）', visit:'回老家探望爸媽', train:'跟教練特訓', dying:'倒下了',
@@ -1159,7 +1182,7 @@ function renderSheet(){
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">怎麼玩</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div></details></div>
       <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">信任與提示</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div></details></div></div>`;
     html += `<div class="sec" style="color:#b03a30">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
-    html += `<div class="stFoot">孤勇者 v17.56 · 只有你一個人在測試</div>`;
+    html += `<div class="stFoot">孤勇者 v17.57 · 只有你一個人在測試</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
