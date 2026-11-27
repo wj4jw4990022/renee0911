@@ -150,7 +150,8 @@ function frame(now){
   const dt = Math.min(.1, (now - last) / 1000); last = now;
   const busy = $('mission').classList.contains('on') || $('end').classList.contains('on') || $('dying').classList.contains('on') || $('evp').classList.contains('on');
   const mk = menuMul();   // v17.23：看選單時時間放慢（或暫停），不會一抬頭就錯過事
-  if (!busy && mk > 0) { const n = (mk < 1 ? 1 : S.speed) * (isAsleep() ? 3 : 1); for (let i = 0; i < n; i++) simulate(dt * mk); }   // v17.16：睡著時約 3 倍速
+  const n = (mk < 1 ? 1 : S.speed) * (isAsleep() ? 3 : 1); G_MUL = !busy && mk > 0 && !S.paused ? n * mk : 0;   // v17.93：村子裡走路跟著遊戲速度
+  if (!busy && mk > 0) { for (let i = 0; i < n; i++) simulate(dt * mk); }   // v17.16：睡著時約 3 倍速
   drawMap(now);
   if (Math.floor(now / 500) !== Math.floor((now - dt * 1000) / 500)) renderTop();
   requestAnimationFrame(frame);

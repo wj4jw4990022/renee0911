@@ -101,7 +101,7 @@ function vilGoal(h){
   if (h.act === 'train') return ['arena', 0];
   if (h.act === 'rest') return ['home', 1];   // v17.89：在家休息就進屋（原本站在家門口的路上）
   if (h.act === 'mission' && h.mission) { const ph = mPhase(h);   // v17.7：任務期間不在工作時，照常在村子裡生活
-    if (ph === 'prep') return ['home', 0];
+    if (ph === 'prep') return ['home', hr >= 22.5 ? 1 : 0];   // v17.93：出發前一晚也進屋睡
     if (ph === 'nout') return ['gate', 0];
     if (ph === 'home' || ph === 'free' || ph === 'back') return hr >= 22.5 ? ['home', 1] : null; }
   if (h.act === 'mission' && h.mission && h.mission.ag === 'patrol') return null;   // v17.90：夜間巡邏＝在街上來回走
@@ -126,11 +126,13 @@ function vDoor(k){ const b = VSLOTS.find(b => b.k === k && b.door === VD[k]) || 
 function vOnPath(){ const d = vDoor(V.pk); if (!d) { V.pk = null; V.p = 0; V.fa = 1; return; } V.x = d.sx + (d.dx - d.sx) * V.p; V.y = V_DOOR + (d.dy - V_DOOR) * V.p; }
 const vPathLen = k => { const d = vDoor(k); return d ? Math.max(4, Math.hypot(d.dx - d.sx, d.dy - V_DOOR)) : 4; };
 // 每一格畫面更新勇者在街上的位置
-function vilTick(dt, now){
-  const h = H(), raw = heroMapRaw(h), alive = !['dead', 'retired', 'left'].includes(h.act) && !heroHidden(h);
-  if (V.lastRaw === 'vil' && raw !== 'vil' && alive && V.x != null && !offline) V.exiting = now + 7000;   // 要出門：先走到村口
+// v17.93：遊戲時間倍率（×1／×3／×10、睡著再 ×3）；村子裡走路、進門、閒晃停頓都乘上它，才不會時鐘跑很快人卻慢慢走
+let G_MUL = 1;
+function vilTick(dt0, now){
+  const dt = dt0 * Math.max(0, Math.min(G_MUL, 30)), h = H(), raw = heroMapRaw(h), alive = !['dead', 'retired', 'left'].includes(h.act) && !heroHidden(h);
+  if (V.lastRaw === 'vil' && raw !== 'vil' && alive && V.x != null && !offline) V.exiting = now + 7000 / Math.max(1, G_MUL);   // 要出門：先走到村口
   if (V.lastRaw && V.lastRaw !== 'vil' && raw === 'vil') { V.x = VD.gate; V.y = V_WALK; V.exiting = 0; V.pk = null; V.p = 0; V.fa = 1; }   // 回村：從村口走進來
-  V.lastRaw = raw;
+  V.lastRaw = raw; if (CH) CH.e += dt * 1000;
   if (raw !== 'vil' && !V.exiting) { V.inside = null; V.pk = null; V.p = 0; V.fa = 1; return; }
   if (CH && !V.inside) { const c = chasePos(now); V.x = c.hx; V.y += clamp(V_WALK - V.y, -40 * dt, 40 * dt); V.mv = c.run; V.left = false; V.pk = null; V.p = 0; V.fa = 1; return; }   // v17.90：抓小偷
   let goal = V.exiting ? ['gate', 0] : vilGoal(h), tx;
@@ -242,17 +244,17 @@ function heroCrouch(h, now){ const s = SCN; if (!s || s.off || !s.work || h !== 
   return Math.abs((h.tx ?? h.x) - h.x) < .6 && Math.abs((h.ty ?? h.y) - h.y) < .6 && Math.floor(now / 700) % 2 === 0; }   // 到了採集點：一蹲一起
 const lzAt2 = (h, k) => { const z = lzOn(h); return !!z && z.k === k; };
 const patrolOn = h => h.act === 'mission' && h.mission && h.mission.ag === 'patrol' && mPhase(h) === 'slot' && hourOf() >= 20;
-let CH = null;   // 抓小偷的追逐（6.5 秒）
+let CH = null;   // 抓小偷的追逐（×1 時 6.5 秒；v17.93 跟著遊戲速度走，CH.e＝已演的毫秒）
 function chaseTick(h, hr, now){
   if (offline) return;
   if (!S.chR || S.chR.day !== S.day) { const pat = h.act === 'mission' && h.mission && h.mission.ag === 'patrol'; S.chR = { day:S.day, at:pat ? rand(20.5, 25) : rand(9, 19), go:chance(pat ? .35 : .04) }; }
-  if (CH) { if (now - CH.t0 > 6500) { CH = null; thiefCaught(h); renderAll(); } return; }
+  if (CH) { if (CH.e > 6500) { CH = null; thiefCaught(h); renderAll(); } return; }
   if (!S.chR.go || S.chR.done || hr < S.chR.at || hr >= 26) return;
   if (heroMap(h) !== 'vil' || V.inside || V.x == null || V.exiting || V.mv || sleeping() || vCarry()) return;
   const ok = S.npcs.filter(n => n.alive && !n.dark && !['rival', 'rival2'].includes(n.role));
-  S.chR.done = 1; CH = { t0:now, x0:clamp(V.x, 80, VW - 200), vic:ok.length ? pick(ok).id : null }; }
+  S.chR.done = 1; CH = { t0:now, e:0, x0:clamp(V.x, 80, VW - 200), vic:ok.length ? pick(ok).id : null }; }
 // 追逐中勇者的位置：小偷搶完往右跑，勇者跟在後面，最後撲倒
-function chasePos(now){ const p = (now - CH.t0) / 1000, k = clamp((p - .8) / 4.2, 0, 1);
+function chasePos(now){ const p = CH.e / 1000, k = clamp((p - .8) / 4.2, 0, 1);
   return { p, hx:CH.x0 + k * 120, tx:CH.x0 + 22 + k * 124 + (p > 5 ? 4 : 0), run:p > .8 && p < 5 }; }
 function chaseDraw(now){ if (!CH) return; const c = chasePos(now), y = V_WALK, v = CH.vic && npc(CH.vic);
   if (v) { const vx = CH.x0 - 22; drawSprite(ctx, v, vx, y, false, now, { moving:false, left:false, noEmo:true }); if (c.p < 4) emoAt('驚訝', vx, y - 22, now - CH.t0); }
@@ -967,9 +969,13 @@ function idleEmo(h, now){
   if ((h.mood ?? 60) > 60) pool.push('happy', 'idea'); if (h.goal === 'rich' || h.goal === 'money' || (h.wallet != null && h.wallet < 50)) pool.push('money', 'money');
   return pool[sprHash(sprSeed(h) + '~' + slot) % pool.length];
 }
+const EMO_UP = new WeakMap();
 function emoKey(h, expr, lying, now){
   if (lying) { if (h.act === 'dying') return null; if (expr === 'hurt' || h.bedDays > 0) return 'hurt'; if (expr && expr !== 'normal' && expr !== 'tired') return expr; return h.act === 'drink' ? 'drunk' : 'sleepy'; }
   if (h.act === 'drink' && typeof hourOf === 'function' && hourOf() >= 20) return 'drunk';
+  if (expr === 'happy') { const m = h.mood ?? 60, r = EMO_UP.get(h);   // v17.93：「開心」只在心情剛變好的那幾秒冒出來
+    if (!r) EMO_UP.set(h, { m, t:-1e9 }); else { if (m > r.m + .5) r.t = now; r.m = m; if (now - r.t < 2600 && now >= r.t) return 'happy'; }
+    return idleEmo(h, now); }
   if (expr && expr !== 'normal') return expr;
   return idleEmo(h, now);
 }
@@ -1892,7 +1898,7 @@ function legTick(h, d){
   const prog = 1 - d / Math.max(1, L.dist);
   if (L.enc && !L.met && prog > .45) { L.met = 1; L.encT = performance.now();
     if (L.enc === 'mon') { adj('sta', -3); say(pickS(['路上被怪物偷襲，打跑了', '趕路時跳出一隻怪，嚇我一跳']));   // v17.45：停下打一回合再走
-      const z = ZONES.findIndex(Z => h.x >= Z.rect[0] && h.x <= Z.rect[2] + 14), dir = Math.sign(L.toX - L.fromX) || 1; L.ez = Math.max(0, z); L.ex = h.x + dir * (monHalf(zoneMon(L.ez)) + 13); L.ey = h.y; L.stop = L.encT + 1800; }
+      const z = ZONES.findIndex(Z => h.x >= Z.rect[0] && h.x <= Z.rect[2] + 14), dir = Math.sign(L.toX - L.fromX) || 1; L.ez = Math.max(0, z); L.ex = h.x + dir * (monHalf(zoneMon(L.ez)) + 13); L.ey = h.y; L.stop = L.encT + 1800 / Math.max(1, Math.min(G_MUL, 3)); }   // v17.93：加速時停下來的時間跟著縮短
     else if (L.enc === 'merc') say(pickS(['路上遇到旅行商人，聊了一下行情', '跟路過的商人買了杯熱茶']));
     else say(pickS(['路上遇到一個迷路的旅人，幫他指了路', '跟同路的旅人聊了一段'])); }
 }
@@ -1995,6 +2001,7 @@ function bubbleTick(now){ const h = H(); if (!h) return;
 
 // ================= v17.16：勇者真的睡著了，時間才加快（約 3 倍） =================
 function isAsleep(){ try { const h = H(), hr = hourOf(); if (!h || hr < 22.5 || h.leg) return false;
+  if (!offline && heroMapRaw(h) === 'vil' && V.x != null && !V.inside) return false;   // v17.93：人還在村子路上走，就還沒睡，不加速
   if (sleeping()) return true;
   if (h.act === 'mission') { const ph = mPhase(h); return ph === 'camp' || ph === 'home' || ph === 'prep' || (ph === 'free' && !(h.mission.ug && hr < 24)); }
   return ['bed', 'slack', 'rest', 'idle', 'home'].includes(h.act); } catch (e) { return false; } }

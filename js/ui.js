@@ -50,8 +50,14 @@ document.addEventListener('click', e => {   // 點有 data-tip 的東西＝看�
 const ACT_TXT = h => ({
   idle:'在村子裡閒晃', rest:'在家休息', home:'正在回村子的路上', bed:`臥床養傷（還要 ${h.bedDays + 1} 個月）`, slack:'整天躺著擺爛', strike:'罷工中，不肯出門',
   drink:'在酒館', mission:`出任務：${h.mission ? h.mission.n : ''}${h.mission && h.mission.comp && npc(h.mission.comp) ? '（和' + npc(h.mission.comp).name + '）' : ''}（剩 ${h.actDays} 個月）`, gone:'不知道去了哪裡', private:'失聯中', side:'在接外快（沒經過你）', visit:'回老家探望爸媽', train:'跟教練特訓', dying:'倒下了',
-  hunt:h.zone >= 0 ? `在${ZONES[h.zone].n}打${ZONES[h.zone].mon}` : '打怪', dead:'已離世', retired:'已退休', left:'已離開',
+  hunt:huntTxt(h), dead:'已離世', retired:'已退休', left:'已離開',
 }[h.act] || '');
+// v17.93：狀態跟著人在哪裡：還在村子裡＝準備出門／走去；人已到場才寫「在草原打野豬」；收工了就寫收工回家
+function huntTxt(h){ if (h.zone < 0) return '打怪'; const Z = ZONES[h.zone], hr = hourOf();
+  if (hr >= 17.5) return '收工回家';
+  if (heroMap(h) === 'vil') return hr < 7 ? '準備出門' : `走去${Z.n}`;
+  const [x0, y0, x1, y1] = Z.rect; if (h.x < x0 - 2 || h.x > x1 + 14 || h.y < y0 - 2 || h.y > y1 + 2) return `走去${Z.n}`;
+  return `在${Z.n}打${Z.mon}`; }
 function chipsOf(h){
   const c = [];
   if (h.burn > 70) c.push(['r', '倦怠']); else if (h.burn > 45) c.push(['o', '有點倦']);
@@ -109,7 +115,7 @@ function renderTop(){
   setH($('bSpeed'), IC('快轉', 2) + (sp ? `<small>${sp}</small>` : '')); setH($('bPause'), IC(S.paused ? '播放' : '暫停', 2)); $('bPause').classList.toggle('on', !!S.paused);
   $('hname').textContent = h.name;
   $('hsub').textContent = `Lv${h.lv}`;
-  let at0 = (tourRound() >= 0 ? tourTxt() : vCarry() ? '受傷了，被擡回村子' : legTxt(h) ? legTxt(h) : vWalkTxt(h) ? vWalkTxt(h) : lzTxt(h) ? lzTxt(h) : mPhase(h) && mPhase(h) !== 'work' && mPhase(h) !== 'slot' ? mTxt(h) : sleeping() ? (h.act === 'drink' ? '喝醉了，在酒館趴著睡' : '在家睡覺') : hourOf() >= 18.5 && ['idle', 'home'].includes(h.act) ? '晚上在村子裡放鬆' : hourOf() < 7 && h.act === 'hunt' ? '準備出門' : ACT_TXT(h));
+  let at0 = (tourRound() >= 0 ? tourTxt() : vCarry() ? '受傷了，被擡回村子' : legTxt(h) ? legTxt(h) : vWalkTxt(h) ? vWalkTxt(h) : lzTxt(h) ? lzTxt(h) : mPhase(h) && mPhase(h) !== 'work' && mPhase(h) !== 'slot' ? mTxt(h) : sleeping() ? (h.act === 'drink' ? '喝醉了，在酒館趴著睡' : '在家睡覺') : hourOf() >= 18.5 && ['idle', 'home'].includes(h.act) ? '晚上在村子裡放鬆' : ACT_TXT(h));
   if (mPhase(h) === 'work' && SCN && !SCN.off) at0 += ' · ' + scnCnt();   // v17.9：進度數字
   { const z = h.act === 'hunt' && h.zone >= 0 ? h.zone : -1, m = h.act === 'mission' && h.mission ? h.mission : null, at = at0; let extra = '';
     if (z >= 0) { const d = danger(ratio(h, zD(z))); extra = ` · <span class="dg ${d.k}">${d.n}</span>`; }
