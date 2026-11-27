@@ -101,7 +101,7 @@ function vilGoal(h){
     if (ph === 'prep') return ['home', 0];
     if (ph === 'nout') return ['gate', 0];
     if (ph === 'home' || ph === 'free' || ph === 'back') return hr >= 22.5 ? ['home', 1] : null; }
-  if (h.act === 'mission' && h.mission && MSPOT_B[h.mission.ag]) return [MSPOT_B[h.mission.ag], h.mission.ag === 'trial' ? 1 : 0, ['endorse', 'variety'].includes(h.mission.ag) ? 96 : 0];   // 代言、綜藝站到舞台上
+  if (h.act === 'mission' && h.mission && MSPOT_B[h.mission.ag]) return [MSPOT_B[h.mission.ag], h.mission.ag === 'trial' ? 1 : 0];   // v17.51：代言、綜藝、見粉絲都站在廣場前面的路上
   if (h.act === 'hunt' && hr < 7) return ['home', 0];
   if (h.act === 'hunt' || h.act === 'mission') return ['gate', 0];
   return null;   // 閒晃
@@ -369,10 +369,6 @@ function drawMap(now){
   // 勇者
   if (hm === view) {
     const [hx0, hy0] = view === 'vil' ? villagePos(h) : [h.x, h.y];
-    if (h.act === 'mission' && h.mission && MSPOT[h.mission.ag] && h.mission.ag !== 'arena' && !heroHidden(h) && mPhase(h) === 'slot') {
-      const sx = VD[MSPOT_B[h.mission.ag]] ?? VD.stage, sy = V_WALK - 4, cols = ['#f1ece0', '#ffb347', '#59a8ff', '#ff7b7b', '#6fcf97'];
-      for (let i = 0; i < 7; i++) { const a = i / 7 * 6.28 + now / 3000; ctx.fillStyle = cols[i % 5]; ctx.fillRect(sx + Math.cos(a) * 20 - 1, sy - 3 + Math.sin(a) * 5 + Math.sin(now / 200 + i) * 1, 3, 4); }
-    }
     if (h.alpha > 0 && !heroHidden(h) && !(view === 'vil' && V.inside)) {
       const vfa = view === 'vil' ? V.fa : 1; ctx.globalAlpha = h.alpha * vfa;
       const lying = view === 'vil' ? h.act === 'dying' || vCarry() : h.act === 'bed' || h.act === 'slack' || h.act === 'dying' || sleeping() || !!(SCN && !SCN.off && SCN.down) || !!(ELX && ELX.down) || (mPhase(h) === 'camp' && (hourOf() >= 22.5 || hourOf() < 6.5));
@@ -380,8 +376,9 @@ function drawMap(now){
       if (view === 'vil' && vCarry()) drawCarry(now, Math.round(hx0), Math.round(hy0));
       RIDE_FRONT = null; RIDE_HA = 1; const ride = view === 'vil' ? 0 : drawRide(now, h, Math.round(hx0), Math.round(hy0));   // v17.12：馬、驛馬車、傳送陣
       ctx.globalAlpha = h.alpha * vfa * RIDE_HA;
-      const am = view === 'vil' && !lying ? arenaMode(h) : null;
-      if (am && am.fight) { const R = arenaRound(now, am.kind); let ox = 0; if (R.p > .1 && R.p < .38) ox = 3;   // v17.49：鬥技場：踏步揮擊；對手回擊時後退＋閃
+      const am = view === 'vil' && !lying ? arenaMode(h) : null, pm = view === 'vil' && !lying && !am ? plazaPose(h, now) : null;
+      if (pm) { drawSprite(ctx, h, Math.round(hx0), Math.round(hy0) - pm.hop, false, now, { moving:false, left:pm.left, expr:'happy' }); if (pm.hand) pm.hand(Math.round(hx0), Math.round(hy0)); }   // v17.51：代言、綜藝、見粉絲
+      else if (am && am.fight) { const R = arenaRound(now, am.kind); let ox = 0; if (R.p > .1 && R.p < .38) ox = 3;   // v17.49：鬥技場：踏步揮擊；對手回擊時後退＋閃
         if (am.kind !== 'train' && R.r % 2 && R.p > .75 && R.p < 1) { ox = -2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * vfa * .35; }
         drawSprite(ctx, h, Math.round(hx0 + ox), Math.round(hy0), false, now, { moving:false, left:false, atkT:R.t0 }); ctx.globalAlpha = h.alpha * vfa; }
       else if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') { const fx = heroFx(h, now), foe = h.target || (fx && (fx.ghost || fx.tg)) || scnFoe(h, now), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
@@ -1482,6 +1479,35 @@ function arenaShow(now, kind){
       arenaCrowd(now, cx, [[F, [-38, -24, 46]]]); }
   } catch (e) { if (!scnErr++) console.error(e); }
 }
+// ================= v17.51：廣場（代言、綜藝、見粉絲）：Kenney 路人小人＋勇者大頭貼看板 =================
+// 勇者站在廣場門口前的路上（V.x、V_WALK）；觀眾在路下方一排（V_ROAD_B + 12），輪流跳一下
+function plazaMode(h){ if (heroMap(h) !== 'vil' || V.inside || V.mv || V.x == null) return null;
+  return h.act === 'mission' && h.mission && ['endorse', 'variety', 'meet'].includes(h.mission.ag) && mPhase(h) === 'slot' ? h.mission.ag : null; }
+// 勇者的姿勢：代言每 1.2 秒換一個（右、左、比讚）；綜藝每 2 秒轉圈＋跳；見粉絲面向右，握手、遞簽名
+function plazaPose(h, now){ const k = plazaMode(h); if (!k) return null;
+  if (k === 'endorse') { const pose = Math.floor(now / 1200) % 3, p = now % 1200;
+    return { left:pose === 1, hop:p < 120 ? 2 : 0, hand:pose === 2 ? (x, y) => { pR2(x + 6, y - 28, 2, 5, '#f7c282'); pR2(x + 6, y - 29, 1, 1, '#3f2631'); } : null }; }
+  if (k === 'variety') { const p = (now % 2000) / 1000; return { left:p < .5 && Math.floor(p / .12) % 2 === 1, hop:p >= .5 && p < .8 ? [0, 3, 5, 5, 3, 0][Math.min(5, Math.floor((p - .5) / .05))] : 0 }; }
+  const p = (now % 1800) / 1800;
+  return { left:false, hop:0, hand:p > .4 && p < .8 ? (x, y) => { pR2(x + 7, y - 12, 3, 2, '#f7c282'); pR2(x + 9, y - 19, 6, 6, '#3f2631'); pR2(x + 10, y - 18, 4, 4, '#ffffff'); pR2(x + 10, y - 16, 3, 1, '#3f2631'); } : null }; }
+const pR2 = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+function plazaCrowd(now, cx, xs, y, emo){ xs.forEach((dx, i) => { const x = cx + dx, k = Math.floor(now / 200 + i * 1.7) % 6; rPerson('cw' + (i % 5), x, y, dx > 0, null, k === 0 ? 2 : k === 1 ? 1 : 0);
+  if (emo && (Math.floor(now / 900) + i * 2) % 7 === 0) emoAt(emo, x + 2, y - 17, now % 900); }); }
+function plazaShow(now, ag){
+  try { const h = H(), k = plazaMode(h); if (k !== ag) return; const hx = V.x, y = V_WALK, F = V_ROAD_B + 12;
+    if (ag === 'endorse') { const bx = hx + 28, cv = rideCanvas('billboard', 'room'), L = Math.round(bx - cv.width / 2), T = V_ROAD - 3 - cv.height;   // 看板在人行道，海報貼勇者當下的大頭貼
+      ctx.drawImage(cv, L, T); ctx.drawImage(kenCanvas(h, 'idle', 0, 'happy'), KEN_OX, KEN_OY + 1, 16, 15, L + 11, T + 10, 16, 15);
+      const cx = hx - 52; rPerson('cam_man', cx, y + 6, false);   // 攝影師：每次換姿勢閃一下
+      if (now % 1200 < 150) { const fx = cx + 8, fy = y - 5; ctx.fillStyle = '#ffffff'; ctx.fillRect(fx - 1, fy - 1, 3, 3); ctx.fillRect(fx - 5, fy, 11, 1); ctx.fillRect(fx, fy - 5, 1, 11); }
+      plazaCrowd(now, hx - 30, [-70, -56, -42, 52, 66, 80], F); return; }
+    if (ag === 'variety') { rPerson('host', hx + 24, y, true); plazaCrowd(now, hx - 4, [-66, -52, -38, -24, 30, 44, 58, 72], F, '開心'); return; }
+    // 見粉絲：右邊排隊，排第一的走上前；見完的往前（畫面下方）走開、冒愛心
+    nameTag(ctx, '粉絲見面會', hx + 8, 66, 'hero');
+    const P = 1800, n = Math.floor(now / P), p = (now % P) / P;
+    if (p < .6) { const lx = hx + 18 + p * 4, ly = y + p * 30; rPerson('cw' + ((n + 4) % 5), lx, ly, true); ctx.globalAlpha = 1 - p / .6; emoAt('戀愛', lx + 2, ly - 17 - p * 8, 600); ctx.globalAlpha = 1; }
+    for (let i = 5; i >= 0; i--) rPerson('cw' + ((n + i) % 5), hx + 18 + i * 13 + 13 * (1 - Math.min(1, p / .34)), y, true);
+  } catch (e) { if (!scnErr++) console.error(e); }
+}
 // 村口迎接、晚上來道謝的村民
 function drawVilGuests(now){
   try {
@@ -2221,17 +2247,7 @@ function drawVilShow(now){
     const ag = h.mission.ag, bx = VD[MSPOT_B[ag]];
     const person = (x, y, c, k) => { const b = Math.round(Math.sin(now / 260 + k) * 1); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(x - 3, y, 7, 1); ctx.fillStyle = c; ctx.fillRect(x - 3, y - 7 + b, 6, 7); ctx.fillStyle = ['#e8b98a', '#c8966a', '#f0c8a0'][k % 3]; ctx.fillRect(x - 2, y - 11 + b, 5, 4); ctx.fillStyle = ['#4a2a1a', '#2a2a30', '#8a5a2a', '#c8a040'][k % 4]; ctx.fillRect(x - 2, y - 12 + b, 5, 2); };
     const cols = ['#c0563f', '#3f6ea0', '#5a9a5a', '#c87aa0', '#d8a02e', '#7a6ac0'];
-    if (ag === 'endorse' || ag === 'variety') {   // 台下觀眾
-      for (let i = 0; i < 12; i++) { const x = bx - 30 + (i % 6) * 12 + (i >= 6 ? 6 : 0), y = 134 + (i >= 6 ? 8 : 0); person(x, y, cols[i % 6], i);
-        if (ag === 'variety' && (Math.floor(now / 700) + i) % 9 === 0) { ctx.fillStyle = '#fff'; ctx.font = fz(8) + 'px Cubic11, sans-serif'; ctx.fillText('哈', x - 3, y - 15); } }
-      if (ag === 'endorse') { drawBld(ctx, 'sign', bx + 16, 82, 16, 14, 'day'); }
-      else person(bx + 14, 96, '#3a3a46', 9);   // 主持人
-    }
-    if (ag === 'meet') {   // 排隊的粉絲，一個一個往前
-      const shift = (now / 1800) % 1;
-      for (let i = 0; i < 9; i++) { const x = bx + 14 + (i - shift) * 11, y = 140; if (x > bx + 12) person(x, y, cols[(i + Math.floor(now / 1800)) % 6], i + Math.floor(now / 1800)); }
-      if (Math.floor(now / 600) % 2) { ctx.fillStyle = '#ff9ad0'; ctx.fillRect(bx + 8, 120, 2, 2); ctx.fillRect(bx + 11, 120, 2, 2); ctx.fillRect(bx + 9, 122, 3, 2); }
-    }
+    if (ag === 'endorse' || ag === 'variety' || ag === 'meet') plazaShow(now, ag);   // v17.51
     if (ag === 'arena') arenaShow(now, 'arena');   // v17.49
   } catch (e) { if (!scnErr++) console.error(e); }
 }
