@@ -233,6 +233,26 @@ def cam_man():   # 攝影師：路人拿相機
     sp = kt('07_01').copy(); d = ImageDraw.Draw(sp); d.rectangle([10, 8, 15, 12], fill=NVd); d.rectangle([14, 9, 15, 10], fill=GYd); d.rectangle([11, 7, 12, 7], fill=NVd); return sp
 def host():   # 主持人：拿麥克風
     sp = kt('07_04').copy(); d = ImageDraw.Draw(sp); d.rectangle([2, 7, 3, 11], fill=O); d.rectangle([1, 5, 4, 7], fill=GYd); d.point((2, 5), fill=GY); return sp
+def placard():   # 抗議牌：木棍＋白板，手繪紅字「No!」（2 像素粗，置中）
+    def f(d):
+        d.rectangle([11, 13, 12, 26], fill=BR); d.rectangle([0, 0, 23, 13], fill=WH)
+    im = shape(24, 27, f); p = im.load(); R_ = (214, 52, 44, 255)
+    GL = ['##...##.......##', '###..##.......##', '####.##..###..##', '##.####.##.##.##', '##..###.##.##.##', '##...##.##.##...', '##...##..###..##']
+    x0 = 2 + (24 - len(GL[0])) // 2; y0 = 2 + (14 - len(GL) + 1) // 2   # 白板（外框內 24×14）正中央
+    for y, row in enumerate(GL):
+        for x, c in enumerate(row):
+            if c == '#': p[x0 + x, y0 + y] = R_
+    return im
+def stall():   # 小攤子：紅白條紋遮雨棚、兩支柱子、矮木頭攤台；藥水擺在攤台兩邊（中間留給勇者）
+    def f(d):
+        d.rectangle([2, 8, 3, 30], fill=BR); d.rectangle([44, 8, 45, 30], fill=BR)
+        for i in range(12): d.rectangle([i * 4, 0, i * 4 + 3, 7], fill=RD if i % 2 == 0 else WH)
+        d.rectangle([0, 7, 47, 9], fill=RDd)
+        d.rectangle([0, 24, 47, 30], fill=BR); d.rectangle([0, 24, 47, 25], fill=OR)
+        for x in range(5, 46, 8): d.line([(x, 26), (x, 29)], fill=BRd)
+    im = shape(48, 31, f)
+    for n, x in (('09_05', 5), ('09_07', 13), ('09_06', 36)): g = kt(n).crop((3, 2, 13, 15)); im.alpha_composite(g, (x, 30 - g.height))
+    return im
 def items():
     RB, RBd = (122, 140, 106, 255), (90, 104, 80, 255)
     return {
@@ -249,6 +269,8 @@ def items():
       'dummy':dummy(),
       # v17.51 廣場：代言看板（大頭貼在遊戲裡貼：看板左上角往右 11、往下 10，16×15）、攝影師、主持人
       'billboard':billboard(), 'cam_man':cam_man(), 'host':host(),
+      # v17.53 罷工、接外快
+      'placard':placard(), 'stall':stall(),
     }
 if __name__ == '__main__':
     if sys.argv[1] == '--sketch':
