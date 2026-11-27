@@ -41,7 +41,7 @@ const T = h => TRAITS[h.trait];
 const hasP = (h, k) => h.perks.includes(k);
 const jobMul = h => [1, 1.35, 1.8][h.job] || 1;
 function power(h){
-  let p = (8 + h.lv * 3.2) * WPN.mul[h.wpn] * CLS[h.cls].pw * jobMul(h);
+  let p = (8 + h.lv * 3.2) * WPN.mul[h.wpn] * CLS[h.cls].pw * jobMul(h) * (1 + (h.wf || 0) * .06) * ageMul(h);   // v17.97：強化、年紀
   if (hasP(h, 'lame')) p *= [.85, .9, .95][h.aid || 0];
   p *= 1 + ch(h, 'pw') + (h.boost || 0);
   if (h.sta < 20) p *= .7; else if (h.sta < 40) p *= .88;
@@ -49,7 +49,7 @@ function power(h){
   if (S && h === S.hero && S.artists && S.artists.length) p *= followBonus();
   return p;
 }
-const maxHp = h => Math.round((60 + h.lv * 12) * ARM.mul[h.arm] * CLS[h.cls].hp * (hasP(h, 'iron') ? 1.1 : 1) * (1 + ch(h, 'hp')));
+const maxHp = h => Math.round((60 + h.lv * 12) * ARM.mul[h.arm] * (1 + (h.af || 0) * .06) * CLS[h.cls].hp * (hasP(h, 'iron') ? 1.1 : 1) * (1 + ch(h, 'hp')));
 const ch = (h, k) => (h.charms || []).reduce((a, c) => a + ((TREASURES[c] || {})[k] || 0), 0);
 const npc = id => S.npcs.find(x => x.id === id);
 const friendsN = () => S.npcs.filter(x => x.alive && x.role !== 'rival' && x.aff >= 50).length;
@@ -118,7 +118,7 @@ function adj(k, v){
   h[k] = clamp(h[k] + v, 0, 100);
 }
 function gainExp(n){
-  const h = H(); n *= (hasP(h, 'genius') ? 1.3 : 1) * (.85 + .3 * hx(h, 'C')); if (S.coach) n *= 1.2; n *= 1 + (S.office.gym || 0) * .12;
+  const h = H(); n *= (hasP(h, 'genius') ? 1.3 : 1) * (.85 + .3 * hx(h, 'C')); if (S.coach) n *= 1.2; if (S.dojo) n *= 1.1;   /* v17.97：前代勇者開的武館 */ n *= 1 + (S.office.gym || 0) * .12;
   h.exp += n; const lv0 = h.lv;
   while (h.exp >= expNeed(h.lv)) {
     h.exp -= expNeed(h.lv); h.lv++; h.hp = 1;
@@ -154,6 +154,7 @@ function dayStart(){
   const h = H();
   if (S.cutNext != null) { const old = S.cut, v = S.cutNext; S.cutNext = null; if (v !== old) { S.cut = v; adj('trust', v > old ? -(v - old) * .4 : (old - v) * .3); if (!offline) sys(`抽成從 ${old}% 改成 ${v}%`); } }   // v17.96：抽成下個月才生效
   h.target = null; h.flash = 0; travelMonthly(h);   // v17.12
+  try { lateTick(h); } catch (e) { console.error(e); }   // v17.97：後期（魔王復活、新秀挑戰、年紀）
   if (h.act === 'dead' || h.act === 'retired' || h.act === 'left') return;
   if (h.act === 'mission') { if (--h.actDays > 0) { setAct('mission'); return; } resolveMission(); if (h.act !== 'idle' || H() !== h) return; }   // v17.20：做完不累的話，這個月接著做別的
   if (h.goneDays > 0) { if (--h.goneDays <= 0) (h.jailed ? jailRelease() : goneReturn()); else setAct('gone'); return; }
@@ -776,6 +777,7 @@ function refreshOffers(){
   zs.forEach((z, i) => { const Z = ZONES[z], k = rand(.9, 1.5) + Math.min(i, 2) * .25;
     S.offers.push({ id:S.day * 10 + i, z, n:pick(NAMES[z]), D:Math.round(Z.D * k), days:z <= 1 ? ri(2, 3) : ri(2, 4), reward:Math.round(Z.gold * 12 * k * ri(2, 4) / 2 * rk) }); });
   if (!h.bossKill && bossOpen(h)) S.offers.push({ id:S.day * 10 + 9, z:2, n:'討伐' + BOSS.n, D:BOSS.D, days:2, reward:BOSS.reward, boss:true });
+  if (S.rv) S.offers.push(rvOffer());   // v17.97：魔王復活
   if (zoneOpen(6) && !S.boss2Done) S.offers.push({ id:S.day * 10 + 8, z:6, n:'討伐' + BOSS2.n, D:BOSS2.D, days:3, reward:BOSS2.reward, boss2:true });
   // v16：公會指名（約每半年一件，對手搶不走）、王室委託、跨國委託
   if (hasU('nominate') && S.day >= (S.nomNext || 0)) { const z = Math.min(topZ(), bestSafeZone() + 1), Z = ZONES[z]; S.offers.push({ id:S.day * 10 + 6, z, n:'公會指名：' + pick(NAMES[z]), D:Math.round(Z.D * 1.1), days:3, reward:Math.round(Z.gold * 12 * 1.5 * 1.5 * rk), nom:1 }); S.nomNext = S.day + ri(5, 7); }
@@ -1125,6 +1127,8 @@ function resolveMission0(){
     if (o.boss2) { S.boss2Done = 1; addFame(300); findTreasure(10); remember('boss2'); ev('good', '傳說', `${h.name}打倒了${BOSS2.n}！全國都在傳頌${pron(h)}的名字`); logLife(`打倒${BOSS2.n}，成為傳說`); say('……結束了。老闆，我們做到了'); }
     else if (o.rescue) { rescued(npc(o.rescue), true); }
     else if (o.favor) { favorDone(o, true); S.thank = { id:o.favor, day:S.day }; }
+    else if (o.rv) { h.bossKill++; const n = S.rv ? S.rv.n : (S.rvN || 0) + 1; S.rv = null; S.rvN = n; S.rvNext = S.day + ri(96, 120); addFame(100 + n * 30); findTreasure(Math.min(6, 2 + n)); remember('boss');
+      ev('good', '魔王再臨', `${h.name}打倒了第 ${n} 次復活的${BOSS.n}！村子又平安了`); logLife(`打倒第 ${n} 次復活的${BOSS.n}`); say('牠還會再回來吧……下次我也會在這裡等牠'); }
     else if (o.boss) { h.bossKill++; if (!S.bossDone) { S.bossDone = 1; ev('good', '里程碑', '你的事務所培養出了屠王勇者！可以挑戰「王都經紀公司」了'); } remember('boss'); findTreasure(9); ev('good', '傳說', `${h.name}打倒了${BOSS.n}！整個村子都在歡呼`); logLife(`打倒${BOSS.n}`); say('老闆！！我做到了！！'); if (h.wish && h.wish.k === 'boss') h.wish.p = 1; }
     else { ev('good', '委託完成', `「${o.n}」完成，報酬 ${fmt(o.reward)} 金，你分到 ${fmt(mine)} 金`); say(d.i === 2 ? L('agWinHard') : L('missionWin')); }
     if (d.i === 2 && !o.boss) logLife(`完成九死一生的委託「${o.n}」`);
@@ -1819,8 +1823,29 @@ function saveTarget(h){
   if (h.partner && !h.married && h.goal !== 'seiko') return { k:'wedding', n:'婚禮基金', t:600 + h.lv * 20 };
   if (h.married && !h.child && !h.readyKid && h.kidWish === 'want') return { k:'child', n:'育兒基金', t:1000 + h.lv * 30 };
   if (h.goal === 'etf') return { k:'retire', n:'退休金', t:Math.round((3000 + h.lv * 150) * (h.richMul || 1)) };
-  return null;
+  return dreamOf(h);
 }
+// v17.97：人生大事——錢包存夠了，勇者自己去完成的夢想（一個做完換下一個）
+const DREAMS = [
+  { k:'parents', n:'幫爸媽蓋新房子', t:h => 4000, ok:h => h.goal === 'filial' || hx(h, 'A') > .6 || dw(h, 'family'),
+    done(h){ adj('mood', 20); adj('stress', -20); say('爸媽住進新房子那天，媽媽哭了。我也是。'); } },
+  { k:'travel', n:'環遊大陸一趟', t:h => 3500, ok:h => h.trait === 'curious' || hx(h, 'O') > .6,
+    done(h){ adj('mood', 25); adj('stress', -25); gainExp(expNeed(h.lv) * .3); h.goneDays = 2; setAct('gone'); say('老闆，我出去走走兩個月！回來說故事給你聽'); } },
+  { k:'tavern', n:'和朋友合開一間酒館', t:h => 7000, ok:h => hx(h, 'X') > .6 || hasP(h, 'drinker') || h.goal === 'seiko',
+    done(h){ h.ownTavern = 1; adj('mood', 20); affAdd('tao', 10); say('酒館開張了！以後喝酒不用錢……開玩笑的，還是要付'); } },
+  { k:'school', n:'捐錢蓋村子的學堂', t:h => 5000, ok:h => hx(h, 'A') > .5 || dw(h, 'idealism'),
+    done(h){ repAdd(8, `${h.name}捐錢蓋學堂`); S.npcs.forEach(n => { if (n.alive && !n.dark) n.aff = Math.min(100, n.aff + 3); }); adj('mood', 15); say('看到小孩子在學堂念書，覺得打了這麼多年怪都值得了'); } },
+  { k:'dojo', n:'開一間武館', t:h => 6000 + h.lv * 100, ok:h => h.lv >= 20,
+    done(h){ S.dojo = 1; addFame(20); adj('mood', 18); say('武館開了！以後村子裡的新人，我來教'); } },
+  { k:'statue', n:'在廣場立自己的銅像', t:h => 9000, ok:h => dw(h, 'status') || hx(h, 'X') > .65,
+    done(h){ addFame(50); adj('mood', 25); say('銅像揭幕了！……做得比我本人帥一點'); } },
+  { k:'orphan', n:'資助孤兒院', t:h => 4000, ok:h => true,
+    done(h){ repAdd(5, `${h.name}資助孤兒院`); infamyAdd(-10, '資助孤兒院'); adj('mood', 15); adj('stress', -10); say('院長說孩子們都在畫我的樣子。'); } },
+];
+function dreamOf(h){
+  if (h.lv < 15 || h.wallet < 1500) return null;
+  const d = DREAMS.find(x => !(h.dreams || []).includes(x.k) && x.ok(h)); if (!d) return null;
+  return { k:'dream', dk:d.k, n:d.n, t:d.t(h), dream:1 }; }
 const WHY = h => ({ seiko:'人生苦短，對自己好一點', etf:'雖然很心痛', slash:'接案也需要好裝備', cert:'這樣就能接更危險、更賺的委託', health:'安全第一', filial:'寄完家裡的錢，這是剩下的' })[h.goal] || '';
 // 鐵匠報價：老陳越貪心、你們看起來越好坑、他今天心情越差，價錢越高；交情好會打折
 function quote(base, who){
@@ -1885,6 +1910,8 @@ function heroShop(){
 }
 function reachTarget(t){
   const h = H();
+  if (t.k === 'dream') { const d = DREAMS.find(x => x.k === t.dk); if (!d) return; h.wallet -= t.t; (h.dreams = h.dreams || []).push(d.k);
+    ev('good', '人生大事', `${h.name}用自己存的 ${fmt(t.t)} 金，完成了心願：${d.n}`); logLife(`用自己的積蓄${d.n}`); d.done(h); return; }
   if (t.k === 'house') {
     h.wallet -= t.t; h.house = 1; adj('mood', 20); adj('stress', -15); addFame(3);
     ev('good', '買房', `${h.name}終於買下了自己的房子`); logLife('買下自己的房子'); clue('一口氣付了房子頭期款');
@@ -2198,3 +2225,38 @@ function nextGen(i){
   refreshOffers(); save(); renderAll();
 }
 
+
+// ================= v17.97：後期——魔王復活、新秀挑戰、年紀衰退 =================
+const rvOffer = () => ({ id:900000 + S.rv.n, z:2, n:`討伐復活的${BOSS.n}（第 ${S.rv.n} 次）`, D:S.rv.D, days:2, reward:S.rv.reward, boss:true, rv:1 });
+const ROOKIES = ['疾風的阿凱', '新星莉娜', '紅髮的托爾', '少年劍士小遙', '鐵拳伊凡', '銀弓的希兒', '狂犬巴德', '天才法師諾亞', '白狼凱恩', '流星的米亞'];
+function lateTick(h){
+  if (!h || ['dead', 'retired', 'left', 'dying'].includes(h.act)) return;
+  h.peakP = Math.max(h.peakP || 0, power(h) / ageMul(h));
+  // 年紀：35 歲開始戰力每年 -2%（最多 -40%），第一次提醒
+  if (h.age >= 35 && !h.ageWarn) { h.ageWarn = 1; ev('warn', '歲月', `${h.name}${Math.floor(h.age)} 歲了，身手開始不如從前（戰力每年少 2%）`); if (!offline) say(pickS(['最近早上起床，膝蓋會響……', '以前一劍就砍倒的怪，現在要兩劍了'])); }
+  // 魔王復活：打倒骸骨魔王後，每 8～10 年回來一次，一次比一次強
+  if (S.bossDone) {
+    if (S.rvNext == null) S.rvNext = S.day + ri(24, 48);
+    if (!S.rv && S.day >= S.rvNext) { const n = (S.rvN || 0) + 1, D = Math.round(Math.max(BOSS.D * Math.pow(1.5, n), (h.peakP || power(h)) * rand(1.05, 1.3)));
+      S.rv = { n, D, until:S.day + 8, reward:Math.round(BOSS.reward * (1 + n * .5)) };
+      if (!S.offers.some(o => o.rv)) S.offers.push(rvOffer());
+      ev('bad', '魔王復活', `${BOSS.n}又復活了（第 ${n} 次），比上次更強。8 個月內沒人打倒牠，就會攻進村子`); }
+    else if (S.rv && S.day > S.rv.until) { const loss = Math.max(2000, Math.round(Math.max(0, S.gold) * .15)), n = S.rv.n;
+      S.gold -= loss; finAdd('other', -loss); repAdd(-8, `沒擋住復活的${BOSS.n}`); addFame(-60);
+      const vs = S.npcs.filter(x => x.alive && !x.dark && !['rival', 'rival2'].includes(x.role)), v = vs.length ? pick(vs) : null;
+      if (v) { if (chance(.15)) npcDies(v, `在${BOSS.n}攻村時喪命`); else { v.sick = S.day + ri(2, 4); news('warn', `${v.name}在魔王攻村時受了傷`, true); } }
+      ev('bad', '魔王攻村', `${BOSS.n}攻進了村子！重建花了 ${fmt(loss)} 金。牠吃飽了就走，過幾年還會再來`);
+      S.offers = S.offers.filter(o => !o.rv); S.rv = null; S.rvN = n; S.rvNext = S.day + ri(36, 60); }
+  }
+  // 新秀挑戰：名聲夠高，大約一年一次有年輕勇者來下戰帖
+  if (!offline && !S.q && h.lv >= 15 && S.fame >= 300 && S.day >= (S.rookNext || 0) && ['idle', 'rest', 'home', 'hunt'].includes(h.act) && chance(.12)) {
+    S.rookNext = S.day + ri(8, 14); const nm = pick(ROOKIES), rp = Math.round((h.peakP || power(h)) * rand(.85, 1.12));
+    ask('rookie', `新人「${nm}」在廣場公開向${h.name}下戰帖：「聽說你是這裡最強的？跟我打一場！」`, ['接受挑戰', '不理他'], { nm, rp }); }
+}
+Object.assign(QH, {
+  rookie(i, d){ const h = H(); let go = i === 0;
+    if (i < 0) go = h.trait === 'brave' || h.trait === 'hot' || dw(h, 'status');
+    if (!go) { addFame(-10); if (dw(h, 'status') || h.trait === 'hot') adj('mood', -8); ev('warn', '新秀', `${d.nm}到處說${h.name}不敢應戰`); return; }
+    if (chance(winP(power(h) / d.rp))) { addFame(25); adj('mood', 10); remember('duelWin', { n:d.nm }); ev('good', '新秀挑戰', `${h.name}擊敗了來挑戰的新人${d.nm}`); logLife(`擊敗來挑戰的新人${d.nm}`); say(pickS(['還早十年呢', '不錯的新人，再練練吧'])); }
+    else { addFame(-40); adj('mood', -15); adj('stress', 10); const r = pick(S.rivals); if (r) r.fame += 30; ev('bad', '新秀挑戰', `${h.name}輸給了新人${d.nm}，${d.nm}被${r ? r.n : '別家事務所'}簽走了`); logLife(`輸給新人${d.nm}`); if (chance(.3)) injure('light', `和${d.nm}比試時受傷`); say(pickS(['……我老了嗎', '可惡，下次不會輸'])); } },
+});

@@ -59,7 +59,12 @@ const sleeping = () => hourOf() >= 22.5 && NIGHT_ACTS.includes(H().act);
 const START_AGE = 18;
 const OFF_MIN_PER_DAY = 4;     // 離線時：現實 4 分鐘＝ 1 天
 const OFF_MAX_DAYS = 15;
-const OFF_MAX_NOCLK = 3;   // v17.96：連不到伺服器時間時，離線最多補 3 個月
+const OFF_MAX_NOCLK = 3;
+// v17.97：後期——裝備強化（最高級之後再鍛造 +1～+10）、勇者年紀變大戰力下降
+const FORGE_MAX = 10;
+const forgeCost = n => Math.round(1200 * Math.pow(1.45, n));
+const FORGE_P = [.95, .9, .85, .75, .65, .55, .45, .35, .28, .2];
+const ageMul = h => h && h.age > 35 ? Math.max(.6, 1 - (h.age - 35) * .02) : 1;   // v17.96：連不到伺服器時間時，離線最多補 3 個月
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const ri = (a, b) => Math.floor(rand(a, b + 1));

@@ -221,7 +221,7 @@ function lzTick(h, hr){
   switch (z.k) {
     case 'chat': adj('mood', 4); adj('stress', -4); affAdd(z.id, 3); break;
     case 'date': adj('mood', 8); adj('stress', -6); affAdd(z.id, 4); pay(20); break;
-    case 'drink': adj('mood', 6); adj('stress', -8); pay(30); if (hasP(h, 'drinker') && chance(.5)) { h.lzNext = { day:S.day, v:-10 }; if (chance(.5)) say('……好像喝太多了'); } break;
+    case 'drink': adj('mood', 6); adj('stress', -8); if (!h.ownTavern) pay(30); if (hasP(h, 'drinker') && chance(.5)) { h.lzNext = { day:S.day, v:-10 }; if (chance(.5)) say('……好像喝太多了'); } break;
     case 'tchat': adj('mood', 3); affAdd(z.id, 2); pay(15); break;
     case 'walk': adj('stress', -5); break;
     case 'fish': adj('stress', -6); if (chance(.2)) { const g = ri(10, 40); h.wallet += g; say(`釣到大魚！賣了 ${g} 金`); } break;

@@ -267,7 +267,7 @@ const lvSq = (n, cur) => `<span class="lvsq">${Array.from({ length:n }, (_, i) =
 function shopView(h){
   const sm = npc('chen'), smOk = sm && sm.alive, nw = h.wpn + 1, na = h.arm + 1, qw = nw < 4 ? quote(WPN.price[nw], 'agent') : null, qa = na < 4 ? quote(ARM.price[na], 'agent') : null;
   const q0 = qw || qa, base = qw ? WPN.price[nw] : qa ? ARM.price[na] : 0;
-  const line = !q0 ? '裝備已經是最好的了！' : q0.p < base ? '看在交情上，算你便宜。' : q0.p > base ? '最近鐵很貴！' : '一分錢一分貨。';
+  const line = !q0 ? ((h.wf || 0) >= FORGE_MAX && (h.af || 0) >= FORGE_MAX ? '這已經是傳說級的裝備了。' : '裝備到頂了，要不要再鍛造看看？') : q0.p < base ? '看在交情上，算你便宜。' : q0.p > base ? '最近鐵很貴！' : '一分錢一分貨。';
   const why = q0 ? (q0.p > base ? `今天貴 ${Math.round((q0.p / base - 1) * 100)}%（${q0.why}）` : q0.p < base ? `今天便宜 ${Math.round((1 - q0.p / base) * 100)}%（${q0.why}）` : '今天照定價') : '';
   let out = `<div class="pb smith"${TIPA('鐵匠', smOk ? '鐵匠' + sm.name : '鐵匠鋪', why || '沒有東西可以升級了')}>${smOk ? `<span class="sav">${pimg(sm)}</span>` : ''}${IC('鐵匠', 2)}<span>「${esc(line)}」</span></div>`;
   const AIC = ['布衣', '皮甲'];
@@ -280,8 +280,12 @@ function shopView(h){
       eff = `${Math.round(P0)} → <b class="cg">${Math.round(P1)}</b>`; }
     if (q && kind === 'a') eff = `×${T0.mul[cur]} → <b class="cg">×${T0.mul[nx]}</b>`;
     return `<div class="pb eqc"><div class="eqh"><span${TIPA(cat, kind === 'w' ? '武器' : '防具', kind === 'w' ? '打怪的強度，越高打得越快、越不容易受傷' : '越好越不容易受傷')}>${IC(cat, 2)}</span>${lvSq(4, cur)}</div>
-      <div class="eqr"><div class="eqi2">${img(cur)}<b class="f22">${esc(nm(cur))}</b></div>${q ? `<span class="eqar">→</span><div class="eqi2">${img(nx)}<b class="f22">${esc(nm(nx))}</b></div>` : `<div class="eqi2 mx cg f16">已經是最好的了</div>`}</div>
-      ${q ? `<div class="eqb"><span class="num">${IC(cat, 2)}<span class="f22">${eff}</span></span>${priceBtn(`data-b="${kind}"`, q.p, !can)}</div>${safe}` : ''}</div>`; };
+      <div class="eqr"><div class="eqi2">${img(cur)}<b class="f22">${esc(nm(cur))}${!q && fN(kind) ? ` +${fN(kind)}` : ''}</b></div>${q ? `<span class="eqar">→</span><div class="eqi2">${img(nx)}<b class="f22">${esc(nm(nx))}</b></div>` : fN(kind) >= FORGE_MAX ? `<div class="eqi2 mx cg f16">強化到頂了</div>` : `<span class="eqar">→</span><div class="eqi2"><b class="f22 cg">+${fN(kind) + 1}</b></div>`}</div>
+      ${q ? `<div class="eqb"><span class="num">${IC(cat, 2)}<span class="f22">${eff}</span></span>${priceBtn(`data-b="${kind}"`, q.p, !can)}</div>${safe}` : fN(kind) < FORGE_MAX ? forgeRow(kind) : ''}</div>`; };
+  // v17.97：最高級之後再鍛造強化 +1～+10（每級武器戰力、防具血量 +6%；+3 以後失敗會退一級）
+  const fN = k => (k === 'w' ? h.wf : h.af) || 0;
+  const forgeRow = k => { const n = fN(k), c = forgeCost(n), pr = Math.round(FORGE_P[n] * 100);
+    return `<div class="eqb"><span class="num"${TIPA('上升', '鍛造強化', `每強化一級${k === 'w' ? '戰力' : '血量'} +6%。成功率 ${pr}%${n >= 3 ? '，失敗會退一級' : '，失敗不會退'}`)}>${IC('上升', 2)}<span class="f22">成功 ${pr}%</span>${n >= 3 ? '<small class="dg">失敗退一級</small>' : ''}</span>${priceBtn(`data-b="f${k}"`, c, S.gold < c)}</div>`; };
   return out + up('w', h.wpn) + up('a', h.arm);
 }
 function caravanItems(h){ const c = S.mt && S.mt.caravan; if (!c) return [];
@@ -1106,7 +1110,7 @@ function renderSheet(){
     const tg = saveTarget(h), known = h.revealed || h.said === h.goal, showG = h.revealed ? h.goal : h.said;
     html += `<div class="pb ofc"><div class="ofr">${IC('生平', 2)}<b class="f14">人生目標</b><span class="rsp"></span><span class="f14 mu">${h.revealed ? '你已經看清楚了' : `${pron(h)}自己說的`}</span></div><b class="f22">${GOALS[showG].n}</b><div class="f14 mu">${GOALS[showG].d}</div>
       ${!h.revealed && h.clues ? `<div class="f14 dg o">你的觀察：有 ${h.clues} 件事跟${pron(h)}說的不太一樣</div>` : ''}
-      ${tg && known ? `<div class="ofr f14"><span>${tg.n}</span><span class="rsp"></span><span>${fmt(Math.min(h.wallet, tg.t))} / ${fmt(tg.t)}</span></div><span class="pbar"><i style="width:${Math.min(100, h.wallet / tg.t * 100)}%;background:var(--ok)"></i></span>` : ''}
+      ${tg && (known || tg.dream) ? `<div class="ofr f14"><span>${tg.dream ? '夢想：' : ''}${tg.n}</span><span class="rsp"></span><span>${fmt(Math.min(h.wallet, tg.t))} / ${fmt(tg.t)}</span></div><span class="pbar"><i style="width:${Math.min(100, h.wallet / tg.t * 100)}%;background:var(--ok)"></i></span>` : ''}
       ${h.goal === 'filial' && known ? `<div class="f14 mu">已經寄回老家 ${fmt(h.sentHome || 0)} 金</div>` : ''}
       ${h.partner || h.married || h.house ? `<div class="f14 mu">${h.partner || h.married ? '對小孩的想法：' + KIDW[h.kidWish] : ''}${h.house ? ' · 有自己的房子' : ''}</div>` : ''}</div>`;
     const cs = chipsOf(h);
@@ -1403,6 +1407,11 @@ function buy0(k){
     ev('good', '復健', `${h.name}做完復健療程，${what === 'scar' ? '舊傷' : '後遺症'}治好了`); logLife(`做了復健療程，治好${what === 'scar' ? '舊傷' : '後遺症'}`); say('謝謝老闆……我還以為這輩子都好不了了'); }
   if (k === 'aid') { const aid = h.aid || 0, c = [300, 2000][aid]; if (aid >= 2 || S.gold < c) return; S.gold -= c; h.aid = aid + 1; adj('trust', 5); adj('mood', 6);
     ev('good', '輔具', `你幫${h.name}買了${['', '拐杖', '魔導義足'][h.aid]}`); say(h.aid === 1 ? '有了拐杖，走路輕鬆多了' : '這個義足好厲害，幾乎跟以前一樣了'); }
+  if (k === 'fw' || k === 'fa') { const w = k === 'fw', key = w ? 'wf' : 'af', n = h[key] || 0; if ((w ? h.wpn : h.arm) < 3 || n >= FORGE_MAX) return; const c = forgeCost(n); if (S.gold < c) return;   // v17.97：鍛造強化
+    S.gold -= c; const nm = w ? WPN.n[3] + WNAME[h.cls] : ARM.n[3];
+    if (chance(FORGE_P[n])) { h[key] = n + 1; adj('mood', 6); affAdd('chen', 2); ev('good', '鍛造', `${nm}強化成功，變成 +${n + 1}`); say(n + 1 >= 7 ? '這把……會發光耶！' : '更順手了！'); }
+    else if (n >= 3) { h[key] = n - 1; adj('mood', -4); ev('warn', '鍛造', `強化失敗，${nm}退回 +${n - 1}`); }
+    else ev('warn', '鍛造', `強化失敗，${nm}還是 +${n}`); }
   if (k === 'm') { if (S.gold < 100) return; S.gold -= 100; h.wallet += 100;   // v17.96：一個月只有第一次會加信任、心情
     if (h.allowM === S.day) say('……又給？那我先收著喔'); else { h.allowM = S.day; adj('trust', 4); adj('mood', 5); say('欸？給我的？謝啦！'); } }
   renderAll();
