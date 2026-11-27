@@ -59,6 +59,7 @@ const sleeping = () => hourOf() >= 22.5 && NIGHT_ACTS.includes(H().act);
 const START_AGE = 18;
 const OFF_MIN_PER_DAY = 4;     // 離線時：現實 4 分鐘＝ 1 天
 const OFF_MAX_DAYS = 15;
+const OFF_MAX_NOCLK = 3;   // v17.96：連不到伺服器時間時，離線最多補 3 個月
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const ri = (a, b) => Math.floor(rand(a, b + 1));
@@ -223,7 +224,7 @@ const hasU = k => rankOf() >= UNLOCK[k];
 const artistSlots = () => hasU('artist3') ? 3 : hasU('artist2') ? 2 : hasU('artist1') ? 1 : 0;
 const officeMax = () => hasU('coach') ? 5 : hasU('royal') ? 4 : 3;
 const OFFICE = {
-  clinic:{ n:'醫務室', d:l => `重傷少躺 ${l} 個月、急救費 -${l * 20}%`, base:800 },
+  clinic:{ n:'醫務室', d:l => `重傷少躺 ${l} 個月、急救費 -${Math.min(75, l * 15)}%`, base:800 },
   gym:   { n:'訓練室', d:l => `經驗 +${l * 12}%`, base:700 },
   lounge:{ n:'休息室', d:l => `休息時多紓壓 ${l * 4}`, base:600 },
   intel: { n:'情報站', d:l => `委託多 ${l} 個${l >= 2 ? '，每 3 個月換一批' : ''}`, base:900 },

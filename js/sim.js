@@ -152,6 +152,7 @@ function earn(g, src){
 // ================= 每天開始：勇者決定今天做什麼 =================
 function dayStart(){
   const h = H();
+  if (S.cutNext != null) { const old = S.cut, v = S.cutNext; S.cutNext = null; if (v !== old) { S.cut = v; adj('trust', v > old ? -(v - old) * .4 : (old - v) * .3); if (!offline) sys(`抽成從 ${old}% 改成 ${v}%`); } }   // v17.96：抽成下個月才生效
   h.target = null; h.flash = 0; travelMonthly(h);   // v17.12
   if (h.act === 'dead' || h.act === 'retired' || h.act === 'left') return;
   if (h.act === 'mission') { if (--h.actDays > 0) { setAct('mission'); return; } resolveMission(); if (h.act !== 'idle' || H() !== h) return; }   // v17.20：做完不累的話，這個月接著做別的
@@ -259,7 +260,7 @@ function step(){
   }
   if (h.hp <= 0) { h.hp = 0; nearDeath(`在${Z.n}被${Z.mon}圍攻`, h.zone); return; }
   // 路上的意外
-  if (!offline && chance(.002 + Math.max(0, 1.25 - r) * .018)) { injure(r < .9 && chance(.35) ? 'heavy' : 'light', pick([`在${Z.n}踩空扭到腳`, `在${Z.n}被${Z.mon}偷襲`, `在${Z.n}的亂石堆摔了一跤`])); return; }
+  if (chance(.002 + Math.max(0, 1.25 - r) * .018)) { injure(r < .9 && chance(.35) ? 'heavy' : 'light', pick([`在${Z.n}踩空扭到腳`, `在${Z.n}被${Z.mon}偷襲`, `在${Z.n}的亂石堆摔了一跤`])); return; }
   // 撤退或逃跑
   const retreat = T(h).retreat + (hasP(h, 'coward') ? .15 : 0) + (h.carefulNext ? .1 : 0);
   if (h.hp < retreat) {
@@ -286,7 +287,7 @@ function goHome(){ const h = H(); h.act = 'home'; h.zone = -1; h.target = null; 
 // ================= 傷病 =================
 function injure(kind, why){
   const h = H(); const z0 = h.zone; h.dyingAg = 0;
-  if (offline && kind !== 'light') kind = 'light';
+  // v17.96：離線補跑也照算重傷（原本全變輕傷）
   h.lastHurt = S.day; adj('mood', kind === 'light' ? -6 : -15); adj('stress', kind === 'light' ? 4 : 12);
   if (S.plan > 0 && !h.ownToday) adj('trust', kind === 'light' ? -1 : -5);
   if (kind === 'light') {
@@ -317,12 +318,12 @@ function injure(kind, why){
 let dyingTimer = null, dyingLeft = 0;
 function nearDeath(why, z){
   const h = H(); if (z != null && z >= 0) remember('nearDeath', { z });
-  if (offline) { injure('light', why); return; }
+  if (offline) { injure('heavy', why); const h2 = H(); h2.health = clamp(h2.health - 30, 1, 100); return; }   // v17.96：離線不會死，但是重傷＋健康 -30
   if (chance(.35 + friendsN() * .05 + (hasP(h, 'social') ? .15 : 0) + ch(h, 'luck') + (isFr('priest') ? .1 : 0))) {
     ev('warn', '被救回', `${h.name}${why}倒下，被路過的冒險者拖回村子`);
     injure('heavy', why); return;
   }
-  h.dyingWhy = why; h.dyingZ = z; h.act = 'dying'; S.paused = true; dyingLeft = 15;
+  h.dyingWhy = why; h.dyingZ = z; h.act = 'dying'; S.paused = true; dyingLeft = 15; h.dyingLeft = 15;
   logLife(`${why}，倒下了`);
   openDying();
 }
@@ -343,7 +344,7 @@ function openDying(){   // v17.80 新版（design-wip design/ui/草圖_瀕死.pn
   dyingScene($('dcv'), h);
   $('dO1').onclick = () => dyingChoose(1); $('dO2').onclick = () => dyingChoose(2); $('dO3').onclick = () => dyingChoose(3);
   clearInterval(dyingTimer);
-  dyingTimer = setInterval(() => { dyingLeft--; const el = $('dLeft'); if (el) el.textContent = `0:${String(Math.max(0, dyingLeft)).padStart(2, '0')}`; if (dyingLeft <= 0) dyingChoose(0); }, 1000);
+  dyingTimer = setInterval(() => { dyingLeft--; H().dyingLeft = dyingLeft; const el = $('dLeft'); if (el) el.textContent = `0:${String(Math.max(0, dyingLeft)).padStart(2, '0')}`; if (dyingLeft <= 0) dyingChoose(0); }, 1000);
 }
 // 倒下的地方：野外前三區用那一區的背景（調暗），其他地方用暗色地面；勇者躺在路上、閉著眼
 function dyingScene(c, h){ if (!c) return; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.fillStyle = '#22262a'; g.fillRect(0, 0, 120, 102);
@@ -351,7 +352,7 @@ function dyingScene(c, h){ if (!c) return; const g = c.getContext('2d'); g.image
   try { if (z >= 0 && z <= 2) { const st = zoneStrip(z); g.drawImage(st, Math.max(0, Math.round(st.width / 2 - 60)), Y0, 120, 102, 0, 0, 120, 102); } else { g.fillStyle = '#3a3530'; g.fillRect(0, 124 - Y0, 120, 102); } } catch (e) {}
   g.fillStyle = 'rgba(16,12,18,.6)'; g.fillRect(0, 0, 120, 102);
   try { drawSprite(g, h, 60, 142 - Y0, true, 0, { moving:false, noEmo:true, expr:'sick' }); } catch (e) {} }
-const healCost = () => Math.round((200 + H().lv * 120) * (1 - (S.office.clinic || 0) * .2) * (isFr('priest') ? .85 : 1));
+const healCost = () => Math.round((200 + H().lv * 120) * (1 - Math.min(.75, (S.office.clinic || 0) * .15)) * (isFr('priest') ? .85 : 1));   // v17.96：每級 -15%，最多 -75%
 function dyingChoose(k){
   clearInterval(dyingTimer); $('dying').classList.remove('on');
   const h = H(); S.paused = false;
@@ -550,7 +551,7 @@ const QH = {
     if (i === 0 && S.gold >= d.c) { S.gold -= d.c; r.hostile = (r.hostile || 0) + 1; ev('good', '搶單', '你加碼留住了客戶'); return; }
     S.offers = S.offers.filter(o => o.id !== d.id); r.fame += 10; ev('warn', '搶單', `委託被${r.n}搶走了`); renderAll(); },
   rvPoach(i, d){ const h = H(), r = S.rivals[d.i];
-    if (i === 0) { S.cut = Math.min(S.cut, 20); adj('trust', 6); say(pickS(['……好，我留下來', '你願意讓步，我就留下'])); return; }
+    if (i === 0) { S.cut = Math.min(S.cut, 20); S.cutNext = null; adj('trust', 6); say(pickS(['……好，我留下來', '你願意讓步，我就留下'])); return; }
     const stay = chance(clamp(h.trust / 100 + .25 - (h.burn || 0) / 200 + (S.cut <= 25 ? .1 : 0) + (dw(h, 'status') || hx(h, 'X') > .65 ? Math.min(.15, stageOf() * .04) : 0) - (i === 2 || i < 0 ? .2 : 0), .08, .95));
     if (stay) { adj('trust', i === 1 ? 6 : -5); say(i === 1 ? pickS(['我才不會走呢', '……你都這麼說了，我留下']) : pickS(['你都不留我的嗎……算了，我還是留下', '……我留下，但我很難過'])); return; }
     r.fame += 40; ev('bad', '跳槽', `${h.name}被${r.n}挖走了`); die(`被${r.n}挖角，跳槽了`, 'left'); },
@@ -611,7 +612,7 @@ const QH = {
     S.queue = S.queue.filter(x => x !== it); if (it.kind === 'ag' && S.day < it.until) S.agTasks.push(it); else if (it.kind === 'offer') S.offers.push(it);
     h.st.forced += 2; adj('mood', -5 - (S.autonomy === 'mine' ? 3 : 0)); if (dw(h, 'independence')) adj('trust', -4); say('……好吧'); },
   nego(i){ const h = H(), it = S.queue[0]; if (!it || it.kind === 'rest') return;
-    if (i === 0) { if (it.kind === 'ag') it.share = Math.max(it.share || .1, .3); else S.cut = Math.max(10, S.cut - 5); it.agreed = 1; adj('trust', 3); say(pickS(['好，那就這樣', '成交！', '這還差不多', '好吧，看在錢的份上', '你都這樣說了，我就去吧', '三成？好，我認真做', '有誠意，我收下了', '早說嘛', '好啦好啦，我去'])); }
+    if (i === 0) { if (it.kind === 'ag') it.share = Math.max(it.share || .1, .3); else S.cut = Math.max(10, S.cut - 5); S.cutNext = null; it.agreed = 1; adj('trust', 3); say(pickS(['好，那就這樣', '成交！', '這還差不多', '好吧，看在錢的份上', '你都這樣說了，我就去吧', '三成？好，我認真做', '有誠意，我收下了', '早說嘛', '好啦好啦，我去'])); }
     else if (i === 1) { it.agreed = 1; S.queue.splice(1, 0, ...[1, 2, 3].map(j => ({ id:Date.now() + j, kind:'rest', n:'休息', days:1 }))); adj('trust', 4); repAdd(1, '談判時答應讓勇者休假'); S.qKey = S.queue.map(x => x.id).join(','); say('說好了喔，做完要放假'); }
     else if (i === 2) { adj('trust', -10); adj('stress', 8); h.st.forced += 3;
       if (h.trust < 25 || chance(h.burn > 80 ? .3 : .05)) { S.queue.shift(); if (it.kind === 'ag') S.agTasks.push(it); say('那我不做了。你自己去');
@@ -639,7 +640,7 @@ const QH = {
     if (i === 1) { S.gold += 1500; S.loan = (S.loan || 0) + 2200; ev('warn', '借貸', '你借了高利貸 1,500 金，之後每天要還 60 金，共 2,200 金'); }
     if (i === 2) { ev('bad', '收購', '你的事務所被銀月經紀社收購了。招牌拆下，一切從頭開始'); S.rivals[1].fame += S.fame * .5; S.fame = 0; S.agDone = 0; Object.keys(S.office).forEach(k => { S.office[k] = 0; }); S.gold = 800; S.loan = 0; S.rep = 50; S.cut = 35; S.queue = []; adj('trust', -15); logLife('經紀人的事務所被收購'); say('……被收購了？那我以後怎麼辦'); } },
   hop(i){ const h = H();
-    if (i === 0) { S.cut = 20; adj('trust', 10); say('好，那我留下來'); }
+    if (i === 0) { S.cut = 20; adj('trust', 10); S.cutNext = null; say('好，那我留下來'); }
     else if (i === 1 && S.gold >= 500) { S.gold -= 500; adj('trust', 8); gainExp(expNeed(h.lv) * .3); say('謝謝老闆，我會好好進修'); }
     else if (chance(.45)) { S.rivals[1].fame += 50; die('被銀月經紀社挖角，跳槽了', 'left'); }
     else { adj('trust', -10); say('……好吧，我再想想'); } },
@@ -706,8 +707,8 @@ const QH = {
     else { adj('mood', -10); adj('trust', -5); h.together = S.day; say(i === 2 ? '我的錢不夠啦……那再等等吧' : '……好吧，再等等'); } },
 
   cut(i, d){ const h = H();
-    if (i === 0) { S.cut = d.want; adj('trust', 15); adj('mood', 8); say('謝啦老闆，明天我就出門！'); }
-    else if (i === 1) { if (chance(.55)) { S.cut -= 5; adj('trust', 5); say('……好吧，成交'); } else { adj('trust', -8); h.strikeDays = 1; say('那我再休一個月，你自己想清楚'); } }
+    if (i === 0) { S.cut = d.want; S.cutNext = null; adj('trust', 15); adj('mood', 8); say('謝啦老闆，明天我就出門！'); }
+    else if (i === 1) { if (chance(.55)) { S.cut -= 5; adj('trust', 5); S.cutNext = null; say('……好吧，成交'); } else { adj('trust', -8); h.strikeDays = 1; say('那我再休一個月，你自己想清楚'); } }
     else { adj('trust', -15); adj('stress', 10); h.strikeDays = ri(1, 2); say(pickS(['好，那我就不出門', '合約、合約，你眼裡只有錢']));
            if (h.trust < 15 && chance(.4)) { ev('bad', '解約', `${h.name}把合約撕了`); die('和經紀人鬧翻，撕毀合約離開', 'left'); } } },
   gone(i){ const h = H(); if (i === 0) { h.letter = 1; adj('trust', 8); sys('你寫了一封長長的信'); } else if (i === 1) { if (S.gold >= 300) { S.gold -= 300; h.search = 1; sys('你派人四處打聽'); } else sys('錢不夠，派不了人'); } },
@@ -898,7 +899,7 @@ function compAfter(o, ok, di){
     return;
   }
   const dieP = [.03, .1, .22][di] * (n.role === 'elder' ? 1.5 : 1);
-  if (!offline && chance(dieP)) {
+  if (chance(dieP)) {   // v17.96：離線補跑時同伴也照算
     npcDies(n, `在「${o.n}」中為了掩護${h.name}而喪命`); adj('stress', 12); remember('compDied', { n:n.name }); logLife(`${n.name}為了掩護自己而死`);
     if (n.role === 'merc') repAdd(-3, '雇來的傭兵死在任務裡');
     return;

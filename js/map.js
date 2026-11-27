@@ -652,10 +652,10 @@ function openCaravan(){
   const items = [['pots', '遠方的藥水 ×3', 120], ['boost', '力量藥劑（戰力永久 +5%）', 900 + rkx() * 300]];
   if (c.t && TREASURES[c.t] && !h.charms.includes(c.t)) items.push(['charm', `${TREASURES[c.t].n}（${TREASURES[c.t].d}）`, 2500 + rkx() * 600]);
   openPop(`<div class="pst f16">${IC('時間', 2)}<b>再 ${Math.max(0, c.until - S.day)} 月就走</b></div>
-    ${items.map(([k, n, p]) => { const full = k === 'charm' && h.charms.length >= CHARM_MAX; return `<div class="pb pit"><span class="pitn">${IC(k === 'charm' ? '寶物' : k === 'boost' ? '戰力' : '照顧', 2)}<b class="f16">${esc(n)}</b></span>${priceBtn(`data-buy="${k}" data-p="${p}"`, p, S.gold < p || full, full ? '帶不下了' : '')}</div>`; }).join('')}
+    ${items.map(([k, n, p]) => { const no = cvNo(h, c, k); return `<div class="pb pit"><span class="pitn">${IC(k === 'charm' ? '寶物' : k === 'boost' ? '戰力' : '照顧', 2)}<b class="f16">${esc(n)}</b></span>${priceBtn(`data-buy="${k}" data-p="${p}"`, p, S.gold < p || !!no, no)}</div>`; }).join('')}
     <div class="f14 mu">用事務所的錢買給${esc(h.name)}</div>`, '商隊', '商隊', 1);
-  $('mBox').querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const k = b.dataset.buy, p = +b.dataset.p; if (S.gold < p) return; S.gold -= p;
-    if (k === 'pots') h.pots += 3; if (k === 'boost') { h.boost = (h.boost || 0) + .05; } if (k === 'charm') { h.charms.push(c.t); c.t = null; }
+  $('mBox').querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const k = b.dataset.buy, p = +b.dataset.p; if (S.gold < p || cvNo(h, c, k)) return; S.gold -= p;
+    cvGet(h, c, k); if (k === 'charm') { h.charms.push(c.t); c.t = null; }
     ev('good', '商隊', `你在商隊買了${b.closest('.pit').querySelector('.pitn b').textContent.split('（')[0]}給${h.name}`); closeMission(); openCaravan(); renderAll(); });
 }
 

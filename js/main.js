@@ -33,8 +33,15 @@ function migrate(o){
 let noSave = false;
 // v7.2：三層保護——瀏覽器存檔、瀏覽器內的備份、你帳號底下的雲端存檔
 const BK_KEY = 'guyongzhe_backup';
+// v17.96：離線補跑用伺服器時間（網頁回應的 Date），改手機時間不能快轉；連不到伺服器最多補 OFF_MAX_NOCLK 個月，時間往回調也不會重算
+let SRV_OFF = null;
+const tNow = () => Date.now() + (SRV_OFF ?? 0);
+async function syncClock(){
+  try { const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 3000);
+    const r = await fetch(location.pathname + '?clk=' + Date.now(), { method:'HEAD', cache:'no-store', signal:ac.signal }); clearTimeout(tm);
+    const d = r.headers.get('Date'), t = d && Date.parse(d); if (t) SRV_OFF = t + 500 - Date.now(); } catch (e) {} }
 function save(){
-  if (noSave) return; S.lastSave = Date.now();
+  if (noSave) return; S.lastSave = tNow(); S.maxSeen = Math.max(S.maxSeen || 0, S.lastSave);
   const js = JSON.stringify(S);
   try { localStorage.setItem(SAVE_KEY, js); } catch (e) {}
   try { const bk = JSON.parse(localStorage.getItem(BK_KEY) || 'null'); if (!bk || S.day - (bk.day || 0) >= 12 || bk.gen !== S.gen) localStorage.setItem(BK_KEY, JSON.stringify({ day:S.day, gen:S.gen, at:Date.now(), js })); } catch (e) {}
@@ -49,7 +56,7 @@ function load(){
   return null;
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); cloudSave(JSON.stringify(S), true); }
-  else if (S && !S.paused && !$('end').classList.contains('on') && !$('dying').classList.contains('on') && !$('mission').classList.contains('on')) { catchUp(); renderFeed(); renderAll(); } });
+  else if (S) { const base = S.lastSave; syncClock().then(() => { if (!S.paused && !$('end').classList.contains('on') && !$('dying').classList.contains('on') && !$('mission').classList.contains('on')) { catchUp(base); renderFeed(); renderAll(); } }); } });
 // 雲端存檔：存在你帳號底下（data/users/你的 id/save），只有你自己讀得到
 const cloud = { ref:null, state:'connecting', at:0, busy:false, pending:null, lastJs:'', remote:null, timer:null };
 function cloudSave(js, now){
@@ -157,9 +164,11 @@ function frame(now){
   if (Math.floor(now / 500) !== Math.floor((now - dt * 1000) / 500)) renderTop();
   requestAnimationFrame(frame);
 }
-function catchUp(){
-  const mins = (Date.now() - (S.lastSave || Date.now())) / 60000;
-  const days = Math.min(OFF_MAX_DAYS, Math.floor(mins / OFF_MIN_PER_DAY));
+function catchUp(base){
+  const now = tNow(), ok = SRV_OFF != null; let from = base ?? S.lastSave ?? now;
+  if (!ok) from = Math.max(from, S.maxSeen || 0);
+  const mins = (now - from) / 60000;
+  const days = Math.min(ok ? OFF_MAX_DAYS : OFF_MAX_NOCLK, Math.floor(mins / OFF_MIN_PER_DAY));
   const h = H(); if (days < 1 || ['dead', 'retired', 'left', 'dying'].includes(h.act)) return;
   const g0 = S.gold, lv0 = h.lv, n0 = S.msgs.length, snap = snapOf(); offline = true;
   const wasPaused = S.paused; S.paused = false;
@@ -199,7 +208,10 @@ function boot(){
   wipeOnce();
   const s = load();
   initMons();
-  if (s) { S = s; S.paused = false; if (H().act === 'dying') { H().act = 'idle'; injure('heavy', H().dyingWhy || '倒下'); } catchUp(); }
+  let reDie = false;
+  if (s) { S = s; S.paused = false;
+    if (H().act === 'dying') { reDie = true; S.paused = true; dyingLeft = Math.max(3, H().dyingLeft ?? 15); }   // v17.96：瀕死時關掉重開，還是回到瀕死畫面、倒數接著算（原本直接改成重傷＝必定活下來）
+    else { const base = S.lastSave; syncClock().then(() => { if (!$('mission').classList.contains('on')) { catchUp(base); renderFeed(); renderAll(); } }); } }
   else {
     newGame(); S.hero = newHero(); refreshOffers(); refreshAg();
     const h = H();
@@ -210,7 +222,7 @@ function boot(){
     S.plan = 1;
   }
   const h = H(); if (['dead', 'retired', 'left'].includes(h.act)) { openEnd(); }
-  renderFeed(); renderAll();
+  renderFeed(); renderAll(); if (reDie) openDying();
   requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 }
 // v17.21：雙點擊、雙指都不縮放畫面

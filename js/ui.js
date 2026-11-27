@@ -285,17 +285,21 @@ function shopView(h){
   return out + up('w', h.wpn) + up('a', h.arm);
 }
 function caravanItems(h){ const c = S.mt && S.mt.caravan; if (!c) return [];
-  const it = [['pots', '遠方的藥水 ×3', '身上的藥水 +3 瓶', 120], ['boost', '力量藥劑', '戰力永久 +5%', 900 + rkx() * 300]];
+  const it = [['pots', '遠方的藥水 ×3', `身上的藥水 +3 瓶（最多 ${POT_MAX} 瓶）`, 120], ['boost', '力量藥劑', `戰力永久 +5%（每次商隊限 1 瓶，一輩子最多 ${BOOST_MAX} 瓶；已喝 ${h.boostN || 0} 瓶）`, 900 + rkx() * 300]];
   if (c.t && TREASURES[c.t] && !h.charms.includes(c.t)) it.push(['charm', TREASURES[c.t].n, TREASURES[c.t].d, 2500 + rkx() * 600]);
   return it; }
-function cvBuy(k, p){ const h = H(), c = S.mt && S.mt.caravan; if (!c || S.gold < p) return; if (k === 'charm' && h.charms.length >= CHARM_MAX) return;
-  S.gold -= p; if (k === 'pots') h.pots += 3; if (k === 'boost') h.boost = (h.boost || 0) + .05; if (k === 'charm') { ev('good', '商隊', `你在商隊買了${TREASURES[c.t].n}給${h.name}`); h.charms.push(c.t); c.t = null; } else ev('good', '商隊', `你在商隊買了${k === 'pots' ? '藥水' : '力量藥劑'}給${h.name}`); renderAll(); }
+// v17.96：藥水照上限、力量藥劑每次商隊 1 瓶、一輩子最多 BOOST_MAX 瓶
+const BOOST_MAX = 5;
+function cvNo(h, c, k){ if (k === 'charm') return h.charms.length >= CHARM_MAX ? '帶不下了' : ''; if (k === 'pots') return h.pots >= POT_MAX ? '帶滿了' : ''; if (k === 'boost') return (h.boostN || 0) >= BOOST_MAX ? '不能再喝了' : c.boost ? '這次賣完了' : ''; return ''; }
+function cvGet(h, c, k){ if (k === 'pots') h.pots = Math.min(POT_MAX, h.pots + 3); if (k === 'boost') { h.boost = (h.boost || 0) + .05; h.boostN = (h.boostN || 0) + 1; c.boost = 1; } }
+function cvBuy(k, p){ const h = H(), c = S.mt && S.mt.caravan; if (!c || S.gold < p || cvNo(h, c, k)) return;
+  S.gold -= p; cvGet(h, c, k); if (k === 'charm') { ev('good', '商隊', `你在商隊買了${TREASURES[c.t].n}給${h.name}`); h.charms.push(c.t); c.t = null; } else ev('good', '商隊', `你在商隊買了${k === 'pots' ? '藥水' : '力量藥劑'}給${h.name}`); renderAll(); }
 function caravanView(h){ const c = S.mt && S.mt.caravan;
   if (!c) return `<div class="pb care"><span class="cbi">${IC('商隊', 3, 1)}</span><div class="cbm"><b class="f16">商隊現在不在村子</b><div class="f14 mu">來的時候，鈴鐺會提醒你</div></div></div>`;
   const CI = { pots:'照顧', boost:'上升', charm:'寶物' };
   return `<div class="pb care"><span class="cbi">${IC('商隊', 3)}</span><div class="cbm"><b class="f22">遠方來的商隊</b></div><span class="num s"${TIPA('時間', '還會待多久', '商隊離開前都能買')}>${IC('時間', 2)}<b>${Math.max(0, c.until - S.day)} 月</b></span></div>`
-    + caravanItems(h).map(([k, n, d, p]) => { const full = k === 'charm' && h.charms.length >= CHARM_MAX;
-      return `<div class="pb care"><span class="cbi"${TIPA(CI[k], n, d)}>${IC(CI[k], 3)}</span><div class="cbm"><b class="f22">${esc(n)}</b></div>${priceBtn(`data-cv="${k}" data-cp="${p}"`, p, S.gold < p || full, full ? '帶不下了' : '')}</div>`; }).join('');
+    + caravanItems(h).map(([k, n, d, p]) => { const no = cvNo(h, c, k);
+      return `<div class="pb care"><span class="cbi"${TIPA(CI[k], n, d)}>${IC(CI[k], 3)}</span><div class="cbm"><b class="f22">${esc(n)}</b></div>${priceBtn(`data-cv="${k}" data-cp="${p}"`, p, S.gold < p || !!no, no)}</div>`; }).join('');
 }
 // ================= v13：事務所頁的元件 =================
 const FINN = { cut:['委託與打怪抽成', '#6fcf97'], ag:['事務所任務', '#59a8ff'], upkeep:['每月開銷', '#ff7b7b'], loan:['還高利貸', '#ff5a5a'], shop:['買裝備與照顧', '#ffb347'], office:['蓋設施', '#c9b6ff'], other:['其他（賽事、商隊、人情…）', '#a3abbd'], trav:['交通（傳送陣）', '#9a7ac8'] };
@@ -625,6 +629,7 @@ function hireArtist(i){
 function releaseArtist(id, how = 'release'){
   const a = arById(id); if (!a) return;
   S.artists = AR().filter(x => x !== a);
+  if (how === 'transfer' && S.day - (a.joined ?? -99) < 12) { S.artists.push(a); return; }   // v17.96：簽約滿 12 個月才能轉讓
   if (how === 'transfer') { const r = pick(S.rivals); r.fame += 20 + a.lv; S.gold += 150 + a.lv * 40; ev('', '轉讓', `${a.name}轉到${r.n}，對方付了轉讓費`); }
   else if (how === 'retire') { ev('good', '退休', `${a.name}退休了`); }
   else { if (a.trust < 40) repAdd(-3, '解約藝人說事務所壞話'); ev('', '解約', `你和${a.name}解約了`); }
@@ -1042,7 +1047,7 @@ function artistCard(a){
       <div class="k" style="font-size:11.5px;margin-top:4px">${sw.ok ? (a.trust >= 70 ? `他願意的機率大約 ${Math.round(swapWill(a) * 100)}%。` : '他還沒跟你說過心裡話，不知道他願不願意。') : ''}條件：進事務所滿兩年、信任 50 以上、本人同意；換完 12 個月內不能再換。${esc(h.name)}會轉為旗下藝人，粉絲可能反彈。</div>
       <div class="lbl">合約</div><div class="acts">
         <button class="btn warn" data-arel="${a.uid}:release">${arArm === a.uid + 'release' ? '再按一次解約' : '解約'}</button>
-        <button class="btn" data-arel="${a.uid}:transfer">${arArm === a.uid + 'transfer' ? '再按一次轉讓' : '轉讓給對手'}</button>
+        <button class="btn" data-arel="${a.uid}:transfer" ${S.day - (a.joined ?? -99) < 12 ? 'disabled' : ''}>${arArm === a.uid + 'transfer' ? '再按一次轉讓' : '轉讓給對手'}${S.day - (a.joined ?? -99) < 12 ? `<small>簽約滿 12 個月（還要 ${12 - (S.day - a.joined)} 月）</small>` : ''}</button>
         <button class="btn" data-arel="${a.uid}:retire" ${a.age < 35 ? 'disabled' : ''}>${arArm === a.uid + 'retire' ? '再按一次' : '讓他退休'}${a.age < 35 ? '<small>35 歲以上</small>' : ''}</button></div>`;
   }
   return o + '</div>';
@@ -1192,7 +1197,7 @@ function renderSheet(){
       const docC = 80 + h.lv * 20, coachC = 150 + h.lv * 40, rows = [];
       const eic = l => l.map(([n, t]) => n ? `<span class="num s">${IC(n, 2)}${t ? `<b class="cg">${t}</b>` : ''}</span>` : `<b class="cg f16">${t}</b>`).join('');
       const row = (ic, t, d, effs, code, price, why) => rows.push(`<div class="pb care"><span class="cbi"${TIPA(ic, t, d)}>${IC(ic, 3)}</span><div class="cbm"><b class="f22">${esc(t)}</b><div class="cbe">${eic(effs)}</div></div>${priceBtn(`data-b="${code}"`, price, !!why || S.gold < price, why)}</div>`);
-      row('照顧', '看醫生', `健康大幅回復，傷勢少躺一個月（現在健康 ${Math.round(h.health)}）`, [['心情', '+'], ['體力', '+']], 'd', docC, h.health > 95 && !h.bedDays ? '現在不用' : '');
+      row('照顧', '看醫生', `健康大幅回復，傷勢少躺一個月（現在健康 ${Math.round(h.health)}）`, [['心情', '+'], ['體力', '+']], 'd', docC, h.docM === S.day ? '這個月看過了' : h.health > 95 && !h.bedDays ? '現在不用' : '');
       row('戰力', '教練特訓 2 月', '經驗大增，但很累', [['上升', ''], ['', '經驗']], 'c', coachC, !['idle', 'rest', 'home'].includes(h.act) ? `${pron(h)}走不開` : '');
       row('照顧', '小藥水', `血少時自動喝，身上最多 ${POT_MAX} 瓶`, [['', `身上 ${h.pots}/${POT_MAX}`]], 'p', potP(), h.pots >= POT_MAX ? '帶滿了' : '');
       if (hasP(h, 'scar') || hasP(h, 'side')) { const rc = 1500 + h.lv * 80, ok = (S.office.clinic || 0) >= 3, what = hasP(h, 'scar') ? '舊傷' : '後遺症';
@@ -1200,7 +1205,7 @@ function renderSheet(){
       if (hasP(h, 'lame')) { const aid = h.aid || 0;
         if (aid < 2) row('上升', ['拐杖', '魔導義足'][aid], `跛腳治不好，但能減輕：戰力 ${['-15% → -10%', '-10% → -5%'][aid]}，走路也比較快`, [['戰力', '+']], 'aid', [300, 2000][aid], ''); }
       if (h.addict) row('醫務室', '送神殿戒癮', `艾琳修女會陪${pron(h)}戒掉魔藥，要休養 2 個月`, [['', '戒掉魔藥']], 'rehab', 600, '');
-      row('金幣', '給零用錢', `${pron(h)}的錢包：${fmt(h.wallet)} 金（${h.wallet < 20 ? '快空了' : h.wallet < 150 ? '還夠用' : '很充裕'}）`, [['心情', '+']], 'm', 100, '');
+      row('金幣', '給零用錢', `${pron(h)}的錢包：${fmt(h.wallet)} 金（${h.wallet < 20 ? '快空了' : h.wallet < 150 ? '還夠用' : '很充裕'}）`, [['心情', h.allowM === S.day ? '' : '+']], 'm', 100, '');
       html += rows.join('');
     }
   }
@@ -1257,7 +1262,7 @@ function renderSheet(){
           html += `<div class="pb ofc"><div class="ofr">${IC('金幣', 2)}<b class="f16">每月淨賺</b><span class="rsp"></span><i class="lgd g"></i><span class="f14">賺</span><i class="lgd r"></i><span class="f14">賠</span></div>
             <div class="nchart">${nets.map((v, i) => `<div class="nc"><div class="nu">${v >= 0 ? `<small class="cg">+${fmt(v)}</small><i class="g" style="height:${Math.max(2, v / mx * 40)}px"></i>` : ''}</div><div class="nd">${v < 0 ? `<i class="r" style="height:${Math.max(2, -v / mx * 40)}px"></i><small class="cr">${fmt(v)}</small>` : ''}</div><small class="nm">${(hs[i].d - 1 + 12) % 12 + 1}月</small></div>`).join('')}</div></div>`; } }
       if (S.infamySeen) html += infamyView();
-      html += `<div class="pb ofc"><div class="ofr">${IC('金幣', 2)}<b class="f16">抽成 ${S.cut}%</b><span class="rsp"></span><span class="f14 mu">${h.name}：「${S.cut <= 15 ? '佛心來的' : S.cut <= 25 ? '很公道' : S.cut <= 35 ? '還算合理' : S.cut <= 40 ? '有點多……' : '這是剝削'}」</span></div><input type="range" min="10" max="50" step="5" value="${S.cut}" id="cutR" aria-label="抽成比例"></div>`;
+      html += `<div class="pb ofc"><div class="ofr">${IC('金幣', 2)}<b class="f16" id="cutT">抽成 ${S.cut}%${S.cutNext != null && S.cutNext !== S.cut ? `<small class="mu">（下個月起 ${S.cutNext}%）</small>` : ''}</b><span class="rsp"></span><span class="f14 mu">${h.name}：「${S.cut <= 15 ? '佛心來的' : S.cut <= 25 ? '很公道' : S.cut <= 35 ? '還算合理' : S.cut <= 40 ? '有點多……' : '這是剝削'}」</span></div><input type="range" min="10" max="50" step="5" value="${S.cutNext ?? S.cut}" id="cutR" aria-label="抽成比例"></div>`;
     }
     if (SS('art')) html += artistView();
     if (SS('comp')) {   // 線上排名開放前：預設 100 家事務所（名字和名聲是暫時的，之後再討論）；不顯示敵意、先隱藏攻擊手段
@@ -1329,7 +1334,7 @@ function renderSheet(){
   B.querySelectorAll('[data-b]').forEach(b => b.onclick = () => buy(b.dataset.b));
   const pc = $('pcv'); if (pc) drawPortrait(pc);
   B.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const k = b.dataset.up, l = S.office[k] || 0, c = officeCost(k, l); if (S.gold < c || l >= officeMax()) return; S.gold -= c; finAdd('office', -c); S.office[k] = l + 1; toast(`${OFFICE[k].n}升到 Lv${l + 1}`); renderAll(); });
-  const cr = $('cutR'); if (cr) cr.oninput = () => { const old = S.cut; S.cut = +cr.value; if (S.cut > old) adj('trust', -(S.cut - old) * .4); else adj('trust', (old - S.cut) * .3); renderTop(); cr.parentElement.previousElementSibling.innerHTML = `抽成比例：<b style="color:var(--gold)">${S.cut}%</b>`; };
+  const cr = $('cutR'); if (cr) cr.oninput = () => { const v = +cr.value; S.cutNext = v === S.cut ? null : v; const t = $('cutT'); if (t) t.innerHTML = `抽成 ${S.cut}%${S.cutNext != null ? `<small class="mu">（下個月起 ${v}%）</small>` : ''}`; };   // v17.96：下個月才生效，信任也那時候才變
   if ($('bCloud')) $('bCloud').onclick = () => cloudRestore(cloud.remote.js);
   if ($('bArch')) $('bArch').onclick = () => { if (!archArm) { archArm = true; renderSheet(); return; } archRestore(); };
   const ta = $('saveTxt');
@@ -1391,14 +1396,15 @@ function buy0(k){
   if (k === 'w') { if (h.wpn >= 3) return; const p = quote(WPN.price[h.wpn + 1], 'agent').p; if (S.gold < p) return; S.gold -= p; S.smithDisc = 0; h.wpn++; adj('trust', 6); adj('mood', 10); say(`${WPN.n[h.wpn]}${WNAME[h.cls]}！謝謝老闆！`); logLife(`經紀人送了${WPN.n[h.wpn]}${WNAME[h.cls]}`); remember('gift'); affAdd('chen', 6); }
   if (k === 'a') { if (h.arm >= 3) return; const p = quote(ARM.price[h.arm + 1], 'agent').p; if (S.gold < p) return; S.gold -= p; S.smithDisc = 0; h.arm++; affAdd('chen', 4); adj('trust', 4); say(`穿上${ARM.n[h.arm]}，安心多了`); }
   if (k === 'p') { const pp = potP(); if (S.gold < pp || h.pots >= POT_MAX) return; S.gold -= pp; h.pots++; }
-  if (k === 'd') { const c = 80 + h.lv * 20; if (S.gold < c) return; S.gold -= c; h.health = clamp(h.health + 35, 0, 100); if (h.bedDays > 0) h.bedDays--; adj('trust', 3); sys('你帶' + pron(h) + '去看了醫生'); }
+  if (k === 'd') { const c = 80 + h.lv * 20; if (S.gold < c || h.docM === S.day) return; h.docM = S.day; /* v17.96：一個月看一次 */ S.gold -= c; h.health = clamp(h.health + 35, 0, 100); if (h.bedDays > 0) h.bedDays--; adj('trust', 3); sys('你帶' + pron(h) + '去看了醫生'); }
   if (k === 'c') { const c = 150 + h.lv * 40; if (S.gold < c) return; S.gold -= c; h.trainDays = 2; setAct('train'); h.tx = 250; h.ty = 255; say(h.trait === 'lazy' ? '咦……特訓？非去不可嗎' : '特訓！來吧！'); }
   if (k === 'rehab') { const c = 1500 + h.lv * 80; if (S.gold < c || (S.office.clinic || 0) < 3) return; const what = hasP(h, 'scar') ? 'scar' : 'side'; if (!hasP(h, what)) return;
     S.gold -= c; h.perks = h.perks.filter(x => x !== what); h.bedDays = Math.max(h.bedDays, 3); setAct('bed'); adj('trust', 6); adj('mood', 8);
     ev('good', '復健', `${h.name}做完復健療程，${what === 'scar' ? '舊傷' : '後遺症'}治好了`); logLife(`做了復健療程，治好${what === 'scar' ? '舊傷' : '後遺症'}`); say('謝謝老闆……我還以為這輩子都好不了了'); }
   if (k === 'aid') { const aid = h.aid || 0, c = [300, 2000][aid]; if (aid >= 2 || S.gold < c) return; S.gold -= c; h.aid = aid + 1; adj('trust', 5); adj('mood', 6);
     ev('good', '輔具', `你幫${h.name}買了${['', '拐杖', '魔導義足'][h.aid]}`); say(h.aid === 1 ? '有了拐杖，走路輕鬆多了' : '這個義足好厲害，幾乎跟以前一樣了'); }
-  if (k === 'm') { if (S.gold < 100) return; S.gold -= 100; h.wallet += 100; adj('trust', 4); adj('mood', 5); say('欸？給我的？謝啦！'); }
+  if (k === 'm') { if (S.gold < 100) return; S.gold -= 100; h.wallet += 100;   // v17.96：一個月只有第一次會加信任、心情
+    if (h.allowM === S.day) say('……又給？那我先收著喔'); else { h.allowM = S.day; adj('trust', 4); adj('mood', 5); say('欸？給我的？謝啦！'); } }
   renderAll();
 }
 
