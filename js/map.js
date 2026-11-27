@@ -181,7 +181,7 @@ function drawVillage(now){
     const label = b.k === 'telepad' && !teleOpen() ? '傳送陣預定地' : b.k === 'home' ? `${h.name}${h.married ? '家' : '的家'}` : sh ? sh.shop.slice(0, 4) : b.k === 'house' ? '' : b.n;
     if (label) nameTag(ctx, label, x + w / 2, y - 3, b.k === 'office' || b.k === 'home' ? 'hero' : 'npc');
     if (sh) vilHits.push({ r:b.r, k:'npc', id:sh.id }); else if (b.k !== 'house') vilHits.push({ r:b.r, k:b.k }); });
-  drawVilShow(now); drawTourShow(now); if (H().act === 'train') arenaShow(now, 'train'); drawVilGuests(now); drawEpisode(now);
+  drawVilShow(now); drawTourShow(now); if (H().act === 'train') arenaShow(now, 'train'); if (H().act === 'strike' || H().act === 'side') plazaShow(now, H().act); drawVilGuests(now); drawEpisode(now);
   drawVilEnd(now);   // v17.17：左端的河、橋、小山
   // 村民：各自在工作的地方附近，偶爾去別棟；晚上去酒館
   const WORK = { tavern:'tavern', smith:'smith', guild:'guild', priest:'temple', mayor:'mayor', reporter:'stage', fan:'office', merc:'guild', elder:'temple' };
@@ -377,7 +377,7 @@ function drawMap(now){
       RIDE_FRONT = null; RIDE_HA = 1; const ride = view === 'vil' ? 0 : drawRide(now, h, Math.round(hx0), Math.round(hy0));   // v17.12：馬、驛馬車、傳送陣
       ctx.globalAlpha = h.alpha * vfa * RIDE_HA;
       const am = view === 'vil' && !lying ? arenaMode(h) : null, pm = view === 'vil' && !lying && !am ? plazaPose(h, now) : null;
-      if (pm) { drawSprite(ctx, h, Math.round(hx0), Math.round(hy0) - pm.hop, false, now, { moving:false, left:pm.left, expr:'happy' }); if (pm.hand) pm.hand(Math.round(hx0), Math.round(hy0)); }   // v17.51：代言、綜藝、見粉絲
+      if (pm) { drawSprite(ctx, h, Math.round(hx0), Math.round(hy0) - pm.hop, false, now, { moving:false, left:pm.left, expr:pm.expr || 'happy' }); if (pm.hand) pm.hand(Math.round(hx0), Math.round(hy0)); }   // v17.51：代言、綜藝、見粉絲
       else if (am && am.fight) { const R = arenaRound(now, am.kind); let ox = 0; if (R.p > .1 && R.p < .38) ox = 3;   // v17.49：鬥技場：踏步揮擊；對手回擊時後退＋閃
         if (am.kind !== 'train' && R.r % 2 && R.p > .75 && R.p < 1) { ox = -2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * vfa * .35; }
         drawSprite(ctx, h, Math.round(hx0 + ox), Math.round(hy0), false, now, { moving:false, left:false, atkT:R.t0 }); ctx.globalAlpha = h.alpha * vfa; }
@@ -1482,9 +1482,13 @@ function arenaShow(now, kind){
 // ================= v17.51：廣場（代言、綜藝、見粉絲）：Kenney 路人小人＋勇者大頭貼看板 =================
 // 勇者站在廣場門口前的路上（V.x、V_WALK）；觀眾在路下方一排（V_ROAD_B + 12），輪流跳一下
 function plazaMode(h){ if (heroMap(h) !== 'vil' || V.inside || V.mv || V.x == null) return null;
+  if (h.act === 'strike' || h.act === 'side') return h.act;   // v17.53：罷工（事務所門口）、接外快（廣場邊擺攤）
   return h.act === 'mission' && h.mission && ['endorse', 'variety', 'meet'].includes(h.mission.ag) && mPhase(h) === 'slot' ? h.mission.ag : null; }
 // 勇者的姿勢：代言每 1.2 秒換一個（右、左、比讚）；綜藝每 2 秒轉圈＋跳；見粉絲面向右，握手、遞簽名
 function plazaPose(h, now){ const k = plazaMode(h); if (!k) return null;
+  if (k === 'strike') return { left:false, expr:'angry', hop:Math.floor(now / 500) % 2, hand:(x, y) => { const cv = rideCanvas('placard', 'room'); ctx.drawImage(cv, x - 6, y - 38 - (now % 1000 < 500 ? 3 : 0));   // 舉抗議牌一上一下、跺腳、頭上生氣
+    if (Math.floor(now / 1500) % 2 === 0) emoAt('生氣', x - 10, y - 16, now % 1500); } };
+  if (k === 'side') return { left:false, hop:5, hand:(x, y) => { const cv = rideCanvas('stall', 'room'); ctx.drawImage(cv, x - Math.floor(cv.width / 2), y + 4 - cv.height); } };   // 站在攤子後面露出上半身
   if (k === 'endorse') { const pose = Math.floor(now / 1200) % 3, p = now % 1200;
     return { left:pose === 1, hop:p < 120 ? 2 : 0, hand:pose === 2 ? (x, y) => { pR2(x + 7, y - 18, 2, 5, '#f7c282'); pR2(x + 7, y - 19, 1, 1, '#3f2631'); } : null }; }
   if (k === 'variety') { const p = (now % 2000) / 1000; return { left:p < .5 && Math.floor(p / .12) % 2 === 1, hop:p >= .5 && p < .8 ? [0, 3, 5, 5, 3, 0][Math.min(5, Math.floor((p - .5) / .05))] : 0 }; }
@@ -1495,6 +1499,11 @@ function plazaCrowd(now, cx, xs, y, emo){ xs.forEach((dx, i) => { const x = cx +
   if (emo && (Math.floor(now / 900) + i * 2) % 7 === 0) emoAt(emo, x + 2, y - 17, now % 900); }); }
 function plazaShow(now, ag){
   try { const h = H(), k = plazaMode(h); if (k !== ag) return; const hx = V.x, y = V_WALK, F = V_ROAD_B + 12;
+    if (ag === 'strike') { const q = (now / 3600) % 1; let px = hx - 80 + q * 160; if (Math.abs(px - hx) < 22) px = px < hx ? hx - 22 : hx + 22; rPerson('cw2', px, y + 6, px > hx); return; }   // 路人經過，繞開勇者
+    if (ag === 'side') { const P = 2400, n = Math.floor(now / P), p = (now % P) / P, cx = p < .35 ? hx + 66 - p / .35 * 34 : p < .7 ? hx + 32 : hx + 32 + (p - .7) / .3 * 50;   // 客人走過來買、投幣、走開
+      rPerson('cw' + n % 5, cx, y + 2, p < .7);
+      if (p > .4 && p < .6) { const t = (p - .4) / .2, X = Math.round(cx - 10 - t * 6), Y = Math.round(y - 20 - Math.sin(t * Math.PI) * 6); pR2(X - 1, Y - 1, 5, 5, '#3f2631'); pR2(X, Y, 3, 3, '#f7c94a'); }
+      return; }
     if (ag === 'endorse') { const bx = hx + 28, cv = rideCanvas('billboard', 'room'), L = Math.round(bx - cv.width / 2), T = V_ROAD - 3 - cv.height;   // 看板在人行道，海報貼勇者當下的大頭貼
       ctx.drawImage(cv, L, T); ctx.drawImage(kenCanvas(h, 'idle', 0, 'happy'), KEN_OX, KEN_OY + 1, 16, 15, L + 11, T + 10, 16, 15);
       const cx = hx - 52; rPerson('cam_man', cx, y + 6, false);   // 攝影師：每次換姿勢閃一下
