@@ -1324,14 +1324,18 @@ function npcLifeTick(){
 // ================= v9：武鬥大會 =================
 const TOUR_NAMES = ['北境的狂戰士', '流浪劍客', '王都騎士見習生', '沙漠來的拳師', '神殿的武僧', '蒙面的怪人', '獵龍人', '前任冠軍'];
 const curY = () => Math.floor(S.day / 12) + 1;
+// v17.50：武鬥大會改成四年一次（第 4、8、12…… 年的 7 月報名、9 月比賽）
+const TOUR_EVERY = 4, tourYear = y => y % TOUR_EVERY === 0;
+// 離下一屆的某個月份（7＝報名、9＝比賽）還有幾個月
+function monthsToTour(m){ const y = curY(), mo = S.day % 12; for (let k = 0; k <= TOUR_EVERY; k++) { const yy = y + k; if (tourYear(yy) && (k > 0 || mo <= m)) return k * 12 + m - mo; } return 0; }
 const tWants = h => dw(h, 'status') || dw(h, 'physical') || dw(h, 'vengeance') || h.trait === 'brave' || h.trait === 'hot';
 const tHates = h => (dw(h, 'tranquility') || h.goal === 'health') && !tWants(h);
 function seasonTick(){
   const h = H(), mo = S.day % 12; if (['dead', 'retired', 'left', 'dying'].includes(h.act)) return;
-  if (mo === 7 && h.lv >= 3 && !offline) {
+  if (mo === 7 && tourYear(curY()) && h.lv >= 3 && !offline) {
     const fee = 100 + rkx() * 100, bet = Math.max(100, Math.min(1000, Math.round(S.gold * .2 / 100) * 100));
     if (tWants(h)) say(L('tWant')); else if (tHates(h)) say(L('tNo'));
-    ask('tReg', `（秋天的武鬥大會開放報名了。報名費 ${fmt(fee)}，冠軍有 ${fmt(600 + rkx() * 400)} 金獎金和大量名聲）`, [`幫${pron(h)}報名（${fmt(fee)}）`, `報名，再押 ${fmt(bet)} 金賭${pron(h)}奪冠（4 倍）`, '今年不參加'], { fee, bet }, 3);
+    ask('tReg', `（四年一度的武鬥大會開放報名了。報名費 ${fmt(fee)}，冠軍有 ${fmt(600 + rkx() * 400)} 金獎金和大量名聲）`, [`幫${pron(h)}報名（${fmt(fee)}）`, `報名，再押 ${fmt(bet)} 金賭${pron(h)}奪冠（4 倍）`, '今年不參加'], { fee, bet }, 3);
   }
   if (mo === 8 && S.tour && S.tour.y === curY() && !offline) ev('warn', '武鬥大會', `下個月就是武鬥大會，${h.name}會留在村裡準備，排程上的長任務會延後`);
   if (mo === 9 && S.tour && S.tour.y === curY()) {
