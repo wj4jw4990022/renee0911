@@ -1413,27 +1413,28 @@ function tourPlan(st){
 }
 function tourStart(st){ const h = H(), hr = hourOf();
   if (offline || hr >= 15 || busyAway(h) || h.act === 'mission') { runTour(st); return; }   // 來不及演就照舊直接算
-  S.tourShow = { day:S.day, pl:tourPlan(st), said:0, start:Math.max(10, Math.ceil(hr + .5)) };
+  S.tourShow = { day:S.day, pl:tourPlan(st), said:0, start:Math.max(9, Math.ceil(hr + .5)) };
   if (h.act === 'hunt') goHome();
   sys(`武鬥大會 ${fmtH(S.tourShow.start)} 開打，地點在村子的鬥技場`); }
-const tR = k => S.tourShow.start + k * 2.5;   // 第 k 場開始的時間，每場 2 小時
-function tourRound(){ const T = S.tourShow; if (!T || T.day !== S.day) return -1; const hr = hourOf(); if (hr < T.start - .5 || hr >= T.start + 7) return -1; return clamp(Math.floor((hr - T.start) / 2.5), 0, 2); }
+const TR_GAP = 4, TR_FIGHT = 3, TR_LEN = TR_GAP * 2 + TR_FIGHT;   // v17.85 開發者要求拉長：每場打 3 小時、中間休息 1 小時（9 點開始的話 9～12、13～16、17～20）
+const tR = k => S.tourShow.start + k * TR_GAP;   // 第 k 場開始的時間
+function tourRound(){ const T = S.tourShow; if (!T || T.day !== S.day) return -1; const hr = hourOf(); if (hr < T.start - .5 || hr >= T.start + TR_LEN) return -1; return clamp(Math.floor((hr - T.start) / TR_GAP), 0, 2); }
 function tourTick(hr){ const T = S.tourShow; if (!T) return;
   if (T.day !== S.day || offline) { tourApply(T.pl); return; }
-  while (T.said < T.pl.my.length && hr >= tR(T.said) + 2) { const mm = T.pl.my[T.said]; T.said++;
+  while (T.said < T.pl.my.length && hr >= tR(T.said) + TR_FIGHT) { const mm = T.pl.my[T.said]; T.said++;
     if (mm.win && mm.r < 2) say(mm.ag ? pickS([`贏了${mm.n}！${mm.ag}的人臉都綠了`, `終於贏了${mm.n}一次`]) : L('tWin')); else if (!mm.win) say(L('tLose')); }
-  if (hr >= T.start + 7) { tourApply(T.pl); save(); renderAll(); } }
+  if (hr >= T.start + TR_LEN) { tourApply(T.pl); save(); renderAll(); } }
 function tourTxt(){ const T = S.tourShow, k = tourRound(), hr = hourOf(), mm = T.pl.my[k];
   if (hr < T.start) return `武鬥大會 ${fmtH(T.start)} 開打，在鬥技場準備`;
   if (!mm) return `武鬥大會${TRN[k]}（${H().name}在場邊觀戰）`;
-  if (hr < tR(k) + 2) return `武鬥大會${TRN[k]}：對上${mm.ag ? mm.ag + '的' : ''}${mm.n}`;
+  if (hr < tR(k) + TR_FIGHT) return `武鬥大會${TRN[k]}：對上${mm.ag ? mm.ag + '的' : ''}${mm.n}`;
   return `武鬥大會${TRN[k]}：${mm.win ? '贏了！' : '輸了……'}`; }
 function drawTourShow(now){
   try {
     const k = tourRound(); if (k < 0) return; const T = S.tourShow, bx = VD.arena, hr = hourOf(), mm = T.pl.my[k], cols = ['#c0563f', '#3f6ea0', '#5a9a5a', '#c87aa0', '#d8a02e', '#7a6ac0'];
     arenaShow(now, 'tour');   // v17.49：彩旗、大旗、觀眾、對手（Kenney 路人）
     nameTag(ctx, '武鬥大會・' + TRN[k], bx, 52, 'hero');
-    if (mm && hr >= tR(k) + 2) pxSay(V.x ?? bx, 112, mm.win ? '勝！' : '敗……');
+    if (mm && hr >= tR(k) + TR_FIGHT) pxSay(V.x ?? bx, 112, mm.win ? '勝！' : '敗……');
   } catch (e) { if (!scnErr++) console.error(e); }
 }
 // ================= v17.49：鬥技場（任務對打、武鬥大會、特訓）：Kenney 路人小人（ART.room）＋野外那套打法 =================
@@ -1450,7 +1451,7 @@ function rPerson(n, x, y, flip, tint, hop){ if (!ART.room || !ART.room[n]) retur
   if (flip) { ctx.save(); ctx.translate(X, 0); ctx.scale(-1, 1); ctx.drawImage(cv, -Math.floor(cv.width / 2), top); ctx.restore(); } else ctx.drawImage(cv, X - Math.floor(cv.width / 2), top); }
 // 現在勇者是不是在鬥技場打（走到了才算）
 function arenaMode(h){ if (heroMap(h) !== 'vil' || V.inside || V.mv || V.x == null) return null;
-  const k = tourRound(); if (k >= 0) { const hr = hourOf(), mm = S.tourShow.pl.my[k]; return { kind:'tour', fight:!!mm && hr >= tR(k) && hr < tR(k) + 2 }; }
+  const k = tourRound(); if (k >= 0) { const hr = hourOf(), mm = S.tourShow.pl.my[k]; return { kind:'tour', fight:!!mm && hr >= tR(k) && hr < tR(k) + TR_FIGHT }; }
   if (h.act === 'train') return { kind:'train', fight:true };
   if (h.act === 'mission' && h.mission && h.mission.ag === 'arena' && mPhase(h) === 'slot') return { kind:'arena', fight:true };
   return null; }
@@ -1471,7 +1472,7 @@ function arenaShow(now, kind){
       for (let i = 0; i < 27; i++) { const x = cx - 126 + i * 9.6, yy = 86 - Math.round(Math.sin(i / 26 * Math.PI) * 6) + (i % 2); ctx.fillStyle = '#3f2631'; ctx.beginPath(); ctx.moveTo(x - 1, yy); ctx.lineTo(x + 7, yy); ctx.lineTo(x + 3, yy + 6); ctx.fill(); ctx.fillStyle = cl[i % 4]; ctx.beginPath(); ctx.moveTo(x, yy + .5); ctx.lineTo(x + 6, yy + .5); ctx.lineTo(x + 3, yy + 4.5); ctx.fill(); }
       for (const fx of [cx - 70, cx + 70]) { ctx.fillStyle = '#3f2631'; ctx.fillRect(fx, 70, 2, 46); ctx.beginPath(); ctx.moveTo(fx + 2, 69); ctx.lineTo(fx + 17, 74); ctx.lineTo(fx + 2, 81); ctx.fill(); ctx.fillStyle = '#e84537'; ctx.beginPath(); ctx.moveTo(fx + 3, 71); ctx.lineTo(fx + 14, 74); ctx.lineTo(fx + 3, 79); ctx.fill(); }
       arenaCrowd(now, cx, [[B, [-68, -56, -44, -32, 32, 44, 56, 68]]]);
-      const k = tourRound(), hr = hourOf(), fight = hr >= tR(k) && hr < tR(k) + 2, mm = S.tourShow.pl.my[k];
+      const k = tourRound(), hr = hourOf(), fight = hr >= tR(k) && hr < tR(k) + TR_FIGHT, mm = S.tourShow.pl.my[k];
       if (fight && mm && am) arenaFoe(now, ['foe_viking', 'foe_knight', 'foe_archer'][k % 3], hx + 36, y, arenaRound(now, 'tour'), arenaRound(now, 'tour').r % 2);
       else if (fight && !mm) { const R = arenaRound(now, 'tour'); rPerson('foe_knight', cx - 18 + (R.p > .1 && R.p < .38 ? 3 : 0), y, false); arenaFoe(now, 'foe_archer', cx + 18, y, R, R.r % 2); }   // 別人的比賽
       arenaCrowd(now, cx, [[F, [-90, -76, -62, -48, -34, -20, 20, 34, 48, 62, 76, 90]]]); return; }
