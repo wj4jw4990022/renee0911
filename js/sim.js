@@ -773,7 +773,7 @@ function refreshOffers(){
   if (isFr('guild')) zs.push(Math.min(topZ(), bestSafeZone() + ri(0, 1)));
   const rk = (1 + rkx() * .25) * (isFr('guild') ? 1.1 : 1) * (S.priceWar > S.day ? .8 : 1);
   zs.forEach((z, i) => { const Z = ZONES[z], k = rand(.9, 1.5) + Math.min(i, 2) * .25;
-    S.offers.push({ id:S.day * 10 + i, z, n:pick(NAMES[z]), D:Math.round(Z.D * k), days:ri(2, 4), reward:Math.round(Z.gold * 12 * k * ri(2, 4) / 2 * rk) }); });
+    S.offers.push({ id:S.day * 10 + i, z, n:pick(NAMES[z]), D:Math.round(Z.D * k), days:z <= 1 ? ri(2, 3) : ri(2, 4), reward:Math.round(Z.gold * 12 * k * ri(2, 4) / 2 * rk) }); });
   if (!h.bossKill && bossOpen(h)) S.offers.push({ id:S.day * 10 + 9, z:2, n:'討伐' + BOSS.n, D:BOSS.D, days:2, reward:BOSS.reward, boss:true });
   if (zoneOpen(6) && !S.boss2Done) S.offers.push({ id:S.day * 10 + 8, z:6, n:'討伐' + BOSS2.n, D:BOSS2.D, days:3, reward:BOSS2.reward, boss2:true });
   // v16：公會指名（約每半年一件，對手搶不走）、王室委託、跨國委託

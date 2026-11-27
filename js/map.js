@@ -1416,7 +1416,8 @@ function durInfo(h, o){
   const k = mKind(o); if (!k || k === 'slot' || k === 'night' || !o.D || o.ag === 'exam') return null;   // 事務所時段任務、升格考核不縮短
   const base = o.baseDays || o.days || 1, dl = dayLen(o), w = DUR_W[scnType(o)] ?? 1;
   const r = ratio(h, o.D) * compMul(o.comp), sp = clamp(r / 1.3, 1 / 1.3, 6);
-  const hours = Math.max(2, base * dl * (w / sp + 1 - w)), extra = 0, days = Math.max(1, Math.ceil(hours / dl - 1e-6));   // v17.13：路上的時間不算進任務
+  const cap = o.z <= 1 ? 3 * dl : Infinity;   // v17.88 開發者：草原、森林的任務最多 3 個月
+  const hours = Math.min(cap, Math.max(2, base * dl * (w / sp + 1 - w))), extra = 0, days = Math.max(1, Math.ceil(hours / dl - 1e-6));   // v17.13：路上的時間不算進任務
   return { base, hours, days, extra, endH:mWin(o)[0] + (hours + extra - (days - 1) * dl) };
 }
 function mDur(h){ const o = h.mission; if (o && o.tGo == null) o.tGo = missionTGo(h, o); if (!o || o.hours != null) return; const d = durInfo(h, o); if (!d) return;
