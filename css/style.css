@@ -828,3 +828,34 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 .rkr.me { background:#d6f0d6; } .rkr.me b, .rkr.me span { color:#2f7a3a; }
 .rkdot { text-align:center; font-size:18px; color:var(--muted); line-height:1; }
 #app .sb input[type=range] { accent-color:#7a5a3a; }
+
+/* ================= v17.69 勇者檔案 ================= */
+.hcd { display:flex; gap:12px; align-items:center; margin:0 -16px 12px; padding:10px 16px; background:#cfe6f5; }
+.hcd #pcv { width:84px; height:84px; image-rendering:pixelated; flex:none; }
+.hci { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+.htg { font-size:13px; padding:0 6px; border:2px solid #e0a040; color:#a8681a; background:#fff6dc; }
+.htg.g { border-color:var(--okd); color:#2f7a3a; }
+.h4n { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-bottom:12px; }
+.h4n .num { padding:5px 6px; justify-content:center; } .h4n .num b { font-size:20px; }
+#app .ptabs.intabs { padding:0 0 12px; margin:0; }
+.cslots { display:flex; align-items:flex-start; gap:8px; }
+.cslot { display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; min-width:0; }
+.cslot small { font-size:12px; text-align:center; max-width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.cbx { width:100%; max-width:56px; aspect-ratio:1; display:flex; align-items:center; justify-content:center; }
+.cbx img { image-rendering:pixelated; }
+.cbx.em { border:2px solid #c9b28a; background:#efe6d0; }
+.csep { width:2px; align-self:stretch; background:#c9b28a; }
+.zr { gap:10px; } .zr b:first-of-type { min-width:42px; } .sk3 { display:flex; gap:2px; }
+.hxw { flex-direction:row; align-items:center; }
+.hxi { display:flex; flex-direction:column; gap:6px; }
+.hx6 { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+.hxc { height:40px; display:flex; align-items:center; justify-content:center; gap:3px; padding:0 2px; background-color:#fff6dc; }
+.hxc.lk { background-color:#efe2c2; }
+.dsr { gap:10px; padding:2px 0; }
+.hnow summary { list-style:none; cursor:pointer; } .hnow summary::-webkit-details-marker { display:none; }
+.lsub, .lflt { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-bottom:12px; }
+.lflt { grid-template-columns:repeat(5, minmax(0, 1fr)); }
+.lsub button, .lflt button { height:36px; display:flex; align-items:center; justify-content:center; gap:4px; padding:0; font-size:14px; filter:drop-shadow(3px 3px 0 var(--shd)); }
+.lsub button.g, .lflt button.g { background-color:var(--ok); }
+.lf3 { justify-content:space-around; } .lf3 .num b { font-size:18px; }
+#app .sb .tline.pb { padding:8px 12px; }

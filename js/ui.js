@@ -169,30 +169,32 @@ function setNavH(){ fitZoom(); document.documentElement.style.setProperty('--nav
 fitZoom(); window.addEventListener('resize', () => { setNavH(); if (sheetT) sheetMax(); }); setTimeout(setNavH, 50);
 // ================= v12：分頁的小元件 =================
 function drawPortrait(c){ drawFace(c); }
-function heroCard(h){
+function heroCard(h){   // v17.69：勇者檔案上方共用（design/ui/草圖_勇者檔案.png）
   const showG = h.revealed ? h.goal : h.said, need = expNeed(h.lv);
-  return `<div class="pcard"><canvas id="pcv" width="32" height="32" aria-label="${esc(h.name)}的模樣"></canvas><div class="pinfo">
-    <div class="k" style="font-size:11.5px">第 ${h.gen} 代${h.master ? ` · ${esc(h.master)}的徒弟` : ''}</div>
-    <div class="nm px">${esc(h.name)}</div><div style="font-size:13px;color:#6a4fb0">${jobName(h)} · Lv${h.lv} · ${Math.floor(h.age)} 歲</div>
-    <div class="tags"><span class="tag">${TRAITS[h.trait].n}</span><span class="tag">${TRAITS[h.trait2].n}</span><span class="tag g">${h.revealed ? '' : '自稱'}${GOALS[showG].n}</span></div>
-    <div><div class="row k" style="font-size:11px"><span>經驗</span><span>${fmt(Math.floor(h.exp))} / ${fmt(need)}</span></div><div class="xbar"><i style="width:${clamp(h.exp / need * 100, 0, 100)}%;background:#6a4fb0"></i></div></div></div></div>
-    <div class="tiles"><div class="tile"><b style="color:#2f7a3a">${Math.round(h.sta)}</b><span>體力</span></div><div class="tile"><b style="color:var(--gold)">${Math.round(h.mood)}</b><span>心情</span></div><div class="tile"><b style="color:#b03a30">${Math.round(h.stress)}</b><span>壓力</span></div><div class="tile"><b style="color:var(--blue)">${Math.round(h.trust)}</b><span>信任</span></div></div>`;
+  return `<div class="hcd"><canvas id="pcv" width="32" height="32" aria-label="${esc(h.name)}的模樣"></canvas><div class="hci">
+    <div class="ofr"><b class="f22">${esc(h.name)}</b><span class="rsp"></span><span class="num s"${TIPA('金幣', '錢包', `${h.name}自己的錢`)}>${IC('金幣', 2)}<b>${fmt(h.wallet)}</b></span></div>
+    <div class="ofr f14"><span class="num s">${IC('戰力', 1)}<b class="f14">${esc(jobName(h))}</b></span><b>Lv${h.lv}</b><b>${Math.floor(h.age)} 歲</b>${h.master ? `<span class="mu">${esc(h.master)}的徒弟</span>` : ''}</div>
+    <div class="ofr"><span class="htg"${TIPA('個性', TRAITS[h.trait].n, TRAITS[h.trait].d)}>${TRAITS[h.trait].n}</span><span class="htg"${TIPA('個性', TRAITS[h.trait2].n, TRAITS[h.trait2].d)}>${TRAITS[h.trait2].n}</span><span class="htg g"${TIPA('心願', '人生目標', (h.revealed ? '' : `${pron(h)}自己說的：`) + GOALS[showG].d)}>${h.revealed ? '' : '自稱'}${GOALS[showG].n}</span></div>
+    <div class="ofl"${TIPA('經驗')}>${IC('經驗', 1)}<span class="pbar"><i style="width:${clamp(h.exp / need * 100, 0, 100)}%;background:var(--ok)"></i></span><span class="f14">${fmt(Math.floor(h.exp))}/${fmt(need)}</span></div></div></div>
+    <div class="h4n">${[['體力', h.sta, '#2f7a3a'], ['心情', h.mood, '#c8901a'], ['壓力', h.stress, '#b03a30'], ['信任', h.trust, '#2f64a3']].map(([n, v, c]) => `<span class="pb num"${TIPA(n)}>${IC(n, 2)}<b style="color:${c}">${Math.round(v)}</b></span>`).join('')}</div>`;
 }
-function gearSlots(h){
-  const ic = (p, c) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" aria-hidden="true">${p}</svg>`;
-  const ch = h.charms.map(k => `<div class="slot t">${TREASURES[k].n}</div>`).join('') + Array(Math.max(0, CHARM_MAX - h.charms.length)).fill('<div class="slot e">+</div>').join('');
-  const zs = ZONES.slice(0, topZ() + 1).map((Z, i) => [Z.n, danger(ratio(h, zD(i)))]).slice(-3);
-  return `<div class="sec" style="margin-top:2px">裝備與寶物</div><div class="card"><div class="slots"><div class="slot w">${eqImg((EQ_WP[h.cls] || 'sword') + h.wpn, 20)}${WPN.n[h.wpn]}${WNAME[h.cls]}</div><div class="slot a">${eqImg('armor' + h.arm, 20)}${ARM.n[h.arm]}</div>${ch}</div>
-    <div class="k" style="font-size:12px;margin-top:8px">寶物越危險的地方越容易撿到，身上最多帶 ${CHARM_MAX} 件</div></div>
-    ${h.charms.map(k => `<div class="card"><b>${TREASURES[k].n}</b><div class="k" style="font-size:12px">${TREASURES[k].d}</div></div>`).join('')}
-    <div class="card row"><span><span class="k" style="font-size:12px">戰力</span><div class="px" style="font-size:26px;color:var(--gold)">${Math.round(power(h))}</div></span><span style="font-size:12.5px;text-align:right;line-height:1.7">${zs.map(([n, d]) => `${n} <span class="dg ${d.k}">${d.n}</span>`).join('<br>')}</span></div>`;
+function gearSlots(h){   // v17.69 寶物頁：身上（武器、防具、寶物三格）、戰力、各區危險
+  const AIC = ['布衣', '皮甲'], wn = WPN.n[h.wpn] + WNAME[h.cls], an = ARM.n[h.arm];
+  const slot = (img, nm, tip) => `<div class="cslot"${tip}><span class="pb ns cbx">${img}</span><small>${esc(nm)}</small></div>`;
+  const ch = Array.from({ length:CHARM_MAX }, (_, i) => { const k = h.charms[i]; return k ? slot(IC('寶物', 2), TREASURES[k].n, TIPA('寶物', TREASURES[k].n, TREASURES[k].d)) : `<div class="cslot"><span class="cbx em">${IC('寶物', 2, 1)}</span></div>`; }).join('');
+  const zs = ZONES.slice(0, topZ() + 1).map((Z, i) => [Z.n, danger(ratio(h, zD(i))), i]);
+  return `<div class="pb ofc"><b class="f16">身上</b><div class="cslots">${slot(eqImg((EQ_WP[h.cls] || 'sword') + h.wpn, 32), wn, TIPA('戰力', wn, '現在用的武器'))}${slot(AIC[h.arm] ? IC(AIC[h.arm], 2) : eqImg('armor' + h.arm, 32), an, TIPA('防具', an, '現在穿的防具'))}<span class="csep"></span>${ch}</div><div class="f14 mu" style="text-align:right">寶物 ${h.charms.length} / ${CHARM_MAX}</div></div>
+    <div class="pb ofc"><div class="ofr"${TIPA('戰力')}>${IC('戰力', 2)}<b class="f16">戰力</b><b class="f22">${Math.round(power(h))}</b></div></div>
+    <div class="pb ofc"><b class="f16">各區危險（照現在的戰力）</b>${zs.map(([n, d, i]) => { const on = [0, 2, 3][d.i];
+      return `<div class="ofr zr">${IC(['草原', '森林', '荒地'][i] || '危險', 1)}<b class="f16">${n}</b><span class="sk3">${[0, 1, 2].map(j => IC('危險', 1, j >= on)).join('')}</span><b class="f16 dg ${d.k}">${d.n}</b></div>`; }).join('')}</div>
+    <div class="f14 mu">越危險的地方，越容易撿到寶物</div>`;
 }
 function hexRadar(h, ok, km){
-  const ks = Object.keys(HEX), cx = 70, cy = 62, R0 = 52, pt = (i, v) => { const a = -Math.PI / 2 + i * Math.PI * 2 / ks.length; return [cx + Math.cos(a) * R0 * v, cy + Math.sin(a) * R0 * v]; };
+  const ks = Object.keys(HEX), cx = 70, cy = 62, R0 = 46, pt = (i, v) => { const a = -Math.PI / 2 + i * Math.PI * 2 / ks.length; return [cx + Math.cos(a) * R0 * v, cy + Math.sin(a) * R0 * v]; };
   const poly = v => ks.map((k, i) => pt(i, v(k)).map(n => n.toFixed(1)).join(',')).join(' ');
-  const lab = ks.map((k, i) => { const [x, y] = pt(i, 1.22); return `<text x="${x.toFixed(0)}" y="${(y + 4).toFixed(0)}" text-anchor="middle" font-size="10" fill="${ok(k) ? '#c9cfdb' : '#5a6380'}">${ok(k) ? HEX_TXT[k].hi.slice(0, 2) : '？'}</text>`; }).join('');
-  return `<div class="card" style="display:flex;gap:10px;align-items:center"><svg width="140" height="128" viewBox="0 0 140 128" role="img" aria-label="${esc(h.name)}的個性圖"><polygon points="${poly(() => 1)}" fill="none" stroke="#343e55"/><polygon points="${poly(() => .5)}" fill="none" stroke="#2c3550"/><polygon points="${poly(k => ok(k) ? Math.max(.08, h.hex[k] / 100) : .5)}" fill="rgba(242,193,78,.22)" stroke="#f2c14e" stroke-width="2"/>${lab}</svg>
-    <div style="flex:1;font-size:12.5px;line-height:1.6"><b>相處 ${km} 個月</b><br><span class="k">越往外，代表越偏向那一邊。灰色的「？」還要再相處一陣子才看得出來。</span></div></div>`;
+  const lab = ks.map((k, i) => { const [x, y] = pt(i, 1.24); return `<text x="${x.toFixed(0)}" y="${(y + 4).toFixed(0)}" text-anchor="middle" font-size="11" font-weight="700" fill="${ok(k) ? '#3b2616' : '#9a8a72'}">${ok(k) ? HEX_TXT[k].hi.slice(0, 2) : '？'}</text>`; }).join('');
+  return `<div class="pb ofc hxw"><svg width="150" height="128" viewBox="0 0 140 124" role="img" aria-label="${esc(h.name)}的個性圖"><polygon points="${poly(() => 1)}" fill="#fffaf0" stroke="#3f2631" stroke-width="2"/><polygon points="${poly(() => .5)}" fill="none" stroke="#c9b28a"/><polygon points="${poly(k => ok(k) ? Math.max(.08, h.hex[k] / 100) : .5)}" fill="rgba(247,201,74,.75)" stroke="#d6962a" stroke-width="2"/>${lab}</svg>
+    <div class="hxi"><span class="num s">${IC('時間', 2)}<b class="f16">相處 ${km} 月</b></span><span class="f14 mu">越相處，看得越清楚</span></div></div>`;
 }
 function qCard(h, o, ag){
   const Z = o.z >= 0 ? ZONES[o.z] : null, d = o.D ? danger(ratio(h, o.D)) : null, win = o.D ? Math.round(winP(ratio(h, o.D)) * 100) : null;
@@ -912,7 +914,7 @@ function openSheet(t, sb){ sheetT = t; if (t === 'quest' && ['ag', 'offer', 'due
 // v17.65：面板高度看內容，最高長到勇者卡下面（勇者卡一直看得到）
 function sheetMax(){ try { const c = $('cap').getBoundingClientRect(), n = $('nav').getBoundingClientRect(); if (c.height && n.height) $('sheet').style.maxHeight = Math.max(240, (n.top - c.bottom - 8) / UIZ) + 'px'; } catch (e) {} }
 let archArm = false;
-function closeSheet(){ qSel = null; resetArm = false; archArm = false; artScroll = null; sheetT = null; $('sheet').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('on')); }
+function closeSheet(){ qSel = null; $('sheet')._t = null; resetArm = false; archArm = false; artScroll = null; sheetT = null; $('sheet').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('on')); }
 
 // ================= v16 介面：旗下藝人、事務所內 =================
 let arArm = null, artScroll = null; const arepOpen = new Set();   // 解約要按兩次
@@ -1044,6 +1046,7 @@ function teamView(){
 }
 function renderSheet(){
   const h = H(), B = $('shB'), st = B.scrollTop;
+  { const sh = $('sheet'); if (sh.classList.contains('on') && sh._t === sheetT) sh.style.minHeight = Math.max(parseFloat(sh.style.minHeight) || 0, sh.offsetHeight) + 'px'; else sh.style.minHeight = ''; sh._t = sheetT; }   // v17.69：同一個面板換分頁時不縮回去（高度只長不縮，免得跳動）
   const title = { hero:H().name, quest:'任務', gear:'花錢', life:'生平', people:'人際', office:'事務所', set:'設定' }[sheetT];
   const TIC = { gear:'金幣', people:'人際', quest:'排程', office:'事務所', set:'設定' }[sheetT];
   setH($('shT'), (TIC ? IC(TIC, 2) : '') + `<span>${esc(title)}</span>`);
@@ -1055,40 +1058,27 @@ function renderSheet(){
   else $('shS').innerHTML = inTabs ? '' : (SUBS[sheetT] || []).length > 1 ? SUBS[sheetT].map(([k, n]) => `<button role="tab" data-s="${k}" class="${SS(k) ? 'on' : ''}">${n}${sheetT === 'quest' && subDot[k] && !SS(k) ? '<i></i>' : ''}</button>`).join('') : '';
   $('shS').querySelectorAll('[data-s]').forEach(b => b.onclick = () => { sub[sheetT] = b.dataset.s; B.scrollTop = 0; renderSheet(); });
   let html = '';
-  if (sheetT === 'hero') html += heroCard(h) + `<div class="subs intabs">${SUBS.hero.map(([k, n]) => `<button role="tab" data-s="${k}" class="${SS(k) ? 'on' : ''}">${n}</button>`).join('')}</div>`;
-  if (sheetT === 'hero' && SS('state')) {
+  if (sheetT === 'hero') html += heroCard(h) + `<div class="ptabs intabs">${SUBS.hero.map(([k, n]) => `<button role="tab" data-s="${k}" class="pb ptab${SS(k) ? ' on' : ''}">${IC({ state:'心情', mind:'個性', life:'生平', charm:'寶物' }[k], 2)}<span>${n}</span></button>`).join('')}</div>`;
+  if (sheetT === 'hero' && SS('state')) {   // v17.69 狀態：心願、人生目標、看他現在的樣子
     const w = h.wish, wp = !w ? 0 : w.k === 'money' ? h.wallet / w.t : (w.k === 'zone' || w.k === 'cnt') ? w.p / w.t : w.k === 'steady' ? (S.day - Math.max(w.from || 0, S.planSet || -99)) / 10 : w.p ? 1 : 0;
-    html += w ? `<div class="card" style="background:#2a2418;border-color:#6a5420"><div class="row"><span style="font-size:12px;color:var(--gold)">心願</span><span class="k" style="font-size:12px">剩 ${Math.max(0, w.until - S.day)} 個月</span></div><div style="font-size:14.5px;margin-top:2px">${esc(w.n)}</div><div class="xbar" style="margin-top:6px;background:#3a3420"><i style="width:${clamp(wp * 100, 3, 100)}%;background:var(--gold)"></i></div></div>` : `<div class="card k" style="font-size:13px">目前沒有特別的心願</div>`;
+    html += `<div class="pb ofc"><div class="ofr">${IC('心願', 2)}<b class="f16">${w ? esc(w.n) : '沒有特別的心願'}</b>${w ? `<span class="rsp"></span><span class="num s">${IC('時間', 1)}<b class="f14">${Math.max(0, w.until - S.day)} 月</b></span>` : ''}</div>${w ? `<span class="pbar"><i style="width:${clamp(wp * 100, 3, 100)}%;background:var(--gold)"></i></span>` : ''}</div>`;
+    const tg = saveTarget(h), known = h.revealed || h.said === h.goal, showG = h.revealed ? h.goal : h.said;
+    html += `<div class="pb ofc"><div class="ofr">${IC('生平', 2)}<b class="f14">人生目標</b><span class="rsp"></span><span class="f14 mu">${h.revealed ? '你已經看清楚了' : `${pron(h)}自己說的`}</span></div><b class="f22">${GOALS[showG].n}</b><div class="f14 mu">${GOALS[showG].d}</div>
+      ${!h.revealed && h.clues ? `<div class="f14 dg o">你的觀察：有 ${h.clues} 件事跟${pron(h)}說的不太一樣</div>` : ''}
+      ${tg && known ? `<div class="ofr f14"><span>${tg.n}</span><span class="rsp"></span><span>${fmt(Math.min(h.wallet, tg.t))} / ${fmt(tg.t)}</span></div><span class="pbar"><i style="width:${Math.min(100, h.wallet / tg.t * 100)}%;background:var(--ok)"></i></span>` : ''}
+      ${h.goal === 'filial' && known ? `<div class="f14 mu">已經寄回老家 ${fmt(h.sentHome || 0)} 金</div>` : ''}
+      ${h.partner || h.married || h.house ? `<div class="f14 mu">${h.partner || h.married ? '對小孩的想法：' + KIDW[h.kidWish] : ''}${h.house ? ' · 有自己的房子' : ''}</div>` : ''}</div>`;
     const cs = chipsOf(h);
-    html += `<div class="sec">近況</div><div class="tags" style="margin-bottom:8px">${cs.map(([k, t]) => `<span class="tag ${k === 'g' ? 'g' : ''}" style="${k === 'r' ? 'border-color:var(--red);color:#b03a30' : k === '' ? 'border-color:#8a6a46;color:var(--muted)' : ''}">${t}</span>`).join('') || '<span class="k" style="font-size:12.5px">一切如常</span>'}</div>
-      <details class="card" style="line-height:1.7"><summary class="k" style="font-size:12.5px;cursor:pointer">看${pron(h)}現在的樣子（完整描述）</summary><div style="margin-top:6px">${describe(h)}</div></details>`;
-    const tg = saveTarget(h), known = h.revealed || h.said === h.goal;
-    const showG = h.revealed ? h.goal : h.said;
-    html += `<div class="sec">人生目標</div><div class="card"><div class="row"><b>${GOALS[showG].n}</b><span class="k" style="font-size:12px">${h.revealed ? '你已經看清楚了' : `${pron(h)}自己說的`}</span></div><div class="k" style="font-size:12px">${GOALS[showG].d}</div>
-      ${!h.revealed && h.clues ? `<div class="dg o" style="font-size:12px;margin-top:4px">你的觀察：有 ${h.clues} 件事跟${pron(h)}說的不太一樣</div>` : ''}
-      ${tg && known ? `<div class="row" style="font-size:12.5px;margin-top:6px"><span>${tg.n}</span><span>${fmt(Math.min(h.wallet, tg.t))} / ${fmt(tg.t)}</span></div><div style="height:6px;background:#c9a466;border-radius:3px;margin-top:4px;overflow:hidden"><i style="display:block;height:6px;background:var(--green);width:${Math.min(100, h.wallet / tg.t * 100)}%"></i></div>` : ''}
-      ${h.goal === 'filial' && known ? `<div class="k" style="font-size:12px;margin-top:4px">已經寄回老家 ${fmt(h.sentHome || 0)} 金</div>` : ''}
-      <div class="k" style="font-size:12px;margin-top:4px">對小孩的想法：${h.partner || h.married ? KIDW[h.kidWish] : '還沒聊過'}${h.house ? ' · 有自己的房子' : ''}</div>
-      <div class="k" style="font-size:12px;margin-top:2px">${pron(h)}的錢包：${fmt(h.wallet)} 金</div></div>`;
+    html += `<details class="pb ofc hnow"><summary class="ofr">${IC('人際', 2)}<b class="f16">看${pron(h)}現在的樣子</b><span class="rsp"></span><b class="f16 mu">›</b></summary><div class="tags">${cs.map(([k, t]) => `<span class="tag ${k === 'g' ? 'g' : ''}" style="${k === 'r' ? 'border-color:var(--red);color:#b03a30' : k === '' ? 'border-color:#8a6a46;color:var(--muted)' : ''}">${t}</span>`).join('') || '<span class="f14 mu">一切如常</span>'}</div><div class="f14" style="line-height:1.6">${describe(h)}</div></details>`;
   }
   if (sheetT === 'hero' && SS('charm')) html += gearSlots(h);
-  if (sheetT === 'hero' && SS('mind')) {
+  if (sheetT === 'hero' && SS('mind')) {   // v17.69 個性：六角形＋天賦六格＋最在乎的事；看不出來的＝鎖＋還要幾個月，點看得出來的跳說明
     const km = S.day - h.born, ok = k => km >= HEX_REVEAL[k] || (k === 'H' && h.revealed);
     html += hexRadar(h, ok, km);
-    { const ks = Object.keys(HEX); if (!hexSel || !ks.includes(hexSel)) hexSel = ks.find(ok) || ks[0]; const k = hexSel, T0 = HEX_TXT[k], v = h.hex[k];
-      html += `<div class="card"><div class="hxbtns">${ks.map(x => `<button data-hx="${x}" class="${x === hexSel ? 'on' : ''}">${ok(x) ? HEX_TXT[x].lo + '／' + HEX_TXT[x].hi : '？'}</button>`).join('')}</div>
-        <div style="margin-top:10px">${ok(k) ? `<div class="hxr" style="font-size:13px"><span class="s ${v <= 40 ? 'on' : ''}">${T0.lo}</span><span class="hb"><i style="left:${v}%"></i></span><span class="s r ${v >= 60 ? 'on' : ''}">${T0.hi}</span></div><div class="e" style="font-size:12.5px;margin-top:6px;line-height:1.6"><b style="font-weight:500">${hexWord(k, v)}</b>${v >= 60 ? '：' + T0.hiE : v <= 40 ? '：' + T0.loE : '，兩種情況都可能'}</div>` : `<div class="k" style="font-size:12.5px">再相處 ${HEX_REVEAL[k] - km} 個月才看得出來</div>`}</div></div>`; }
-    const seen = Object.keys(HEX).filter(k => ok(k) && Math.abs(h.hex[k] - 50) >= 10).map(k => hexWord(k, h.hex[k]).replace(/^比較/, ''));
-    const unseen = Object.keys(HEX).filter(k => !ok(k));
-    html += `<div class="card sum"><b>${h.name}給人的第一印象：${TRAITS[h.trait].n}、${TRAITS[h.trait2].n}</b><br><span class="k" style="font-size:12.5px">${TRAITS[h.trait].d}；${TRAITS[h.trait2].d}。</span>
-      ${seen.length ? `<br>相處下來，你發現${pron(h)}${seen.join('、')}。` : ''}${unseen.length ? `<br><span class="k" style="font-size:12.5px">還有 ${unseen.length} 項要再相處一陣子才看得出來。</span>` : ''}</div>`;
-    if (false) html += `<div class="card" style="padding:2px 12px">` + Object.keys(HEX).map(k => { const T0 = HEX_TXT[k], v = h.hex[k];
-      if (!ok(k)) return `<div class="hx"><div class="hxr"><span class="s">${T0.lo}</span><span class="hb"><b>？</b></span><span class="s r">${T0.hi}</span></div><div class="e k">再相處 ${HEX_REVEAL[k] - km} 個月才看得出來</div></div>`;
-      return `<div class="hx"><div class="hxr"><span class="s ${v <= 40 ? 'on' : ''}">${T0.lo}</span><span class="hb"><i style="left:${v}%"></i></span><span class="s r ${v >= 60 ? 'on' : ''}">${T0.hi}</span></div><div class="e"><b style="font-weight:500">${hexWord(k, v)}</b>${v >= 60 ? '：' + T0.hiE : v <= 40 ? '：' + T0.loE : '，兩種情況都可能'}</div></div>`; }).join('') + '</div>';
-    html += `<div class="sec">${pron(h)}最在乎的事（越前面越重要）</div><div class="card" style="padding:2px 12px">` + h.des.map((k, i) => km >= DES_REVEAL[i]
-      ? `<div class="hx"><div class="hxr"><b>${i + 1}. ${DESIRES[k].n}</b><span class="k" style="margin-left:8px;font-size:12.5px">${DESIRES[k].d}</span></div><div class="e">會怎樣：${DES_FX[k]}</div></div>`
-      : `<div class="hx"><div class="hxr"><b class="k">${i + 1}. ？</b></div><div class="e k">再相處 ${DES_REVEAL[i] - km} 個月才知道</div></div>`).join('') + '</div>';
-    html += `<div class="k" style="font-size:12px;margin:2px 2px 8px">年紀越大，通常會越自律、越冷靜。</div>`;
+    html += `<div class="pb ofc"><div class="hx6">${Object.keys(HEX).map(k => { const v = h.hex[k], T0 = HEX_TXT[k];
+      return ok(k) ? `<span class="pb ns hxc"${TIPA('個性', hexWord(k, v), v >= 60 ? T0.hiE : v <= 40 ? T0.loE : '兩種情況都可能')}><b class="f14">${hexWord(k, v).replace(/^比較/, '').replace(/^介於(.)(.)和.*/, '$1$2之間')}</b></span>`
+        : `<span class="pb ns hxc lk"${TIPA('鎖', `${T0.lo}／${T0.hi}`, `再相處 ${HEX_REVEAL[k] - km} 個月才看得出來`)}>${IC('鎖', 1)}${IC('時間', 1)}<b class="f14">${HEX_REVEAL[k] - km}月</b></span>`; }).join('')}</div></div>`;
+    html += `<div class="pb ofc"><div class="ofr">${IC('心情', 2)}<b class="f16">最在乎的事</b></div>${h.des.map((k, i) => `<div class="ofr dsr"><b class="f22 mu">${i + 1}</b>${km >= DES_REVEAL[i] ? `<b class="f16"${TIPA('心情', DESIRES[k].n, DESIRES[k].d + '。會怎樣：' + DES_FX[k])}>${DESIRES[k].n}</b><span class="f14 mu">${DESIRES[k].d}</span>` : `${IC('鎖', 1)}${IC('時間', 1)}<b class="f14">${DES_REVEAL[i] - km}月</b>`}</div>`).join('')}</div>`;
   }
   if (sheetT === 'people' && SS('team')) html += teamView();
   if (sheetT === 'people' && SS('news')) { const nw = (S.news || []).slice().reverse();
@@ -1178,16 +1168,15 @@ function renderSheet(){
     }
   }
   const lifeIs = k => sheetT === 'hero' && SS('life') && (S.lifeT || 'log') === k;
-  if (sheetT === 'hero' && SS('life')) html += `<div class="ff2">${[['log', '年表'], ['mem', '回憶'], ['regret', '遺憾'], ['own', '自己買']].map(([k, n]) => `<button class="${(S.lifeT || 'log') === k ? 'on' : ''}" data-lt="${k}">${n}</button>`).join('')}</div>`;
+  if (sheetT === 'hero' && SS('life')) html += `<div class="lsub">${[['log', '年表', '排程'], ['mem', '回憶', '心情'], ['regret', '遺憾', '危險'], ['own', '自己買', '金幣']].map(([k, n, ic]) => `<button class="pb${(S.lifeT || 'log') === k ? ' g' : ''}" data-lt="${k}">${IC(ic, 1)}<span>${n}</span></button>`).join('')}</div>`;
   if (lifeIs('log')) {
-    const rg = regrets(h), hp = happyOf(rg), worst = rg.filter(r => r.lv).sort((a, b) => b.lv - a.lv)[0], wn = (h.mem || []).filter(m => m.k === 'wishOk').length;
-    html += `<div class="card" style="margin-top:4px"><div class="row k" style="font-size:12px"><span>18 歲</span><span>現在 ${Math.floor(h.age)} 歲</span><span>50 歲</span></div><div class="lifebar"><i style="width:${clamp((h.age - 18) / 32 * 100, 2, 100)}%"></i></div>
-      <div class="tags" style="margin-top:4px"><span class="tag g">幸福感 ${hp}</span>${worst ? `<span class="tag" style="border-color:var(--red);color:#b03a30">遺憾：${worst.n.replace(/^沒有/, '沒').slice(0, 10)}</span>` : ''}<span class="tag b">心願達成 ${wn} 次</span></div></div>`;
-    html += `<div class="sec">${h.name}的人生</div>`;
-    const LF = [['all', '全部', null], ['glory', '榮耀', '#f2c14e'], ['hurt', '受傷', '#ff7b7b'], ['love', '感情', '#e88aa8'], ['gain', '收穫', '#6fcf97']], lf = S.lifeF || 'all', lc = (LF.find(x => x[0] === lf) || [])[2];
-    html += `<div class="ff2">${LF.map(([k, n, c]) => `<button class="${lf === k ? 'on' : ''}" data-lf="${k}">${c ? `<i style="display:inline-block;width:8px;height:8px;border-radius:4px;background:${c};margin-right:5px"></i>` : ''}${n}</button>`).join('')}</div>`;
+    const rg = regrets(h), hp = happyOf(rg), rgn = rg.filter(r => r.lv).length, wn = (h.mem || []).filter(m => m.k === 'wishOk').length;
+    html += `<div class="pb ofc"><b class="f16">18 歲 → 50 歲</b><span class="pbar"><i style="width:${clamp((h.age - 18) / 32 * 100, 2, 100)}%;background:var(--gold)"></i></span>
+      <div class="ofr lf3"><span class="num s"${TIPA('心情', '幸福感', '如果人生現在結束的幸福感')}>${IC('心情', 2)}<b>${hp}</b></span><span class="num s"${TIPA('名聲', '心願達成', '達成過幾次心願')}>${IC('名聲', 2)}<b>${wn}</b></span><span class="num s"${TIPA('危險', '遺憾', '現在有幾個遺憾（看「遺憾」分頁）')}>${IC('危險', 2)}<b>${rgn}</b></span></div></div>`;
+    const LF = [['all', '', null], ['glory', '名聲', '#f2c14e'], ['hurt', '生病', '#ff7b7b'], ['love', '戀人', '#e88aa8'], ['gain', '金幣', '#6fcf97']], lf = S.lifeF || 'all', lc = (LF.find(x => x[0] === lf) || [])[2];
+    html += `<div class="lflt">${LF.map(([k, ic]) => `<button class="pb${lf === k ? ' g' : ''}" data-lf="${k}">${ic ? IC(ic, 2) : '<b class="f16">全</b>'}</button>`).join('')}</div>`;
     const logs = [...h.log].reverse().filter(e => !lc || lifeColor(e.t) === lc);
-    html += logs.length ? `<div class="tline">${logs.map(e => `<div class="te"><span class="dot2" style="background:${lifeColor(e.t)}"></span><div class="ag">${Math.floor(e.age)} 歲</div><div class="tx">${esc(e.t)}</div></div>`).join('')}</div>` : `<div class="k">${lc ? '這一類還沒有發生過' : '還沒有發生值得記下的事'}</div>`;
+    html += logs.length ? `<div class="pb ofc tline">${logs.map(e => `<div class="te"><span class="dot2" style="background:${lifeColor(e.t)}"></span><div class="ag">${Math.floor(e.age)} 歲</div><div class="tx">${esc(e.t)}</div></div>`).join('')}</div>` : `<div class="k">${lc ? '這一類還沒有發生過' : '還沒有發生值得記下的事'}</div>`;
   }
   if (lifeIs('own')) { const bs = (h.buys || []).slice(-20).reverse();   // v17.59：從花錢頁搬來
     html += `<div class="k" style="font-size:12px;margin:4px 0 8px">${pron(h)}會用自己的錢買裝備、藥水、看病、進修，買多少看${pron(h)}的人生目標（${GOALS[h.goal].n}）。${pron(h)}的錢包：${fmt(h.wallet)} 金</div>`;
