@@ -1486,10 +1486,10 @@ function plazaMode(h){ if (heroMap(h) !== 'vil' || V.inside || V.mv || V.x == nu
 // 勇者的姿勢：代言每 1.2 秒換一個（右、左、比讚）；綜藝每 2 秒轉圈＋跳；見粉絲面向右，握手、遞簽名
 function plazaPose(h, now){ const k = plazaMode(h); if (!k) return null;
   if (k === 'endorse') { const pose = Math.floor(now / 1200) % 3, p = now % 1200;
-    return { left:pose === 1, hop:p < 120 ? 2 : 0, hand:pose === 2 ? (x, y) => { pR2(x + 6, y - 28, 2, 5, '#f7c282'); pR2(x + 6, y - 29, 1, 1, '#3f2631'); } : null }; }
+    return { left:pose === 1, hop:p < 120 ? 2 : 0, hand:pose === 2 ? (x, y) => { pR2(x + 7, y - 18, 2, 5, '#f7c282'); pR2(x + 7, y - 19, 1, 1, '#3f2631'); } : null }; }
   if (k === 'variety') { const p = (now % 2000) / 1000; return { left:p < .5 && Math.floor(p / .12) % 2 === 1, hop:p >= .5 && p < .8 ? [0, 3, 5, 5, 3, 0][Math.min(5, Math.floor((p - .5) / .05))] : 0 }; }
   const p = (now % 1800) / 1800;
-  return { left:false, hop:0, hand:p > .4 && p < .8 ? (x, y) => { pR2(x + 7, y - 12, 3, 2, '#f7c282'); pR2(x + 9, y - 19, 6, 6, '#3f2631'); pR2(x + 10, y - 18, 4, 4, '#ffffff'); pR2(x + 10, y - 16, 3, 1, '#3f2631'); } : null }; }
+  return { left:false, hop:0, hand:p > .4 && p < .8 ? (x, y) => { pR2(x + 7, y - 8, 3, 2, '#f7c282'); pR2(x + 9, y - 15, 6, 6, '#3f2631'); pR2(x + 10, y - 14, 4, 4, '#ffffff'); pR2(x + 10, y - 12, 3, 1, '#3f2631'); } : null }; }
 const pR2 = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
 function plazaCrowd(now, cx, xs, y, emo){ xs.forEach((dx, i) => { const x = cx + dx, k = Math.floor(now / 200 + i * 1.7) % 6; rPerson('cw' + (i % 5), x, y, dx > 0, null, k === 0 ? 2 : k === 1 ? 1 : 0);
   if (emo && (Math.floor(now / 900) + i * 2) % 7 === 0) emoAt(emo, x + 2, y - 17, now % 900); }); }
