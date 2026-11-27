@@ -106,7 +106,15 @@ function vilGoal(h){
   if (h.act === 'hunt' || h.act === 'mission') return ['gate', 0];
   return null;   // 閒晃
 }
-const INSIDE_IC = { home:'z', tavern:'♪', clinic:'+', office:'!' };
+// v17.56：勇者在屋裡時，門口上方冒的表情泡泡（和勇者頭上同一套 Kenney 泡泡；畫在夜色之後，晚上也看得清楚）
+function insideEmo(h){ const k = V.inside;
+  if (k === 'home') return sleeping() ? '想睡' : h.act === 'slack' ? '累' : h.mood < 35 ? '難過' : '開心';
+  if (k === 'tavern') return h.mood < 35 ? '難過' : '喝醉';
+  if (k === 'clinic') return h.act === 'mission' && h.mission && h.mission.ag === 'trial' ? '緊張' : '好痛';
+  if (k === 'office') return '認真';
+  return '開心'; }
+function doorEmo(now){ const h = H(), wx = VD[V.inside]; if (wx == null) return; const wy = V_BASE - 22 + Math.sin(now / 500) * 1.5, sx = 180 + (wx - cam.x) * cam.z, sy = SH / 2 + (wy - cam.y) * cam.z;
+  drawEmo(ctx, insideEmo(h), sx + 14, sy, now, .8 * cam.z); }
 // 每一格畫面更新勇者在街上的位置
 // v17.38：門前小路。sx＝小路接到人行道的點（VD[k]），dx、dy＝真正的門口
 function vDoor(k){ const b = VSLOTS.find(b => b.k === k && b.door === VD[k]) || VSLOTS.find(b => b.k === k); if (!b || b.dx == null) return null;
@@ -234,8 +242,7 @@ function drawVilMini(now){
   ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = .7; ctx.strokeRect(x0 + (cam.x - hw) * k, y - 1, hw * 2 * k, mh + 2);
   if (hm === 'vil' && V.x != null) { ctx.fillStyle = '#ff7b7b'; ctx.beginPath(); ctx.arc(x0 + V.x * k, y + mh / 2, 2, 0, 7); ctx.fill(); }
   // 勇者在屋裡：門口上方冒一個小泡泡（畫在夜色之後，晚上也看得清楚）
-  if (V.inside && hm === 'vil') { const wx = VD[V.inside], wy = V_BASE - 24 + Math.sin(now / 500) * 1.5, sx = 180 + (wx - cam.x) * cam.z, sy = SH / 2 + (wy - cam.y) * cam.z, ic = INSIDE_IC[V.inside] || '…';
-    ctx.fillStyle = 'rgba(16,20,30,.8)'; ctx.beginPath(); ctx.arc(sx + 14, sy - 6, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#f2c14e'; ctx.font = '13px Cubic11, sans-serif'; const tt = ic === 'z' ? (Math.floor(now / 600) % 2 ? 'z' : 'Zz') : ic; ctx.fillText(tt, sx + 14 - ctx.measureText(tt).width / 2, sy - 1); }
+  if (V.inside && hm === 'vil') doorEmo(now);   // v17.56：門口上方冒 Kenney 表情泡泡
 }
 function vilMiniHit(sx, sy){ const { x0, x1, y, h: mh } = MINI; if (sy > y + mh + 8 || sx < x0 - 6 || sx > x1 + 6) return false; V.pan = clamp((sx - x0) / (x1 - x0) * WW, 0, WW); V.panT = performance.now(); return true; }
 function drawFar(now){
@@ -1686,8 +1693,7 @@ function drawWorldMini(now){
     const px = hm === 'vil' ? V.x : !heroHidden(hh) ? hh.x : null;
     if (px != null) { ctx.fillStyle = '#ff7b7b'; ctx.beginPath(); ctx.arc(x0 + px * k, y + mh / 2, 2, 0, 7); ctx.fill(); }
     // 勇者在屋裡：門口上方冒一個小泡泡（畫在夜色之後）
-    if (V.inside && hm === 'vil') { const wx = VD[V.inside], wy = V_BASE - 24 + Math.sin(now / 500) * 1.5, sx = 180 + (wx - cam.x) * cam.z, sy = SH / 2 + (wy - cam.y) * cam.z, ic = INSIDE_IC[V.inside] || '…';
-      ctx.fillStyle = 'rgba(16,20,30,.8)'; ctx.beginPath(); ctx.arc(sx + 14, sy - 6, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#f2c14e'; ctx.font = '13px Cubic11, sans-serif'; const tt = ic === 'z' ? (Math.floor(now / 600) % 2 ? 'z' : 'Zz') : ic; ctx.fillText(tt, sx + 14 - ctx.measureText(tt).width / 2, sy - 1); }
+    if (V.inside && hm === 'vil') doorEmo(now);   // v17.56：門口上方冒 Kenney 表情泡泡
   } catch (e) { console.error(e); }
 }
 // 鏡頭：整條路高度剛好塞滿畫面，左右跟著勇者（或玩家滑到的地方）
