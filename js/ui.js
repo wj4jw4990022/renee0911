@@ -157,7 +157,7 @@ $('chX').onclick = () => { const on = $('app').classList.toggle('chatx'); $('chX
 let UIZ = 1;
 function fitZoom(){ UIZ = clamp(($('app').clientWidth || 390) / 390, .8, 1.25); document.documentElement.style.setProperty('--z', UIZ); }
 function setNavH(){ fitZoom(); document.documentElement.style.setProperty('--navh', $('nav').offsetHeight + 'px'); }
-fitZoom(); window.addEventListener('resize', setNavH); setTimeout(setNavH, 50);
+fitZoom(); window.addEventListener('resize', () => { setNavH(); if (sheetT) sheetMax(); }); setTimeout(setNavH, 50);
 // ================= v12：分頁的小元件 =================
 function drawPortrait(c){ drawFace(c); }
 function heroCard(h){
@@ -854,7 +854,9 @@ const SS = k => (sub[sheetT] || SUBS[sheetT][0][0]) === k;
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { const t = b.dataset.t; if (sheetT === t) closeSheet(); else openSheet(t); });
 $('shX').onclick = closeSheet;
 $('cap').onclick = () => { if (sheetT === 'hero') closeSheet(); else openSheet('hero', 'state'); };
-function openSheet(t, sb){ sheetT = t; if (t === 'quest' && ['ag', 'offer', 'due'].includes(sb)) { S.takeF = sb; sb = 'take'; } if (sb) sub[t] = sb; if (t === 'quest') $('dQuest').classList.remove('on'); if (t === 'office') $('dOffice').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); renderSheet(); $('sheet').style.bottom = $('nav').offsetHeight + 'px'; $('sheet').classList.add('on'); }
+function openSheet(t, sb){ sheetT = t; if (t === 'quest' && ['ag', 'offer', 'due'].includes(sb)) { S.takeF = sb; sb = 'take'; } if (sb) sub[t] = sb; if (t === 'quest') $('dQuest').classList.remove('on'); if (t === 'office') $('dOffice').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); renderSheet(); $('sheet').style.bottom = $('nav').offsetHeight + 'px'; sheetMax(); $('sheet').classList.add('on'); }
+// v17.65：面板高度看內容，最高長到勇者卡下面（勇者卡一直看得到）
+function sheetMax(){ try { const c = $('cap').getBoundingClientRect(), n = $('nav').getBoundingClientRect(); if (c.height && n.height) $('sheet').style.maxHeight = Math.max(240, (n.top - c.bottom - 8) / UIZ) + 'px'; } catch (e) {} }
 let archArm = false;
 function closeSheet(){ resetArm = false; archArm = false; artScroll = null; sheetT = null; $('sheet').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('on')); }
 

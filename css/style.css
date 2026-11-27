@@ -723,3 +723,6 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 .qtime .pbar { height:12px; } .qtime b { font-size:14px; }
 #app .qopts3 button { font-size:13px; line-height:1.15; padding:2px 2px; min-height:32px; }
 #app .qopts3 button { font-size:12px; padding:2px 0; }
+/* v17.65：面板高度看內容（max-height 由 ui.js sheetMax 算到勇者卡下面） */
+#app .sheet { height:auto; max-height:74%; }
+#app .sheet .sb { flex:1 1 auto; min-height:0; }
