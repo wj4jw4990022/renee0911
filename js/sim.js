@@ -955,9 +955,8 @@ function thiefCaught(h, quiet){ addFame(6); repAdd(1, '抓到小偷', true); adj
 function resolveAg(){
   const h = H(), o = h.mission; h.mission = null; h.alpha = 1;
   h.x = o.z >= 0 ? ZONES[o.z].rect[0] + 10 : GX; h.y = o.z >= 0 ? ZONES[o.z].rect[1] + 10 : GY; h.tx = GX; h.ty = GY;
-  if (o.ug) { adj('sta', -15 * o.days); resolveUg(h, o); if (o.last) { S.underworld = 0; S.quitAfter = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('good', '抽身', '最後一件事辦完了，地下商會放你走了'); } if (h.act !== 'dying' && h.bedDays <= 0) setAct('rest'); return; }
+  if (o.ug) { resolveUg(h, o); if (o.last) { S.underworld = 0; S.quitAfter = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('good', '抽身', '最後一件事辦完了，地下商會放你走了'); } if (h.act !== 'dying' && h.bedDays <= 0) setAct('rest'); return; }
   const pay = () => { const his = Math.round(o.gold * o.share); S.gold += o.gold - his; finAdd('ag', o.gold - his); h.wallet += his; addFame(o.fame); S.agDone = (S.agDone || 0) + 1; yr().ag++; };
-  adj('sta', -15 * o.days);
   if (o.ag === 'endorse' || o.ag === 'variety' || o.ag === 'meet') {
     pay(); yr().show++; if (S.contract) S.contract.done++; const like = o.ag === 'endorse' ? .6 - dw(h, 'independence') * .5 + dw(h, 'status') * .3 : hx(h, 'X') - .3 + dw(h, 'status') * .3 + dw(h, 'acceptance') * .2;
     adj('mood', like > .3 ? 8 : -10); adj('stress', like > .3 ? -2 : 8);
@@ -1118,7 +1117,6 @@ function resolveMission0(){
   const h = H(), o = h.mission; h.mission = null; h.alpha = 1; h.x = ZONES[o.z].rect[0] + 10; h.y = ZONES[o.z].rect[1] + 10; h.tx = GX; h.ty = GY;
   const r = ratio(h, o.D) * compMul(o.comp), d = danger(r);
   const p = winP(r);
-  adj('sta', -40);
   if (winOf(o, p)) { compAfter(o, true, d.i); yr().mis++; if (!o.ag && !o.favor) affAdd('guild', 1);
     const mine = o.reward ? earn(o.reward) : 0; gainExp(ZONES[o.z].exp * 8 * (o.D / zD(o.z)));
     addFame(o.boss ? 80 : o.rescue ? 15 : [3, 8, 20][d.i]);
@@ -1147,12 +1145,11 @@ function dayEnd(){
   if (h.act === 'dying') return;
   const was = h.act;
   // 體力、壓力、心情
-  if (was === 'hunt' || was === 'home') { adj('sta', h.trait === 'lazy' ? -26 : -32); const r = h.zone >= 0 ? ratio(h, zD(h.zone)) : 1.2; adj('stress', 3 + Math.max(0, 1 - r) * 25); adj('mood', h.huntKills > 6 ? 4 : h.huntKills < 2 ? -6 : 0); }
-  if (was === 'rest' || was === 'bed' || was === 'slack' || was === 'strike') { adj('sta', 40); adj('stress', -12); }
-  if (was === 'drink') { adj('sta', 10); }
-  if (was === 'train') { adj('sta', -20); gainExp(expNeed(h.lv) * .45); adj('stress', 4); }
-  if (was === 'mission') { adj('sta', -10); }
-  if (was === 'side') { const g = Math.round(ri(40, 120) * (1 + h.lv / 8)); h.wallet += g; adj('sta', -15); adj('mood', 3); if (chance(.3)) ev('warn', '外快', `${h.name}自己接案賺了 ${g} 金，沒有經過你`); }
+  // v17.94：體力改成照時數每小時加減（map.js `staRate`），這裡只算壓力、心情
+  if (was === 'hunt' || was === 'home') { const r = h.zone >= 0 ? ratio(h, zD(h.zone)) : 1.2; adj('stress', 3 + Math.max(0, 1 - r) * 25); adj('mood', h.huntKills > 6 ? 4 : h.huntKills < 2 ? -6 : 0); }
+  if (was === 'rest' || was === 'bed' || was === 'slack' || was === 'strike') { adj('stress', -12); }
+  if (was === 'train') { gainExp(expNeed(h.lv) * .45); adj('stress', 4); }
+  if (was === 'side') { const g = Math.round(ri(40, 120) * (1 + h.lv / 8)); h.wallet += g; adj('mood', 3); if (chance(.3)) ev('warn', '外快', `${h.name}自己接案賺了 ${g} 金，沒有經過你`); }
   // 倦怠：連續工作越久越累，休息才會降
   const working = ['hunt', 'home', 'mission', 'train', 'side'].includes(was);
   h.workStreak = working ? (h.workStreak || 0) + 1 : 0;
@@ -1165,7 +1162,6 @@ function dayEnd(){
   // 等房＋ETF：閒錢放 ETF；精緻窮：被抽太多會不爽
   if (h.goal === 'etf' && h.wallet > 100) h.wallet *= 1.003;
   if (h.goal === 'seiko' && S.cut > 25) adj('trust', -.3);
-  adj('sta', 18);   // 晚上睡覺
   h.hp = h.bedDays > 0 ? .6 : 1;
   if (was === 'rest' && h.restStreak >= 3) adj('mood', 4);
   if (h.sta < 20) adj('mood', -4);

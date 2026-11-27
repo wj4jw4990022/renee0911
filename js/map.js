@@ -211,7 +211,7 @@ function lzTick(h, hr){
   if (S.lz && S.lz.day !== S.day) S.lz = null;
   if (!S.lz) { if (!lzFree(h)) return; const b = lzBoss(h);
     S.lz = b ? { day:S.day, k:'boss', meal:b.meal } : { day:S.day, ...lzPick(h) };
-    if (S.lz.k === 'sleep') { h.lzNext = { day:S.day, v:10 }; S.lz.done = 1; }
+    if (S.lz.k === 'sleep') S.lz.done = 1;   // v17.94：早點睡不再另外加，躺下就照時數回體力
     if (LZ_SAY[S.lz.k] && chance(.35)) say(pick(LZ_SAY[S.lz.k]));
     return; }
   const z = S.lz; if (z.done) return;
@@ -1998,6 +1998,29 @@ function bubbleTick(now){ const h = H(); if (!h) return;
   if (BUB.h !== h) { BUB.h = h; BUB.q = []; BUB.cur = null; }   // 換了一代勇者，上一代的話不要接著冒出來
   if (BUB.cur && (BUB.cur.until < now || BUB.cur.until - now > 3600)) BUB.cur = null;   // 時間到，或時間對不上（例如分頁被暫停過）就收掉
   if (!BUB.cur && BUB.q.length) BUB.cur = { t:BUB.q.shift(), until:now + 3500 }; }
+
+// ================= v17.94：體力照時數加減（每遊戲小時）；開發者 11/27「依建議」 =================
+// 睡著 +3、白天在家休息／臥床 +2.5、打怪／出任務工作 -3.5、時段工作 -3、特訓 -3、外快 -2、酒館 +0.5、其他 0
+function staSleep(h, hr){
+  if (isAsleep()) return true;
+  if (h.act === 'bed' && hr >= 22.5) return true;
+  const z = lzOn(h); return !!z && z.k === 'sleep' && hr >= 19 && (offline || V.inside === 'home'); }
+function staRate(h, hr){ const a = h.act;
+  if (a === 'dying' || h.leg) return 0;
+  if (staSleep(h, hr)) return 3;
+  if (['rest', 'bed', 'slack', 'strike'].includes(a)) return 2.5;
+  if (a === 'hunt') return hr >= 7 && hr < 17.5 ? (h.trait === 'lazy' ? -2.85 : -3.5) : 0;
+  if (a === 'train') return hr >= 9 && hr < 17 ? -3 : 0;
+  if (a === 'side') return hr >= 9 && hr < 17 ? -2 : 0;
+  if (a === 'drink') return .5;
+  if (a === 'mission' && h.mission) { const o = h.mission, k = mKind(o), ph = mPhase(h);
+    if (ph === 'work' || ph === 'nwork') return -3.5;
+    if (ph === 'slot') return hr >= (SLOT[o.ag] || [0])[0] ? -3 : 0;
+    if (!k) return hr >= 9 && hr < 17 ? -3 : 0;   // 臥底等不分時段的
+    return 0; }
+  const z = lzOn(h); if (z && ['drink', 'tchat', 'boss'].includes(z.k) && (offline || V.inside === 'tavern')) return .5;
+  return 0; }
+function staTick(h, hr, dt){ const r = staRate(h, hr); if (r) adj('sta', r * dt / DAY_SEC * 24); }
 
 // ================= v17.16：勇者真的睡著了，時間才加快（約 3 倍） =================
 function isAsleep(){ try { const h = H(), hr = hourOf(); if (!h || hr < 22.5 || h.leg) return false;
