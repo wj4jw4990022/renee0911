@@ -216,6 +216,12 @@ def bg_tavern():
     return sc
 def flask():
     im = kt('09_06'); return im.crop(im.getbbox())
+def dummy():   # 稻草人（特訓用）：木柱、橫桿、稻草頭和身體、綁繩
+    def f(d):
+        d.rectangle([7, 4, 8, 26], fill=BR); d.rectangle([0, 9, 15, 11], fill=BR)
+        d.ellipse([3, 0, 12, 8], fill=(234, 196, 110, 255)); d.rectangle([4, 10, 11, 19], fill=(234, 196, 110, 255))
+        d.line([(4, 13), (11, 13)], fill=BRd); d.line([(4, 17), (11, 17)], fill=BRd); d.point((6, 4), fill=O); d.point((9, 4), fill=O)
+    return shape(16, 27, f)
 def items():
     RB, RBd = (122, 140, 106, 255), (90, 104, 80, 255)
     return {
@@ -226,6 +232,10 @@ def items():
       'stool':stool(), 'lamp':lamp(), 'bucket':bucket(), 'table':table(22), 'mug':mug(), 'crib':crib(), 'rug':rug(36), 'pic':frame_pic(),
       'cross':cross(), 'iv':iv(), 'counter':counter(60), 'flask':flask(),
       'doctor':kt('08_04'), 'barkeep':kt('07_04'), 'patron':kt('07_02'),
+      # v17.49 鬥技場：對手、教練、觀眾（不具名路人，Kenney 原圖）、稻草人
+      'foe_viking':kt('07_03'), 'foe_knight':kt('08_01'), 'foe_archer':kt('09_04'), 'coach':kt('07_02'),
+      'cw0':kt('07_01'), 'cw1':kt('08_03'), 'cw2':kt('08_04'), 'cw3':kt('09_04'), 'cw4':kt('07_04'),
+      'dummy':dummy(),
     }
 if __name__ == '__main__':
     if sys.argv[1] == '--sketch':
