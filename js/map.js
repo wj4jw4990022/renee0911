@@ -1910,7 +1910,7 @@ function drawRide(now, h, x, y){
         if (p < .4) { a = p / .4; dx = d * Math.round((1 - p / .4) * 10); }   // 從前面跳出來
         else if (q > .3 && q < .45) { kind = 'hurt'; f = 1; dx = d * 2; } else if (q >= .45) { kind = 'down'; dx = d * 3; a = Math.max(0, 1 - (q - .45) / .65); }
         if (a > 0) { ctx.globalAlpha = a; drawMonster(ctx, zoneMon(L.ez), L.ex + dx, L.ey, kind, f, false, left, L.encSeed ??= Math.random()); ctx.globalAlpha = 1; } } }
-    else { pxPerson(ex, y, L.enc === 'merc' ? '#8a5a3a' : '#59a8ff', 2, now); if (L.enc === 'merc') drawBld(ctx, 'cart', ex + 6, y - 14, 20, 15, 'day'); } }
+    else { pxPerson(ex, y, L.enc === 'merc' ? '#8a5a3a' : '#59a8ff', 2, now); if (L.enc === 'merc') drawRideSpr(ctx, 'wagon_0', ex + 34, y + 1, false); } }   // v17.91：傭兵的篷車
   const left = L.toX < L.fromX;
   // v17.39：驛馬車（灰白馬走路、輪子轉）；進出驛馬車路段時勇者和馬車交叉淡入淡出
   if (L.mode === 'coach' && h.x >= COACH_A() - 2 && h.x <= COACH_B() + 2) {
@@ -2342,12 +2342,15 @@ function scnGoal(h){
   const tg = s.tg && !s.tg.kt && !(s.tg.born && performance.now() - s.tg.born < 400) ? s.tg : null, fx = scnFxOn(h, performance.now(), 1.1);
   if (fx && fx.kill) return [h.x, h.y, 0];   // 打倒的那隻倒下時先站著
   if (tg && Math.abs(tg.x - h.x) < 70) { const sd = h.x > tg.x ? 1 : -1; return [tg.x + sd * scnGap(s), tg.y + 4, 1]; }   // v17.34：和怪物保持距離，不重疊
-  if (s.t === 'escort') return [s.cart[0] + 16, s.cart[1], 0];
+  if (s.t === 'escort') return [s.cart[0] + (s.fav ? 16 : 42), s.cart[1], 0];   // v17.91：篷車比較長，勇者走在馬前面
   if (s.t === 'rescue') return s.phase ? [s.vic[0] - 12, s.vic[1] + 4, 0] : [s.sx, s.sy + 4, 0];
   if (s.t === 'guard') return [s.sx, s.sy + 4, 0];
   if ((s.t === 'search' || s.t === 'probe') && s.found < s.pts.length) { const p = s.pts[s.found]; return [p[0] - 6, p[1] + 2, 0]; }
   return [s.sx, s.sy + 4, 0];
 }
+// v17.91：2 像素粗線的小旗（守衛黃、考官藍），木桿＋三角旗＋白點，旗子微微飄
+function scnFlag(x, y, c, now){ const w = Math.floor(now / 400) % 2; pR2(x - 1, y - 23, 4, 24, '#3f2631'); pR2(x, y - 22, 2, 22, '#bd6c4a');
+  ctx.fillStyle = '#3f2631'; ctx.beginPath(); ctx.moveTo(x + 2, y - 23); ctx.lineTo(x + 15 + w, y - 18); ctx.lineTo(x + 2, y - 12); ctx.fill(); ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x + 3, y - 21); ctx.lineTo(x + 12 + w, y - 18); ctx.lineTo(x + 3, y - 14); ctx.fill(); pR2(x + 5, y - 18, 2, 1, '#f4eee0'); }
 // 在地圖上畫演出（勇者以外的部分）
 function drawScene(now, view){
   try {
@@ -2363,12 +2366,14 @@ function drawScene(now, view){
       const a = .5 + .5 * Math.sin(now / 220 + i); ctx.fillStyle = s.t === 'probe' ? `rgba(159,208,255,${a})` : `rgba(255,240,170,${a})`;
       ctx.fillRect(p[0] - 1, p[1] - 5, 2, 6); ctx.fillRect(p[0] - 3, p[1] - 3, 6, 2);
       if (s.t === 'probe' && i === s.found) { ctx.font = fz(9) + 'px Cubic11, sans-serif'; ctx.fillStyle = '#9fd0ff'; ctx.fillText('?', p[0] - 2, p[1] - 9 - Math.sin(now / 300) * 1.5); } });
-    if (s.t === 'escort' && s.cart && !s.fav) drawBld(ctx, 'cart', s.cart[0] - 12, s.cart[1] - 16, 24, 18, 'day');
-    if (s.examiner) { pxPerson(s.sx - 34, s.sy, '#3f6ea0', 2, now); ctx.fillStyle = '#5a4a3a'; ctx.fillRect(s.sx - 29, s.sy - 16, 1, 16); ctx.fillStyle = '#f2c14e'; ctx.fillRect(s.sx - 28, s.sy - 16, 5, 3); }   // 公會考官
+    if (s.t === 'escort' && s.cart && !s.fav) drawRideSpr(ctx, 'wagon_' + (s.down || S.paused ? 0 : Math.floor(now / 170) % 4), s.cart[0], s.cart[1] + 1, false);   // v17.91：棕馬拉的篷車
+    if (s.examiner) { pxPerson(s.sx - 34, s.sy, '#3f6ea0', 2, now); scnFlag(s.sx - 26, s.sy, '#5a96dc', now); }   // 公會考官
     if (s.fav) { const n = npc(s.fav); if (n && n.alive) { const p = s.t === 'escort' && s.cart ? [s.cart[0] - 2, s.cart[1] + 2] : [s.sx - 22, s.sy + 2]; drawSprite(ctx, n, p[0], p[1], false, now, { moving:s.t === 'escort' && !s.down, left:false }); } }   // 拜託的村民
-    if (s.t === 'rescue' && s.vic) { const [x, y] = s.vic; ctx.fillStyle = '#59a8ff'; ctx.fillRect(x - 3, y - 10, 6, 7); ctx.fillStyle = '#e8b98a'; ctx.fillRect(x - 2, y - 14, 5, 4); ctx.fillStyle = '#4a2a1a'; ctx.fillRect(x - 2, y - 15, 5, 1);
-      if (!s.phase && Math.floor(now / 400) % 2) { ctx.fillStyle = '#fff'; ctx.font = fz(9) + 'px sans-serif'; ctx.fillText('!', x + 4, y - 14); } }
-    if (s.t === 'guard') { ctx.fillStyle = '#5a4a3a'; ctx.fillRect(s.sx + 10, s.sy - 18, 1, 18); ctx.fillStyle = '#f2c14e'; ctx.fillRect(s.sx + 11, s.sy - 18, 6, 4); }
+    if (s.t === 'rescue' && s.vic) { const [x, y] = s.vic, key = '#59a8ff|3', p = PXP[key] || (PXP[key] = { seed:'px' + key, name:'', sex:'f', age:22, _cloth:'#59a8ff' });   // v17.91：Kenney 村民
+      if (!s.phase) { drawSprite(ctx, p, x, y, false, now, { moving:false, left:true, crouch:true, noEmo:true }); pR2(x - 5, y - 9, 10, 1, '#763b36'); pR2(x - 5, y - 7, 10, 1, '#763b36');   // 坐在地上、身上兩圈繩子
+        if (Math.floor(now / 1600) % 2 === 0) emoAt('驚訝', x, y - 18, now % 1600); }
+      else drawSprite(ctx, p, x, y, false, now, { moving:!s.down && !S.paused, left:true, noEmo:true }); }   // 救出來：跟在勇者後面走
+    if (s.t === 'guard') scnFlag(s.sx + 12, s.sy, '#f7c94a', now);
     const h = H(), fx = scnFxOn(h, now);
     s.mobs.slice().sort((a, b) => a.y - b.y).forEach(m => { let kind = 'idle', f = Math.floor(now / (m.vx ? 150 : 240) + m.ph) % 4, dx = 0, a = 1;
       const left = m.vx && !m.kt ? m.vx < 0 : h.x < m.x, d = left ? 1 : -1;   // 走路時面向前進方向，其他時候面向勇者
