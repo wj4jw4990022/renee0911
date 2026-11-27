@@ -1884,11 +1884,9 @@ function rZ(x, y, now){ const k = Math.floor(now / 250) % 3; ctx.fillStyle = '#c
 function rClinic(h, now){ RM('bg_clinic', 0, 54); RM('cross', 66, 22); rWin(82, 8); RM('bed_clinic', 8, 48); rLie(h, 18, now, 'blk_clinic'); RM('iv', 46, 48); RM('doctor', 62, 48); }
 // ---- 各場景 ----
 const PIP_DRAW = {
-  sleep(h, now, c){ const mood = h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1, p = h.married && h.partner && npc(h.partner), blk = h.house ? 'blk_house' : 'blk_rent';
-    rHome(h, now);
-    if (p && p.alive) { drawSprite(ctx, p, 19, 34, true, now, { moving:false, noEmo:true }); RM(blk, 21, 39); }   // 另一半睡在後面
-    rLie(h, 17, now, blk); rZ(24, 12, now);
-    if (mood === 2) pBubble(40, 4, now, 'heart'); else if (mood === 0) pBubble(40, 4, now, '…'); },
+  sleep(h, now, c){ const mood = h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1, blk = h.house ? 'blk_house' : 'blk_rent';
+    rHome(h, now); rLie(h, 17, now, blk); rZ(24, 12, now);   // v17.48：不再畫另一半（兩個人疊在一起很怪）
+    if (mood === 2) pBubble(50, 4, now, 'heart'); else if (mood === 0) pBubble(50, 4, now, '…'); },
   home(h, now){ rHome(h, now); const bob = Math.floor(now / 1000) % 2;
     drawSprite(ctx, h, h.house ? 58 : 38, 47 - bob, false, now, { moving:false, expr:h.mood < 35 ? 'sad' : undefined }); },
   tavern(h, now){ RM('bg_tavern', 0, 54); rWin(80, 8); RM('barkeep', 22, 34); RM('counter', 2, 48); RM('mug', 10, 32); RM('mug', 44, 32); RM('stool', 70, 48); RM('stool', 86, 48);
@@ -2205,12 +2203,13 @@ function drawBubble(t, x, y){
   ctx.fillRect(clamp(x - 2, bx + 4, bx + w - 8), y + 2, 4, 3);
   ctx.fillStyle = '#161b27'; ctx.fillText(t, bx + 6, y - 3);
 }
-function drawFace(c, force){
+function drawFace(c, force, roomy){
   if (!c) return; const h = H(); if (!h) return;
   const e = typeof force === 'string' ? force : force === -1 ? 'nervous' : exprOf(h);
-  if (c.width !== 32) { c.width = 32; c.height = 32; }
-  const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, 32, 32); g.drawImage(kenCanvas(h, 'idle', 0, e), KEN_OX, KEN_OY + 1, 16, 16, 0, 0, 32, 32);
-  const nm = e !== 'normal' && EMO_OF[e]; if (nm) { const s = emoStrip(nm); if (s) { const i = s.e.n > 1 ? ART_STILL(s) : 0; g.drawImage(s.cv, i * s.e.w, 0, s.e.w, s.e.h, 32 - s.e.w, 0, s.e.w, s.e.h); } }
+  const N = roomy ? 48 : 32, fy = roomy ? 16 : 0;   // v17.48：roomy（大事件的大頭像）：臉放左下、表情泡泡放右上，不蓋到臉
+  if (c.width !== N) { c.width = N; c.height = N; }
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, N, N); g.drawImage(kenCanvas(h, 'idle', 0, e), KEN_OX, KEN_OY + 1, 16, 16, 0, fy, 32, 32);
+  const nm = e !== 'normal' && EMO_OF[e]; if (nm) { const s = emoStrip(nm); if (s) { const i = s.e.n > 1 ? ART_STILL(s) : 0; g.drawImage(s.cv, i * s.e.w, 0, s.e.w, s.e.h, N - s.e.w, 0, s.e.w, s.e.h); } }
 }
 // 靜態代表格：非透明像素最多的那一格（動畫的第一格常是空的）
 function ART_STILL(s){ if (s.still != null) return s.still; const g = s.cv.getContext('2d'); let best = 0, bn = -1; for (let i = 0; i < s.e.n; i++) { const d = g.getImageData(i * s.e.w, 0, s.e.w, s.e.h).data; let n = 0; for (let k = 0; k < d.length; k += 4) if (d[k + 3] && (d[k] < 240 || d[k + 1] < 240)) n++; if (n > bn) { bn = n; best = i; } } return s.still = best; }
