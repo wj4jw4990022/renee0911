@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#161b27">
-<title>孤勇者 v17.65</title>
+<title>孤勇者 v17.66</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon-64.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="孤勇者">
 <link rel="preload" href="fonts/Cubic_11.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/style.css?v=17.65">
+<link rel="stylesheet" href="css/style.css?v=17.66">
 </head>
 <body>
 <div id="app">
-  <!-- v17.65 主畫面新版（design-wip design/ui/草圖_主畫面.png）：圖示由 ui.js 的 IC() 填進 [data-ic] -->
+  <!-- v17.66 主畫面新版（design-wip design/ui/草圖_主畫面.png）：圖示由 ui.js 的 IC() 填進 [data-ic] -->
   <div class="rbar wbar" id="rbar"><span id="date"></span><span class="rsp"></span><span class="mpill"><span class="num s" id="pGold"><i data-ic="金幣"></i><b id="gold">0</b></span><span class="num s" id="pFame"><i data-ic="名聲"></i><b id="fame"></b></span></span><button class="pb mbtn" id="bPause" aria-label="暫停"></button><button class="pb mbtn" id="bSpeed" aria-label="快轉"></button></div>
   <div class="stage" id="mapw">
     <canvas id="cv" width="720" height="540" aria-label="勇者所在的地圖"></canvas>
@@ -57,12 +57,12 @@
   <div class="tipbox" id="tipbox"></div>
 </div>
 
-<script src="js/data.js?v=17.65"></script>
-<script src="js/sim.js?v=17.65"></script>
-<script src="js/art.js?v=17.65"></script>
-<script src="js/map.js?v=17.65"></script>
-<script src="js/ui.js?v=17.65"></script>
-<script src="js/main.js?v=17.65"></script>
+<script src="js/data.js?v=17.66"></script>
+<script src="js/sim.js?v=17.66"></script>
+<script src="js/art.js?v=17.66"></script>
+<script src="js/map.js?v=17.66"></script>
+<script src="js/ui.js?v=17.66"></script>
+<script src="js/main.js?v=17.66"></script>
 <script>
 // v17.28：App 模式（加到主畫面）用的 service worker。有網路一律拿最新版，沒網路才用上次存下來的
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -192,6 +192,20 @@ function qCard(h, o, ag){
     ${d ? `<div class="seg"><i class="${d.i === 0 ? 'on' : ''}" style="background:#6fcf97"></i><i class="${d.i === 1 ? 'on' : ''}" style="background:#ffb347"></i><i class="${d.i === 2 ? 'on' : ''}" style="background:#ff7b7b"></i></div><div class="dg ${d.k}" style="font-size:12.5px">${d.n} · 勝率約 ${win}%</div>` : '<div class="dg g" style="font-size:12.5px">不用打</div>'}
     ${o.until ? `<div style="font-size:12px" class="${o.until - S.day <= 1 ? 'dg r' : 'k'}">${dueTxt(o.until)}</div>` : ''}</div></div>`;
 }
+// v17.66 任務卡（新版）：標頭（事務所紫、委託棕）＋名稱＋名聲／報酬＋危險＋期限；右下加號＝排進去，排了變打勾
+let qSel = null;
+function qCard2(h, o, ag, inQ){
+  const Z = o.z >= 0 ? ZONES[o.z] : null, d = o.D ? danger(ratio(h, o.D) * compMul(o.comp)) : null, win = o.D ? Math.round(winP(ratio(h, o.D) * compMul(o.comp)) * 100) : null;
+  const left = o.until ? o.until - S.day : null, dur = durTxt(h, o).replace(/ ?個月/, '月').replace('約 ', '約');
+  const tip = `${typeTag(o)}${Z ? Z.n : '村子'}${o.comp && npc(o.comp) ? ` · 和${npc(o.comp).name}同行` : ''}${o.ug ? ` · 惡名 +${o.inf}` : ''}`;
+  return `<div class="pb qc2${o.ug ? ' ug' : ag ? ' ag' : ''}${o.boss || o.boss2 ? ' boss' : ''}"${inQ ? '' : ` role="button" tabindex="0" ${ag ? `data-ag="${o.id}"` : `data-o="${o.id}"`}`}>
+    <div class="qch">${IC(ag ? '事務所' : '任務', 2)}<b>${Z ? Z.n : '村子'}</b><span class="rsp"></span>${IC('時間', 1)}<b>${dur}</b></div>
+    <div class="qcb"><div class="qcn">${esc(o.n)}</div>
+    <div class="qcr">${ag ? `<span class="num s">${IC('名聲', 2)}<b>+${o.fame}</b></span>` : ''}<span class="num s">${IC('金幣', 2)}<b>${fmt(ag ? o.gold : o.ug ? o.gold : o.reward)}</b></span></div>
+    <div class="qcr f14">${d ? `${Array.from({ length:d.i + 1 }, () => IC('危險', 2)).join('')}<b class="dg ${d.k}">勝率 ${win}%</b>` : `${IC('心情', 1)}<b class="cg">不用打</b>`}</div>
+    <div class="qcr f14${left != null && left <= 1 ? ' cr' : ' mu'}">${left != null ? `${IC('時間', 1)}剩 ${Math.max(0, left)} 月` : `<span class="mu" data-tip="任務|${esc(o.n)}|${esc(tip)}">${esc(tip)}</span>`}</div>
+    <span class="qadd2 pb${inQ ? ' g' : ''}" aria-hidden="true">${IC(inQ ? '打勾' : '加號', 2)}</span></div></div>`;
+}
 // v17.59 花錢頁新版（design/ui/草圖_花錢.png）：一列一張粗框卡，圖示＋數字，說明收進說明框
 const priceBtn = (attr, p, dis, note) => `<span class="pbw"><button class="pb pbtn" ${attr} ${dis ? 'disabled' : ''}>${IC('金幣', 2, dis)}<b>${fmt(p)}</b></button>${note ? `<small>${esc(note)}</small>` : ''}</span>`;
 const lvSq = (n, cur) => `<span class="lvsq">${Array.from({ length:n }, (_, i) => `<i class="${i <= cur ? 'on' : ''}"></i>`).join('')}</span>`;
@@ -842,7 +856,7 @@ let sheetT = null, hexSel = null;
 const SUBS = {
   hero:[['state', '狀態'], ['mind', '個性'], ['life', '生平'], ['charm', '寶物']],
   people:[['ppl', '身邊'], ['team', '事務所'], ['wall', '歷代'], ['news', '近況'], ['ledger', '人情帳']],   // v17.23：標籤縮短，手機上五個都放得下
-  quest:[['queue', '排程'], ['take', '接任務']],
+  quest:[['q', '任務']],   // v17.66：排程和接任務合成一頁
   gear:[['gear', '裝備'], ['care', '照顧'], ['caravan', '商隊']],   // v17.59：「他自己買的」搬到勇者檔案生平
   office:[['main', '概況'], ['art', '旗下'], ['comp', '競爭'], ['fac', '設施']],
   set:[['set', '設定']],
@@ -858,7 +872,7 @@ function openSheet(t, sb){ sheetT = t; if (t === 'quest' && ['ag', 'offer', 'due
 // v17.65：面板高度看內容，最高長到勇者卡下面（勇者卡一直看得到）
 function sheetMax(){ try { const c = $('cap').getBoundingClientRect(), n = $('nav').getBoundingClientRect(); if (c.height && n.height) $('sheet').style.maxHeight = Math.max(240, (n.top - c.bottom - 8) / UIZ) + 'px'; } catch (e) {} }
 let archArm = false;
-function closeSheet(){ resetArm = false; archArm = false; artScroll = null; sheetT = null; $('sheet').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('on')); }
+function closeSheet(){ qSel = null; resetArm = false; archArm = false; artScroll = null; sheetT = null; $('sheet').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('on')); }
 
 // ================= v16 介面：旗下藝人、事務所內 =================
 let arArm = null, artScroll = null; const arepOpen = new Set();   // 解約要按兩次
@@ -990,7 +1004,7 @@ function teamView(){
 }
 function renderSheet(){
   const h = H(), B = $('shB'), st = B.scrollTop;
-  const title = { hero:H().name, quest:'排程與任務', gear:'花錢', life:'生平', people:'人際', office:'經紀人事務所', set:'設定' }[sheetT];
+  const title = { hero:H().name, quest:'任務', gear:'花錢', life:'生平', people:'人際', office:'經紀人事務所', set:'設定' }[sheetT];
   const TIC = { gear:'金幣', people:'人際', quest:'排程', office:'事務所', set:'設定' }[sheetT];
   setH($('shT'), (TIC ? IC(TIC, 2) : '') + `<span>${esc(title)}</span>`);
   const subDot = { take:S.agTasks.some(o => o.until - S.day <= 2) || $('dQuest').classList.contains('on'), queue:!S.queue.length };
@@ -1058,37 +1072,39 @@ function renderSheet(){
     if (gone.length) html += `<div class="k" style="font-size:12px;margin:8px 2px">已經不在：${gone.map(n => `${n.name}（${relWord(n)}）`).join('、')}</div>`;
     html += `<div class="k" style="font-size:12px;margin:2px 2px 8px">交情到「朋友」以上，就能找${pron(h)}們一起出任務。請客可以拉近關係。</div>`;
   }
-  if (sheetT === 'quest' && SS('queue')) {
-    html += dutyCard(h);
-    // 每天方針：區域卡
-    const tz = topZ(), cards = [['休息', null, '#3a4a5a', -1], ...ZONES.slice(0, tz + 1).map((Z, i) => [Z.n, danger(ratio(h, zD(i))), Z.c, i])];
-    html += `<div class="sec" style="margin-top:2px">沒排程時，每天去哪（${pron(h)}不一定會照做）</div><div class="hscroll zrow">` + cards.map(([n, d, c, z], i) =>
-      `<button class="zc ${S.plan === i ? 'on' : ''}" data-p="${i}"><span class="zb" style="background:${c}"></span><b>${n}</b><span class="dg ${d ? d.k : 'g'}">${d ? d.n : '回復體力'}</span>${d && d.i ? `<span class="k" style="font-size:11px">收穫 ×${RISK_MUL[d.i]}</span>` : ''}</button>`).join('')
-      + (tz + 1 < ZONES.length ? `<div class="zc lock"><span class="zb" style="background:${ZONES[tz + 1].c}"></span><b>${ZONES[tz + 1].n}</b><span class="k" style="font-size:11px;line-height:1.35">未開放：${ZGATE[tz + 1].t}</span></div>` : '') + '</div>';
-    // 排程時間軸
-    const eta = etaList(), busyD = h.act === 'mission' ? Math.max(0, h.actDays) : (h.bedDays || 0) + (h.visit || 0) + (h.goneDays || 0);
-    html += `<div class="sec">排程（${S.queue.length}/${Q_MAX}）· ${pron(h)}閒下來就照順序做，可能跟你談條件</div>${calStrip(h, eta)}<div class="qline">`;
-    if (busyD > 0) html += `<div class="qi now"><span class="qd" style="background:var(--gold)"></span><div class="qw">現在 ～ 第 ${busyD} 個月</div><div class="qt2">${esc(ACT_TXT(h))}</div></div>`;
-    S.queue.forEach((it, i) => { const d = it.kind === 'rest' ? null : danger(ratio(h, it.D) * compMul(it.comp)), st = eta[i] - S.day, en = st + estDays(h, it) - 1, late = it.until && eta[i] > it.until;
-      html += `<div class="qi ${late ? 'late' : ''}"><span class="qd" style="background:${it.kind === 'rest' ? '#59a8ff' : d ? ['#6fcf97', '#ffb347', '#ff7b7b'][d.i] : '#6fcf97'}"></span>
-        <div class="qw">第 ${st}${en > st ? `～${en}` : ''} 個月${late ? ' · <b class="dg r">會趕不上期限</b>' : it.until ? ` · <span class="${it.until - S.day <= 1 ? 'dg r' : ''}">${dueTxt(it.until)}</span>` : ''}</div>
-        <div class="row" style="align-items:flex-start"><div style="min-width:0"><div class="qt2">${esc(it.n)}</div><div class="k" style="font-size:12px">${it.kind === 'rest' ? '休息一個月' : `${it.kind === 'ag' ? '事務所任務' : '委託'} · ${durTxt(h, it)}`}${d ? ` · <span class="dg ${d.k}">${d.n}</span>` : ''}${it.comp && npc(it.comp) ? ` · 和${npc(it.comp).name}同行` : ''}${it.favor ? ' · 人情' : ''}${it.agreed ? ' · 已談妥' : ''}${it.by === 'hero' ? ' · <span class="dg g">' + pron(h) + '自己排的</span>' : ''}</div></div>
-        <span style="display:flex;gap:4px;flex:none">${i ? `<button class="btn sm2" data-q="up" data-i="${i}" aria-label="往前移">↑</button>` : ''}<button class="btn sm2" data-q="del" data-i="${i}" aria-label="移除">✕</button></span></div></div>`; });
-    for (let i = S.queue.length; i < Q_MAX; i++) html += `<div class="qi empty"><span class="qd"></span><div class="row"><button class="qadd" data-go="take">＋ 接任務</button>${i === S.queue.length ? `<button class="qadd" data-rest="1">＋ 排一個月休息</button>` : ''}</div></div>`;
-    html += '</div>';
-    if (!S.queue.length) html += `<div class="k" style="font-size:12px;margin:-4px 2px 8px">排程是空的，${pron(h)}會照上面的方針自己安排每天</div>`;
-    // 自主權（收起來）
-    const pol = S.autonomy || 'ask', PN = { mine:'由我安排', ask:'可以，先問我', free:'完全放手' };
-    html += `<details class="card"><summary style="font-size:13px;cursor:pointer;display:flex;justify-content:space-between"><span>${pron(h)}可以自己接任務嗎？</span><b style="color:var(--gold);font-weight:500">${PN[pol]} ›</b></summary>
-      <div class="grid3" style="margin-top:10px">` + Object.keys(PN).map(k => `<button class="plan ${pol === k ? 'on' : ''}" data-auto="${k}" style="min-height:44px;text-align:center"><b style="font-size:13px">${PN[k]}</b></button>`).join('') + `</div><div class="k" style="font-size:12px;margin-top:6px">放手越多，${pron(h)}越覺得在過自己的人生，但也可能挑你不想要的任務。累了${pron(h)}也會自己排休。</div></details>`;
-  }
-  if (sheetT === 'quest' && SS('take')) {
-    const F = S.takeF || 'all', all = [...S.agTasks.map(o => [o, true]), ...S.offers.map(o => [o, false])];
-    const cnt = { all:all.length, offer:S.offers.length, ag:S.agTasks.length, due:all.filter(([o]) => o.until && o.until - S.day <= 2).length };
-    html += `<div class="ff2">${[['all', '全部'], ['offer', '委託'], ['ag', '事務所'], ['due', '快到期']].map(([k, n]) => `<button class="${F === k ? 'on' : ''}" data-tf="${k}">${n} ${cnt[k]}</button>`).join('')}</div>`;
-    const list = all.filter(([o, ag]) => F === 'all' || (F === 'ag' ? ag : F === 'offer' ? !ag : o.until && o.until - S.day <= 2)).sort((x, y) => (x[0].until || 1e9) - (y[0].until || 1e9));
-    html += list.length ? `<div class="qgrid">${list.map(([o, ag]) => qCard(h, o, ag)).join('')}</div>` : '<div class="card k">這一類目前沒有任務</div>';
-    html += `<div class="k" style="font-size:12px;margin:8px 2px">委託每 ${(S.office.intel || 0) >= 2 ? 3 : 5} 個月換一批，${pron(h)}照你的抽成分錢；事務所任務每 6 個月一批，替事務所賺名聲和代表作，${pron(h)}只拿一成。點卡片安排出發成員。</div>`;
+  if (sheetT === 'quest') {   // v17.66：排程和挑任務合成一頁（design/ui/草圖_任務.png）
+    const eta = etaList(), busyD = h.act === 'mission' ? Math.max(0, h.actDays) : (h.bedDays || 0) + (h.visit || 0) + (h.goneDays || 0), mo0 = S.day % 12;
+    const qIc = it => it.kind === 'rest' ? '休息' : it.kind === 'ag' ? '事務所' : '任務';
+    const zIc = i => i === 0 ? '休息' : ['草原', '森林', '荒地'][i - 1] || '危險';
+    const pol = S.autonomy || 'ask', PIC = { mine:'鎖', ask:'問號', free:'放手' }, PN = { mine:'由我安排', ask:'先問我', free:'放手' };
+    const lateOf = i => { const it = S.queue[i]; return !!(it.until && eta[i] > it.until); };
+    let top = `<div class="qsch"><div class="qsh"><b class="f16">排程</b><span class="rsp"></span><button class="pb qib${qSel === 'plan' ? ' g' : ''}" data-qs="plan" aria-label="沒排程時去哪">${IC(zIc(S.plan || 0), 2)}</button><button class="pb qib${qSel === 'auto' ? ' g' : ''}" data-qs="auto" aria-label="自己接任務">${IC(PIC[pol], 2)}</button></div><div class="qslots">`;
+    for (let i = 0; i < Q_MAX; i++) { const it = S.queue[i];
+      if (!it) { top += `<button class="qslot em${qSel === 'add' && i === S.queue.length ? ' sel' : ''}" data-qs="add" aria-label="排進排程">${IC('加號', 3)}</button>`; continue; }
+      const st = eta[i] - S.day, en = st + estDays(h, it) - 1, late = lateOf(i);
+      top += `<button class="pb qslot ${it.kind === 'rest' ? 'b' : 'gn'}${qSel === i ? ' sel' : ''}${late ? ' late' : ''}" data-qs="${i}">${IC(qIc(it), 2)}<b>${esc(it.n.replace(/^升格考核：/, '考核：'))}</b><small>${(mo0 + st) % 12 + 1}${en > st ? '～' + ((mo0 + en) % 12 + 1) : ''}月</small></button>`; }
+    top += `</div>`;
+    // 點了才出現的一行：排程格（往前移、刪除）、空格（休息、挑任務）、沒排程時去哪、自己接任務
+    if (typeof qSel === 'number' && S.queue[qSel]) { const it = S.queue[qSel];
+      top += `<div class="qact"><span class="f14">${esc(it.n)}${lateOf(qSel) ? ' <b class="cr">會趕不上期限</b>' : it.until ? ` · ${dueTxt(it.until)}` : ''}${it.by === 'hero' ? ` · ${pron(h)}自己排的` : ''}</span><span class="rsp"></span>${qSel ? `<button class="pb qib" data-q="up" data-i="${qSel}" aria-label="往前移">${IC('往上', 2)}</button>` : ''}<button class="pb qib" data-q="del" data-i="${qSel}" aria-label="刪除">${IC('刪除', 2)}</button></div>`; }
+    if (qSel === 'add') top += `<div class="qact"><button class="pb qbtn" data-rest="1">${IC('休息', 2)}排一個月休息</button><button class="pb qbtn" data-qs="pick">${IC('任務', 2)}挑任務</button></div>`;
+    if (qSel === 'plan') { const tz = topZ();
+      top += `<div class="qact wrap"><span class="f14 mu">沒排程時，每天去哪（${pron(h)}不一定會照做）</span><div class="qzs">${[-1, ...ZONES.slice(0, tz + 1).map((_, i) => i)].map(z => { const i = z + 1, d = z >= 0 ? danger(ratio(h, zD(z))) : null;
+        return `<button class="pb qz${(S.plan || 0) === i ? ' g' : ''}" data-p="${i}">${IC(zIc(i), 2)}<b>${z >= 0 ? ZONES[z].n : '休息'}</b><span>${d ? Array.from({ length:d.i + 1 }, () => IC('危險', 1)).join('') : IC('體力', 1)}</span></button>`; }).join('')}</div></div>`; }
+    if (qSel === 'auto') top += `<div class="qact wrap"><span class="f14 mu">${pron(h)}可以自己接任務嗎？</span><div class="qzs">${Object.keys(PN).map(k => `<button class="pb qz${pol === k ? ' g' : ''}" data-auto="${k}">${IC(PIC[k], 2)}<b>${PN[k]}</b></button>`).join('')}</div></div>`;
+    // 12 個月小條：綠＝任務、藍＝休息、灰＝臥床或不在；紅字＝這個月
+    const cells = Array(12).fill('');
+    for (let c = 0; c < Math.min(12, busyD); c++) cells[c] = h.act === 'mission' ? 'gn' : 'gy';
+    S.queue.forEach((it, i) => { const st = eta[i] - S.day, en = st + estDays(h, it) - 1; for (let c = Math.max(0, st); c <= Math.min(11, en); c++) cells[c] = lateOf(i) ? 'rd' : it.kind === 'rest' ? 'b' : 'gn'; });
+    top += `<div class="qcal">${cells.map((k, c) => `<span><i class="${k}"></i><small class="${c ? '' : 'cr'}">${(mo0 + c) % 12 + 1}</small></span>`).join('')}</div></div>`;
+    html += top + dutyCard(h);
+    // 挑任務
+    const F = S.takeF || 'all', all = [...S.agTasks.map(o => [o, true, 0]), ...S.offers.map(o => [o, false, 0]), ...S.queue.filter(it => it.kind !== 'rest').map(o => [o, o.kind === 'ag', 1])];
+    const due = o => o.until && o.until - S.day <= 2;
+    const cnt = { all:all.length, offer:all.filter(x => !x[1]).length, ag:all.filter(x => x[1]).length, due:all.filter(([o]) => due(o)).length };
+    html += `<div class="qflt" id="qflt">${[['all', ''], ['offer', '任務'], ['ag', '事務所'], ['due', '時間']].map(([k, ic]) => `<button class="pb${F === k ? ' g' : ''}" data-tf="${k}">${ic ? IC(ic, 2) : '<b class="f16">全</b>'}<b>${cnt[k]}</b></button>`).join('')}</div>`;
+    const list = all.filter(([o, ag]) => F === 'all' || (F === 'ag' ? ag : F === 'offer' ? !ag : due(o))).sort((x, y) => x[2] - y[2] || (x[0].until || 1e9) - (y[0].until || 1e9));
+    html += list.length ? `<div class="qgrid2">${list.map(([o, ag, inQ]) => qCard2(h, o, ag, inQ)).join('')}</div>` : `<div class="pb care f16 mu">這一類目前沒有任務</div>`;
   }
   if (false) {
     html += `<div class="sec">事務所任務（替事務所賺名聲和代表作，${pron(h)}只拿一成）</div>`;
@@ -1214,28 +1230,31 @@ function renderSheet(){
     html += `<div class="stFoot">孤勇者 v17.57 · 只有你一個人在測試</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
-  B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
+  B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
   B.querySelectorAll('[data-lt]').forEach(b => b.onclick = () => { S.lifeT = b.dataset.lt; renderSheet(); });
   B.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => { sub.people = b.dataset.ps; B.scrollTop = 0; renderSheet(); });
   B.querySelectorAll('[data-lf]').forEach(b => b.onclick = () => { S.lifeF = b.dataset.lf; renderSheet(); });
   B.querySelectorAll('[data-cv]').forEach(b => b.onclick = () => cvBuy(b.dataset.cv, +b.dataset.cp));
   B.querySelectorAll('[data-tf]').forEach(b => b.onclick = () => { S.takeF = b.dataset.tf; renderSheet(); });
+  B.querySelectorAll('[data-qs]').forEach(b => b.onclick = () => { const v = b.dataset.qs;
+    if (v === 'pick') { qSel = null; renderSheet(); const f = $('qflt'); if (f) B.scrollTop = f.offsetTop - B.querySelector('.qsch').offsetHeight - 6; return; }
+    const k = /^\d+$/.test(v) ? +v : v; qSel = qSel === k ? null : k; renderSheet(); });
   B.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { sub.quest = b.dataset.go; B.scrollTop = 0; renderSheet(); });
   B.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { const o = S.offers.find(x => x.id === +b.dataset.o); if (o) openMission(o); });
   B.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { const o = S.agTasks.find(x => x.id === +b.dataset.ag); if (o) openMission(o); });
   B.querySelectorAll('.qcard[role=button]').forEach(c => c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.click(); } });
-  B.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const i = +b.dataset.i;
+  B.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const i = +b.dataset.i; qSel = null;
     if (b.dataset.q === 'del') { const it = S.queue.splice(i, 1)[0]; if (it && it.by === 'hero') { adj('trust', -3 - dw(h, 'independence') * 3); adj('mood', -3); say(pickS(['……那是我自己排的耶', '好吧，你說了算'])); } if (it && it.kind === 'ag' && S.day < it.until) S.agTasks.push(it); else if (it && it.kind === 'offer') S.offers.push(it); }
     else if (i > 0) { const t = S.queue[i]; S.queue[i] = S.queue[i - 1]; S.queue[i - 1] = t; }
     queueComment(); renderAll(); });
   B.querySelectorAll('[data-rv]').forEach(b => b.onclick = () => rvCounter(+b.dataset.rv, b.dataset.rk));
   B.querySelectorAll('[data-treat]').forEach(b => b.onclick = () => { const n = npc(b.dataset.treat); if (!n || S.gold < 30) return; S.gold -= 30; n.treat = S.day; affAdd(n.id, 4); toast(`${H().name}和${n.name}吃了頓飯`); renderAll(); });
-  B.querySelectorAll('[data-auto]').forEach(b => b.onclick = () => { const k = b.dataset.auto, old = S.autonomy || 'ask'; if (k === old) return; S.autonomy = k;
+  B.querySelectorAll('[data-auto]').forEach(b => b.onclick = () => { qSel = null; const k = b.dataset.auto, old = S.autonomy || 'ask'; if (k === old) return; S.autonomy = k;
     if (k === 'free') { adj('mood', 3 + dw(h, 'independence') * 5); adj('trust', 2); addMsg('me', '之後你想接什麼就自己接吧'); say(dw(h, 'independence') ? '真的嗎？太好了！' : '好，我會挑適合自己的'); }
     else if (k === 'mine') { if (dw(h, 'independence')) { adj('mood', -6); adj('trust', -3); } addMsg('me', '之後的工作都由我來排'); say(dw(h, 'independence') ? '……又要什麼都聽你的' : '好，聽你安排'); }
     else { addMsg('me', '想接什麼可以，但先問過我'); say('嗯，我會先問你'); }
     renderAll(); });
-  B.querySelectorAll('[data-rest]').forEach(b => b.onclick = () => { if (S.queue.length >= Q_MAX) return; S.queue.push({ id:Date.now(), kind:'rest', n:'休息', days:1 }); queueComment(); renderAll(); });
+  B.querySelectorAll('[data-rest]').forEach(b => b.onclick = () => { qSel = null; if (S.queue.length >= Q_MAX) return; S.queue.push({ id:Date.now(), kind:'rest', n:'休息', days:1 }); queueComment(); renderAll(); });
   B.querySelectorAll('.intabs [data-s]').forEach(b => b.onclick = () => { sub[sheetT] = b.dataset.s; renderSheet(); const t = B.querySelector('.intabs'); if (t && B.scrollTop > t.offsetTop) B.scrollTop = t.offsetTop; });
   B.querySelectorAll('[data-npc]').forEach(b => b.onclick = () => openNpcPop(b.dataset.npc));
   B.querySelectorAll('[data-hx]').forEach(b => b.onclick = () => { hexSel = b.dataset.hx; renderSheet(); });
