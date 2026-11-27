@@ -181,7 +181,7 @@ function drawVillage(now){
     const label = b.k === 'telepad' && !teleOpen() ? '傳送陣預定地' : b.k === 'home' ? `${h.name}${h.married ? '家' : '的家'}` : sh ? sh.shop.slice(0, 4) : b.k === 'house' ? '' : b.n;
     if (label) nameTag(ctx, label, x + w / 2, y - 3, b.k === 'office' || b.k === 'home' ? 'hero' : 'npc');
     if (sh) vilHits.push({ r:b.r, k:'npc', id:sh.id }); else if (b.k !== 'house') vilHits.push({ r:b.r, k:b.k }); });
-  drawVilShow(now); drawTourShow(now); drawVilGuests(now); drawEpisode(now);
+  drawVilShow(now); drawTourShow(now); if (H().act === 'train') arenaShow(now, 'train'); drawVilGuests(now); drawEpisode(now);
   drawVilEnd(now);   // v17.17：左端的河、橋、小山
   // 村民：各自在工作的地方附近，偶爾去別棟；晚上去酒館
   const WORK = { tavern:'tavern', smith:'smith', guild:'guild', priest:'temple', mayor:'mayor', reporter:'stage', fan:'office', merc:'guild', elder:'temple' };
@@ -369,9 +369,8 @@ function drawMap(now){
   // 勇者
   if (hm === view) {
     const [hx0, hy0] = view === 'vil' ? villagePos(h) : [h.x, h.y];
-    if (h.act === 'mission' && h.mission && MSPOT[h.mission.ag] && !heroHidden(h) && mPhase(h) === 'slot') {
+    if (h.act === 'mission' && h.mission && MSPOT[h.mission.ag] && h.mission.ag !== 'arena' && !heroHidden(h) && mPhase(h) === 'slot') {
       const sx = VD[MSPOT_B[h.mission.ag]] ?? VD.stage, sy = V_WALK - 4, cols = ['#f1ece0', '#ffb347', '#59a8ff', '#ff7b7b', '#6fcf97'];
-      if (h.mission.ag === 'arena') { ctx.strokeStyle = '#d8c08a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(sx, sy - 2, 16, 6, 0, 0, 7); ctx.stroke(); }
       for (let i = 0; i < 7; i++) { const a = i / 7 * 6.28 + now / 3000; ctx.fillStyle = cols[i % 5]; ctx.fillRect(sx + Math.cos(a) * 20 - 1, sy - 3 + Math.sin(a) * 5 + Math.sin(now / 200 + i) * 1, 3, 4); }
     }
     if (h.alpha > 0 && !heroHidden(h) && !(view === 'vil' && V.inside)) {
@@ -381,7 +380,11 @@ function drawMap(now){
       if (view === 'vil' && vCarry()) drawCarry(now, Math.round(hx0), Math.round(hy0));
       RIDE_FRONT = null; RIDE_HA = 1; const ride = view === 'vil' ? 0 : drawRide(now, h, Math.round(hx0), Math.round(hy0));   // v17.12：馬、驛馬車、傳送陣
       ctx.globalAlpha = h.alpha * vfa * RIDE_HA;
-      if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') { const fx = heroFx(h, now), foe = h.target || (fx && (fx.ghost || fx.tg)) || scnFoe(h, now), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
+      const am = view === 'vil' && !lying ? arenaMode(h) : null;
+      if (am && am.fight) { const R = arenaRound(now, am.kind); let ox = 0; if (R.p > .1 && R.p < .38) ox = 3;   // v17.49：鬥技場：踏步揮擊；對手回擊時後退＋閃
+        if (am.kind !== 'train' && R.r % 2 && R.p > .75 && R.p < 1) { ox = -2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * vfa * .35; }
+        drawSprite(ctx, h, Math.round(hx0 + ox), Math.round(hy0), false, now, { moving:false, left:false, atkT:R.t0 }); ctx.globalAlpha = h.alpha * vfa; }
+      else if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') { const fx = heroFx(h, now), foe = h.target || (fx && (fx.ghost || fx.tg)) || scnFoe(h, now), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
         if (fx && fx.charge) { const p = Math.max(0, now - fx.t) / 1000; if (p > 1.42 && p < 2.2) { ox = -d * Math.round(6 * Math.min(1, (p - 1.42) * 4) * (p < 1.9 ? 1 : (2.2 - p) / .3)); if (p < 1.75 && Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * .35; } }   // v17.45：魔王反擊，被擊退
         else if (fx) { const p = Math.max(0, now - fx.t) / 1000; if (p > .1 && p < .4) ox = d * 2; if (fx.hurt && !fx.kill && p > .72 && p < .95) { ox = -d * 2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * .35; } }   // 出手往前踏、被打到往後退＋閃
         drawHero(ctx, Math.round(hx0 + ox), Math.round(hy0) - (ride || 0), lying, now); if (RIDE_FRONT) drawRideSpr(ctx, RIDE_FRONT[0], RIDE_FRONT[1], RIDE_FRONT[2], RIDE_FRONT[3], RIDE_AX); ctx.globalAlpha = h.alpha * vfa;
@@ -874,6 +877,7 @@ function drawSprite(c, h, x, y, lying, now, opt){
   const left = opt ? opt.left : foe ? foe.x < h.x : moving && (h.tx ?? h.x) < h.x - .6;
   if (lying) kind = 'down';
   else if (opt && opt.atk) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
+  else if (opt && opt.atkT != null && now >= opt.atkT && now - opt.atkT < 600) { kind = 'attack'; f = Math.min(5, Math.floor((now - opt.atkT) / 100)); }   // v17.49：指定這一下揮擊的時間（村子裡的鬥技場）
   else if (!opt && heroFx(h, now) && !heroFx(h, now).charge && Math.max(0, now - heroFx(h, now).t) < 600) { const t0 = heroFx(h, now).t; kind = 'attack'; f = Math.min(5, Math.floor(Math.max(0, now - t0) / 100)); }   // v17.35：每回合揮一次
   else if ((h.act === 'hunt' || (h.act === 'mission' && h.mission && !MSPOT[h.mission.ag] && !(SCN && !SCN.off))) && h.flash > 0) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
   else if (moving) { kind = 'walk'; f = Math.floor(now / 140) % 4; }
@@ -1423,12 +1427,59 @@ function tourTxt(){ const T = S.tourShow, k = tourRound(), hr = hourOf(), mm = T
 function drawTourShow(now){
   try {
     const k = tourRound(); if (k < 0) return; const T = S.tourShow, bx = VD.arena, hr = hourOf(), mm = T.pl.my[k], cols = ['#c0563f', '#3f6ea0', '#5a9a5a', '#c87aa0', '#d8a02e', '#7a6ac0'];
-    for (let i = 0; i < 14; i++) pxPerson(bx - 42 + (i % 7) * 13 + (i >= 7 ? 6 : 0), 148 + (i >= 7 ? 6 : 0), cols[i % 6], i, now);
+    arenaShow(now, 'tour');   // v17.49：彩旗、大旗、觀眾、對手（Kenney 路人）
     nameTag(ctx, '武鬥大會・' + TRN[k], bx, 52, 'hero');
-    const fight = hr >= tR(k) && hr < tR(k) + 2, ox = (V.x ?? bx) + 16;
-    if (mm && fight) { const hit = Math.floor(now / 450) % 3 === 0; pxPerson(ox + (hit ? 2 : 0), 146, '#6a3a3a', 3, now); if (hit) { ctx.fillStyle = '#fff6a0'; ctx.fillRect(ox - 7, 136, 3, 3); } }
-    else if (mm && hr >= tR(k) + 2) pxSay(V.x ?? bx, 112, mm.win ? '勝！' : '敗……');
-    else if (!mm && fight) { pxPerson(bx - 6, 146, '#6a3a3a', 1, now); pxPerson(bx + 8, 146, '#3a5a6a', 2, now); if (Math.floor(now / 450) % 3 === 0) { ctx.fillStyle = '#fff6a0'; ctx.fillRect(bx, 136, 3, 3); } }
+    if (mm && hr >= tR(k) + 2) pxSay(V.x ?? bx, 112, mm.win ? '勝！' : '敗……');
+  } catch (e) { if (!scnErr++) console.error(e); }
+}
+// ================= v17.49：鬥技場（任務對打、武鬥大會、特訓）：Kenney 路人小人（ART.room）＋野外那套打法 =================
+// 勇者站在鬥技場門口（V.x），對手在右邊 36；觀眾：人行道一排（V_ROAD - 2）、路下方一排（V_ROAD_B + 14），輪流跳一下歡呼
+const TINT = new Map();
+function tintRoom(n, kind){ const key = n + '|' + kind; let cv = TINT.get(key); if (cv) return cv; const src = rideCanvas(n, 'room'); cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height;
+  const g = cv.getContext('2d'); g.drawImage(src, 0, 0); const d = g.getImageData(0, 0, cv.width, cv.height), p = d.data;
+  for (let i = 0; i < p.length; i += 4) { if (!p[i + 3] || (p[i] === 63 && p[i + 1] === 38 && p[i + 2] === 49)) continue;
+    if (kind === 'white') p[i] = p[i + 1] = p[i + 2] = 255; else { p[i] = Math.round(p[i] * .55 + 115); p[i + 1] = Math.round(p[i + 1] * .55 + 33); p[i + 2] = Math.round(p[i + 2] * .55 + 33); } }
+  g.putImageData(d, 0, 0); TINT.set(key, cv); return cv; }
+// 路人小人：腳底中心在 (x, y)；flip＝面向左；hop＝往上跳幾格
+function rPerson(n, x, y, flip, tint, hop){ if (!ART.room || !ART.room[n]) return; const cv = tint ? tintRoom(n, tint) : rideCanvas(n, 'room'), X = Math.round(x), Y = Math.round(y), top = Y - cv.height - (hop || 0);
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(X, Y, 5, 1.6, 0, 0, 7); ctx.fill();
+  if (flip) { ctx.save(); ctx.translate(X, 0); ctx.scale(-1, 1); ctx.drawImage(cv, -Math.floor(cv.width / 2), top); ctx.restore(); } else ctx.drawImage(cv, X - Math.floor(cv.width / 2), top); }
+// 現在勇者是不是在鬥技場打（走到了才算）
+function arenaMode(h){ if (heroMap(h) !== 'vil' || V.inside || V.mv || V.x == null) return null;
+  const k = tourRound(); if (k >= 0) { const hr = hourOf(), mm = S.tourShow.pl.my[k]; return { kind:'tour', fight:!!mm && hr >= tR(k) && hr < tR(k) + 2 }; }
+  if (h.act === 'train') return { kind:'train', fight:true };
+  if (h.act === 'mission' && h.mission && h.mission.ag === 'arena' && mPhase(h) === 'slot') return { kind:'arena', fight:true };
+  return null; }
+// 一回合：對打 1.2 秒、特訓 1 秒；r＝第幾回合（單數回合對手回擊）
+function arenaRound(now, kind){ const P = kind === 'train' ? 1000 : 1200, t0 = now - now % P; return { t0, p:(now - t0) / 1000, r:Math.floor(now / P) }; }
+function arenaStar(x, y){ ctx.fillStyle = '#fff6a0'; ctx.fillRect(x - 3, y, 7, 1); ctx.fillRect(x, y - 3, 1, 7); }
+// 被打的一方：命中閃白、往後退；回擊時往前衝
+function arenaFoe(now, n, x, y, R, counter){ let tint = null, dx = 0; const p = R.p;
+  if (p > .3 && p < .52) { tint = p < .42 ? 'white' : null; dx = 2; }
+  if (counter && p > .65 && p < .95) dx = p < .8 ? -4 : -2;
+  rPerson(n, x + dx, y, true, tint); if (p > .3 && p < .42) arenaStar(x - 7, y - 10); }
+function arenaCrowd(now, cx, rows){ rows.forEach(([y, xs], r) => xs.forEach((dx, i) => { const k = Math.floor(now / 200 + i * 1.7 + r) % 6; rPerson('cw' + ((i + r * 3) % 5), cx + dx, y, dx > 0, null, k === 0 ? 2 : k === 1 ? 1 : 0); })); }
+function arenaShow(now, kind){
+  try { const h = H(), am = arenaMode(h), hx = V.x ?? VD.arena, cx = (am ? hx : VD.arena) + 18, y = V_WALK, B = V_ROAD - 2, F = V_ROAD_B + 14;
+    if (kind === 'tour') {   // 彩旗串＋兩支大旗
+      const cl = ['#e84537', '#f7c94a', '#43a0dc', '#43e1b3'];
+      ctx.fillStyle = '#3f2631'; ctx.fillRect(cx - 126, 86, 252, 1);
+      for (let i = 0; i < 27; i++) { const x = cx - 126 + i * 9.6, yy = 86 - Math.round(Math.sin(i / 26 * Math.PI) * 6) + (i % 2); ctx.fillStyle = '#3f2631'; ctx.beginPath(); ctx.moveTo(x - 1, yy); ctx.lineTo(x + 7, yy); ctx.lineTo(x + 3, yy + 6); ctx.fill(); ctx.fillStyle = cl[i % 4]; ctx.beginPath(); ctx.moveTo(x, yy + .5); ctx.lineTo(x + 6, yy + .5); ctx.lineTo(x + 3, yy + 4.5); ctx.fill(); }
+      for (const fx of [cx - 70, cx + 70]) { ctx.fillStyle = '#3f2631'; ctx.fillRect(fx, 70, 2, 46); ctx.beginPath(); ctx.moveTo(fx + 2, 69); ctx.lineTo(fx + 17, 74); ctx.lineTo(fx + 2, 81); ctx.fill(); ctx.fillStyle = '#e84537'; ctx.beginPath(); ctx.moveTo(fx + 3, 71); ctx.lineTo(fx + 14, 74); ctx.lineTo(fx + 3, 79); ctx.fill(); }
+      arenaCrowd(now, cx, [[B, [-68, -56, -44, -32, 32, 44, 56, 68]]]);
+      const k = tourRound(), hr = hourOf(), fight = hr >= tR(k) && hr < tR(k) + 2, mm = S.tourShow.pl.my[k];
+      if (fight && mm && am) arenaFoe(now, ['foe_viking', 'foe_knight', 'foe_archer'][k % 3], hx + 36, y, arenaRound(now, 'tour'), arenaRound(now, 'tour').r % 2);
+      else if (fight && !mm) { const R = arenaRound(now, 'tour'); rPerson('foe_knight', cx - 18 + (R.p > .1 && R.p < .38 ? 3 : 0), y, false); arenaFoe(now, 'foe_archer', cx + 18, y, R, R.r % 2); }   // 別人的比賽
+      arenaCrowd(now, cx, [[F, [-90, -76, -62, -48, -34, -20, 20, 34, 48, 62, 76, 90]]]); return; }
+    if (!am) return;
+    if (kind === 'arena') { arenaCrowd(now, cx, [[B, [-44, -32, 32, 44]]]); arenaFoe(now, 'foe_viking', hx + 36, y, arenaRound(now, 'arena'), arenaRound(now, 'arena').r % 2); arenaCrowd(now, cx, [[F, [-60, -46, -32, -18, 18, 32, 46, 60]]]); return; }
+    if (kind === 'train') { const R = arenaRound(now, 'train'), p = R.p, dx = hx + 24, tilt = p > .3 && p < .55 ? (p < .42 ? 8 : 4) : 0, cv = rideCanvas('dummy', 'room');   // 稻草人被打到會晃、掉稻草
+      ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(dx, y + 1, 7, 2, 0, 0, 7); ctx.fill();
+      ctx.save(); ctx.translate(dx, y + 1); ctx.rotate(tilt * Math.PI / 180); ctx.drawImage(cv, -Math.floor(cv.width / 2), -cv.height); ctx.restore();
+      if (p > .3 && p < .45) { const k = (p - .3) / .15; ctx.fillStyle = '#eac46e'; for (let i = 0; i < 4; i++) ctx.fillRect(Math.round(dx + 2 + i * 2 + k * 4), Math.round(y - 16 - i + k * (i - 1) * 3), 1, 1); }
+      const kx = hx + 52; rPerson('coach', kx, y - 2, true);   // 教練站旁邊，偶爾說「好！」
+      if (Math.floor(now / 2000) % 2 === 0) pxSay(kx, y - 24, '好！');
+      arenaCrowd(now, cx, [[F, [-38, -24, 46]]]); }
   } catch (e) { if (!scnErr++) console.error(e); }
 }
 // 村口迎接、晚上來道謝的村民
@@ -2181,11 +2232,7 @@ function drawVilShow(now){
       for (let i = 0; i < 9; i++) { const x = bx + 14 + (i - shift) * 11, y = 140; if (x > bx + 12) person(x, y, cols[(i + Math.floor(now / 1800)) % 6], i + Math.floor(now / 1800)); }
       if (Math.floor(now / 600) % 2) { ctx.fillStyle = '#ff9ad0'; ctx.fillRect(bx + 8, 120, 2, 2); ctx.fillRect(bx + 11, 120, 2, 2); ctx.fillRect(bx + 9, 122, 3, 2); }
     }
-    if (ag === 'arena') {   // 對手＋圍觀
-      const ox = bx + 16, hit = Math.floor(now / 500) % 3 === 0; person(ox + (hit ? 2 : 0), 146, '#6a3a3a', 3);
-      if (hit) { ctx.fillStyle = '#fff6a0'; ctx.fillRect(ox - 6, 136, 3, 3); }
-      for (let i = 0; i < 6; i++) person(bx - 30 + i * 12, 158, cols[i], i + 4);
-    }
+    if (ag === 'arena') arenaShow(now, 'arena');   // v17.49
   } catch (e) { if (!scnErr++) console.error(e); }
 }
 // 演出用的小東西
