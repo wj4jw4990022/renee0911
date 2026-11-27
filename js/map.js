@@ -1980,32 +1980,27 @@ const PIP_DRAW = {
     if (up) { ctx.fillStyle = '#f3c86a'; ctx.font = '9px Cubic11, sans-serif'; ctx.fillText('♪', 62, 28); } },
   clinic(h, now){ rClinic(h, now); },
   trial(h, now){ rClinic(h, now); RM('stool', 82, 48); RM('flask', 83, 38); const b = Math.floor(now / 250) % 3; pR(87 + b % 2, 22 - b, 1, 1, '#c8f0a0'); pR(86 - b % 2, 20 - b * 2, 1, 1, '#c8f0a0'); },
-  office(h, now){ pR(0, 0, 100, 46, '#7a6a52'); pR(0, 46, 100, 8, '#5a4a38'); pR(8, 8, 26, 14, '#3a3028'); for (let i = 0; i < 4; i++) pR(10 + i * 6, 10, 4, 10, ['#a04040', '#4a6a9a', '#c0a040', '#5a8a5a'][i]);
-    pR(46, 34, 34, 4, '#8a5a3a'); pR(48, 38, 2, 8, '#6a3a22'); pR(76, 38, 2, 8, '#6a3a22'); pR(52, 31, 8, 3, '#f4f0e8'); pR(62, 30, 6, 4, '#f4f0e8'); pWin(84, 8, 12, 12, now);
-    drawSprite(ctx, h, 40, 46, false, now, { moving:false }); },
-  camp(h, now){ pR(0, 0, 100, 40, '#141c34'); for (let i = 0; i < 9; i++) if ((Math.floor(now / 700) + i) % 4) pR((i * 37) % 100, (i * 13) % 30, 1, 1, '#fff'); pR(84, 4, 5, 5, '#f3e6a6');
-    pR(0, 40, 100, 14, '#2a3a24'); ctx.fillStyle = '#7a6a4a'; ctx.beginPath(); ctx.moveTo(60, 42); ctx.lineTo(74, 22); ctx.lineTo(88, 42); ctx.fill(); pR(72, 32, 4, 10, '#2a2018');
-    const f = Math.floor(now / 150) % 3; pR(40, 40, 10, 2, '#5a3a22'); pR(42, 36 - f, 6, 4 + f, '#f08a30'); pR(44, 34 - f, 2, 3, '#f3d060');
-    pLie(h, 24, 46, now, h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1); if (h.mood >= 70) pBubble(26, 10, now, 'heart'); },
-  spy(h, now){ pR(0, 0, 100, 54, '#16141e'); pR(0, 44, 100, 10, '#22202a'); pR(10, 10, 14, 34, '#1e1c28'); pR(72, 6, 18, 38, '#1e1c28'); const x = 50 + Math.sin(now / 800) * 8; pShadow(x, 44);
-    ctx.fillStyle = '#f3c86a'; ctx.font = '12px Cubic11, sans-serif'; ctx.fillText('?', x - 3, 9 + Math.sin(now / 300)); },
-  gone(h, now){ PIP_DRAW.spy(h, now); },
-  ug(h, now){ pR(0, 0, 100, 54, '#0e0e16'); pR(0, 44, 100, 10, '#1a1a22'); pR(0, 4, 30, 40, '#18161e'); pR(70, 0, 30, 44, '#18161e'); pR(48, 4, 2, 40, '#3a3a40');
-    const fl = Math.floor(now / 180) % 7 ? 1 : .4; ctx.globalAlpha = .25 * fl; ctx.fillStyle = '#f0c060'; ctx.beginPath(); ctx.moveTo(49, 8); ctx.lineTo(30, 44); ctx.lineTo(68, 44); ctx.fill(); ctx.globalAlpha = 1; pR(45, 4, 8, 5, '#f3c86a');
-    pShadow(58, 44); pR(20, 34, 10, 10, '#2a2418'); },
-  private(h, now){ pR(0, 0, 100, 54, '#1b2340'); pR(14, 6, 72, 42, '#4a4a5a'); pR(14, 4, 72, 3, '#3a3a48'); pR(0, 48, 100, 6, '#3a3a48');
-    pWin(34, 16, 32, 20, now, true); const g = .25 + Math.sin(now / 600) * .08; ctx.globalAlpha = g; pR(30, 12, 40, 28, '#f3c86a'); ctx.globalAlpha = 1; pR(44, 36, 12, 12, '#3a2a1c'); },
-  visit(h, now){ pR(0, 0, 100, 30, '#8ec6f0'); pR(0, 30, 100, 24, '#6a9a4a'); pR(84, 4, 8, 8, '#f3d060');
-    ctx.fillStyle = '#8a4a3a'; ctx.beginPath(); ctx.moveTo(6, 22); ctx.lineTo(30, 6); ctx.lineTo(54, 22); ctx.fill(); pR(10, 22, 40, 22, '#b89a6a'); pR(16, 28, 8, 8, '#f3e0a0'); pR(36, 32, 8, 12, '#5a3a22');
-    pR(56, 38, 30, 3, '#8a5a3a'); pR(58, 41, 2, 5, '#6a3a22'); pR(82, 41, 2, 5, '#6a3a22'); pR(62, 35, 5, 3, '#f4f0e8'); pR(72, 35, 5, 3, '#f4f0e8'); pR(64, 33 - Math.floor(now / 400) % 2, 1, 2, '#ddd');
-    drawSprite(ctx, h, 60, 48, false, now, { moving:false, expr:'happy' }); pxPerson(76, 48, '#7a6a5a', 0, now); pxPerson(86, 48, '#9a5a6a', 1, now); },
+  // v17.55：第二批改 Kenney Q 版（design/rooms/rooms2.py）；不會動的在背景圖裡，會動的在這裡畫
+  office(h, now){ RM('bg_office', 0, 54); rWin(40, 6); drawSprite(ctx, h, 38, 47, false, now, { moving:false }); if (Math.floor(now / 1000) % 2) pR(66, 30, 1, 4, '#3f2631'); },   // 櫃檯小姐在寫字
+  camp(h, now){ RM('bg_camp', 0, 54); for (let i = 0; i < 14; i++) if ((Math.floor(now / 500) + i) % 5) pR((i * 37) % 100, (i * 13) % 28, 1, 1, '#ffffff');
+    const f = Math.floor(now / 250) % 3; ctx.fillStyle = `rgba(240,160,60,${f % 2 ? .18 : .14})`; ctx.beginPath(); ctx.ellipse(54, 44, 20, 10, 0, 0, 7); ctx.fill(); RM('fire' + f, 52, 50);   // 營火
+    drawSprite(ctx, h, 17, 48, true, now, { moving:false, noEmo:true }); RM('bedroll', 18, 53); rZ(18, 22, now); if (h.mood >= 70) pBubble(40, 6, now, 'heart'); },
+  spy(h, now){ RM('bg_alley', 0, 54); const peek = Math.floor(now / 1250) % 2; RM('hood', 36, 37 - peek * 2); RM('crate', 30, 48);   // 兜帽身影從木箱後面探頭
+    ctx.fillStyle = '#f3c86a'; ctx.font = '11px Cubic11, sans-serif'; ctx.fillText('?', 47, 17 + Math.floor(now / 250) % 2); },
+  gone(h, now){ RM('bg_alley', 0, 54); ctx.fillStyle = '#f3c86a'; ctx.font = '11px Cubic11, sans-serif'; ctx.fillText('?', 44, 17 + Math.floor(now / 250) % 2); },
+  ug(h, now){ RM('bg_ug', 0, 54); const fl = Math.floor(now / 250) % 7 === 3 ? .4 : 1; ctx.fillStyle = `rgba(240,192,96,${.22 * fl})`; ctx.beginPath(); ctx.moveTo(50, 8); ctx.lineTo(26, 46); ctx.lineTo(74, 46); ctx.fill();   // 吊燈偶爾閃
+    drawSprite(ctx, h, 30, 45, false, now, { moving:false }); RM('hooded', 64, 46); RM('ctable', 36, 50); },
+  private(h, now){ RM('bg_private', 0, 54); if (Math.floor(now / 1500) % 2) pR(33, 22, 5, 9, '#784050'); },   // 窗簾後面的人影晃一下
+  visit(h, now){ RM('bg_visit', 0, 54); for (let i = 0; i < 3; i++) { const k = (Math.floor(now / 250) + i * 3) % 9; pR(34 + Math.floor(k / 3), 6 - k, 3, 3, '#dcdcdc'); }   // 煙囪冒煙
+    drawSprite(ctx, h, 58, 45, false, now, { moving:false, expr:'happy' }); RM('dad', 66, 46); RM('mom', 82, 46); RM('picnic', 52, 53);
+    const k = Math.floor(now / 250) % 2; [55, 69, 84].forEach(x => { RM('dish', x, 46); pR(x + 3, 39 - k, 1, 1, '#ffffff'); pR(x + 4, 37 - k, 1, 1, '#ffffff'); }); },
   ep(h, now, c){ const room = c.room || 'home'; (room === 'home' ? (H2 => rHome(H2, now)) : PIP_DRAW[room] ? (H2 => PIP_DRAW[room](H2, now)) : (H2 => pRoom(H2, now)))(h);
     if (room === 'home') drawSprite(ctx, h, 50, 47, false, now, { moving:false });
     const n = npc(c.npc); if (n && n.alive) { const k = Math.min(1, (now - c.t0) / 900), x = Math.round(94 - 22 * k); drawSprite(ctx, n, x, 46, false, now, { moving:k < 1, left:true }); if (k >= 1 && c.tag) { ctx.font = '6px Cubic11, sans-serif'; const w = ctx.measureText(c.tag).width + 4; pR(x - w / 2, 4, w, 8, '#f1ece0'); ctx.fillStyle = '#161b27'; ctx.fillText(c.tag, x - w / 2 + 2, 10); } } },
 };
 function pipCap(h, c){ const n = h.name, p = h.married && h.partner && npc(h.partner), mood = h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1;
   switch (c.k) {
-    case 'sleep': return pipHurt(h) ? `${n}帶著傷睡著了` : pipTired(h) ? `${n}累壞了，額頭敷著冰毛巾` : mood === 0 ? `${n}翻來覆去睡不著` : mood === 2 ? `${n}睡得很甜，好像在做好夢` : p && p.alive ? `${n}和${p.name}睡著了` : `${n}睡得很熟`;
+    case 'sleep': return pipHurt(h) ? `${n}帶著傷睡著了` : pipTired(h) ? `${n}累壞了，額頭敷著冰毛巾` : mood === 0 ? `${n}翻來覆去睡不著` : mood === 2 ? `${n}睡得很甜，好像在做好夢` : `${n}睡得很熟`;   // v17.55：畫面不再畫另一半，說明也不提
     case 'home': return h.act === 'slack' ? `${n}在家耍廢` : `${n}在家休息`;
     case 'tavern': return mood === 0 ? `${n}一個人在酒館喝悶酒` : `${n}在酒館喝一杯`;
     case 'clinic': return `${n}躺在診所的病床上`;
