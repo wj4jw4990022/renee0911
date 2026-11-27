@@ -909,6 +909,7 @@ const sub = {};
 const SS = k => (sub[sheetT] || SUBS[sheetT][0][0]) === k;
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { const t = b.dataset.t; if (sheetT === t) closeSheet(); else openSheet(t); });
 $('shX').onclick = closeSheet;
+$('shHelp').onclick = e => { e.stopPropagation(); const h = H(); popAt($('shHelp'), `<b class="f16">怎麼玩</b><div class="f14" style="line-height:1.6">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div><b class="f16">信任與提示</b><div class="f14" style="line-height:1.6">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div>`); };
 $('cap').onclick = () => { if (sheetT === 'hero') closeSheet(); else openSheet('hero', 'state'); };
 function openSheet(t, sb){ sheetT = t; if (t === 'quest' && ['ag', 'offer', 'due'].includes(sb)) { S.takeF = sb; sb = 'take'; } if (sb) sub[t] = sb; if (t === 'quest') $('dQuest').classList.remove('on'); if (t === 'office') $('dOffice').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); renderSheet(); $('sheet').style.bottom = $('nav').offsetHeight + 'px'; sheetMax(); $('sheet').classList.add('on'); }
 // v17.65：面板高度看內容，最高長到勇者卡下面（勇者卡一直看得到）
@@ -1050,6 +1051,7 @@ function renderSheet(){
   const title = { hero:H().name, quest:'任務', gear:'花錢', life:'生平', people:'人際', office:'事務所', set:'設定' }[sheetT];
   const TIC = { gear:'金幣', people:'人際', quest:'排程', office:'事務所', set:'設定' }[sheetT];
   setH($('shT'), (TIC ? IC(TIC, 2) : '') + `<span>${esc(title)}</span>`);
+  $('shHelp').hidden = sheetT !== 'set'; if (sheetT === 'set') setH($('shHelp'), IC('生平', 2));
   const subDot = { take:S.agTasks.some(o => o.until - S.day <= 2) || $('dQuest').classList.contains('on'), queue:!S.queue.length };
   const inTabs = sheetT === 'hero';
   $('shS').style.display = inTabs ? 'none' : '';
@@ -1237,36 +1239,28 @@ function renderSheet(){
         html += `<div class="pb care"><span class="cbi"${TIPA(F[0], O.n, l ? '現在：' + O.d(l) : '還沒蓋')}>${IC(F[0], 3)}</span><div class="cbm"><div class="ofr"><b class="f16">${O.n}</b>${lvSq(mx, l - 1)}</div><div class="cbe">${full ? `<b class="f14 mu">${l >= 5 ? '已滿級' : officeMax() < 4 ? '升上「王室御用經紀」才能再升' : '升上「英雄之家」才能再升'}</b>` : `<span class="num s"${TIPA(F[1], '下一級', O.d(l + 1))}>${IC(F[1], 2)}<b class="cg">${F[2](l + 1)}</b></span>`}</div></div>${full ? '' : priceBtn(`data-up="${k}"`, c, S.gold < c)}</div>`; });
     }
   }
-  if (sheetT === 'set') {
+  if (sheetT === 'set') {   // v17.70：設定新版（design/ui/草圖_設定.png）
     const cr = cloud.remote, newer = cr && (cr.at || 0) > (S.lastSave || 0) + 5 * 60000 && (cr.gen !== S.gen || cr.day !== S.day);
-    const cst = newer ? ['new', '雲端有較新進度'] : cloud.state === 'ok' ? ['ok', cloud.at ? '雲端已同步 ' + new Date(cloud.at).toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' }) : '雲端已連上'] : cloud.state === 'connecting' ? ['wait', '雲端連線中'] : ['', '只存在這台裝置'];
+    const cok = cloud.state === 'ok', cst = newer ? '雲端有比較新的進度' : cok ? (cloud.at ? '雲端已同步 ' + new Date(cloud.at).toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' }) + '，點一下立刻存' : '雲端已連上，點一下立刻存') : cloud.state === 'connecting' ? '雲端連線中' : '只存在這台裝置（沒有雲端存檔）';
     const alive = !['dead', 'retired', 'left'].includes(h.act);
-    html += `<div class="stHead"><div class="av">🛡️</div><div style="min-width:0;flex:1"><div class="nm">第 ${S.gen} 代 · ${esc(h.name)}</div><div class="k">${rankName()} · ${ym(S.day)}${alive ? '' : ' · 這一代已結束'}</div><span class="stCloud ${cst[0]}"><i></i>${cst[1]}</span></div></div>`;
-    html += `<div class="sec">遊戲</div><div class="grp">
-      <div class="li"><div class="tx"><b>時間速度</b><small>x1：約現實 60 秒＝1 個月（睡覺時加快）</small></div><div class="segc">${[1, 3, 10].map(v => `<button data-spd="${v}" class="${S.speed === v ? 'on' : ''}">x${v}</button>`).join('')}</div></div>
-      <div class="li"><div class="tx"><b>看選單時</b><small>打開下方選單時，時間${['照常走', '放慢成 1/4', '先停住'][pref.sl ?? 1]}</small></div><div class="segc">${[[0, '照常'], [1, '放慢'], [2, '暫停']].map(([v, n]) => `<button data-sl="${v}" class="${(pref.sl ?? 1) === v ? 'on' : ''}">${n}</button>`).join('')}</div></div>
-      <div class="li"><div class="tx"><b>暫停</b><small>暫停時${pron(h)}不會過日子</small></div><button class="tgl ${S.paused ? 'on' : ''}" data-pz="1" aria-label="暫停"></button></div>
-      <div class="li"><div class="tx"><b>離線時</b><small>每 4 分鐘＝1 個月，最多 15 個月。只發生平安或好的事，不扣配額、不會負債</small></div></div></div>`;
-    html += `<div class="sec">顯示</div><div class="grp">
-      <div class="li"><div class="tx"><b>文字大小</b><small>影響選單和對話</small></div><div class="segc">${[[0, '標準'], [1, '大']].map(([v, n]) => `<button data-fz="${v}" class="${pref.fz === v ? 'on' : ''}">${n}</button>`).join('')}</div></div>
-      <div class="li"><div class="tx"><b>互動飄字</b><small>說話後在地圖上顯示數值和表情</small></div><button class="tgl ${pref.fx ? 'on' : ''}" data-fx="1" aria-label="互動飄字"></button></div></div>`;
-    html += `<div class="sec">存檔</div><div class="grp">
-      <div class="li col"><div class="row"><div class="tx"><b>雲端存檔</b><small>${cloud.state === 'ok' || cloud.state === 'connecting' ? '存在你的帳號底下，換裝置也找得回來。約每 45 秒、離開畫面時自動存' : '這個畫面不能用雲端存檔（可能沒登入，或在不支援的地方開啟）'}</small></div>${cloud.state === 'ok' ? '<button class="btn sm2" id="bSaveNow">立即存</button>' : ''}</div>
-        ${newer ? `<div class="dg r" style="font-size:12.5px;margin-top:8px">雲端有比較新的進度：第 ${cr.gen} 代「${esc(cr.name || '')}」，${ym(cr.day || 0)}</div><button class="btn pri" id="bCloud" style="width:100%;margin-top:6px">載入雲端存檔（會覆蓋這台裝置的進度）</button>` : ''}</div>
-      ${(() => { let a = null; try { a = JSON.parse(localStorage.getItem(ARCH_KEY) || 'null'); } catch (e) {} return a && a.js ? `<div class="li col"><div class="tx"><b>清除前的進度</b><small>改版清除舊紀錄時先收起來的：第 ${a.gen || 1} 代「${esc(a.name)}」，${ym(a.day || 0)}。找回會取代現在這一局（現在這一局會先放進備份）</small></div><button class="btn${archArm ? ' warn' : ''}" id="bArch" style="width:100%;margin-top:8px">${archArm ? '再按一次確定找回' : '找回清除前的進度'}</button></div>` : ''; })()}
-      <div class="li col"><div class="tx"><b>存檔搬家</b><small id="saveMsg">匯出會得到一串文字，到別的裝置按「匯入」貼上即可</small></div>
-        <div class="grid2" style="margin-top:8px"><button class="btn" id="bExp">匯出</button><button class="btn" id="bImpShow">匯入</button></div>
-        <textarea id="saveTxt" rows="4" style="width:100%;margin-top:8px;background:#f3e0b2;color:var(--text);border:1px solid #c9a466;border-radius:10px;padding:8px;font-size:12px;display:none" aria-label="存檔文字"></textarea>
-        <div class="grid2" id="saveBtns" style="margin-top:6px;display:none"><button class="btn" id="bCopy">複製</button><button class="btn pri" id="bImp">確定匯入</button></div></div></div>`;
-    { const inApp = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || navigator.standalone);   // v17.28：從主畫面打開
-      html += `<div class="sec">App</div><div class="grp">
-      <div class="li"><div class="tx"><b>${inApp ? '正在用 App 模式玩' : '加到主畫面'}</b><small>${inApp ? '有網路時每次打開都會拿最新版；沒網路也能打開上次的版本' : 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」或「安裝應用程式」'}</small></div></div>
-      <div class="li"><div class="tx"><b>重新載入最新版</b><small>改完遊戲推上去後，按這裡立刻換新版（會先存檔）</small></div><button class="btn sm2" id="bReload">重新載入</button></div></div>`; }
-    html += `<div class="sec">說明</div><div class="grp">
-      <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">怎麼玩</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">你是勇者的經紀人，不能直接操控${pron(h)}。設定方針、接委託、花錢、說話來影響${pron(h)}。${pron(h)}會累、會煩、會受傷、會逃跑，也可能死掉。死亡或退休後，選下一代繼續。</div></details></div>
-      <div class="li col"><details><summary class="row" style="cursor:pointer"><b style="font-size:14px;font-weight:500">信任與提示</b><span class="go">›</span></summary><div class="k" style="font-size:12.5px;line-height:1.7;margin-top:6px">${pron(h)}越信任你，大事件的後果提示就說得越清楚：信任 40 以上看得到大方向，70 以上看得到實際機率。聊心事要信任 30 以上才有用。</div></details></div></div>`;
-    html += `<div class="sec" style="color:#b03a30">危險區域</div><div class="grp"><div class="li col"><div class="tx"><b>重新開始</b><small>刪除所有紀錄，從第 1 代重新開始。雲端存檔也會被新進度蓋掉</small></div><button class="btn warn" id="bReset" style="width:100%;margin-top:8px">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</button>${resetArm ? '<button class="btn" id="bResetNo" style="width:100%;margin-top:6px">算了</button>' : ''}</div></div>`;
-    html += `<div class="stFoot">孤勇者 v17.57 · 只有你一個人在測試</div>`;
+    const seg = (opts, cur, attr) => `<span class="sseg">${opts.map(([v, lab]) => `<button class="pb${cur === v ? ' g' : ''}" ${attr}="${v}">${lab}</button>`).join('')}</span>`;
+    const tgl = (on, attr) => `<button class="stg2${on ? ' on' : ''}" ${attr}="1" aria-label="開關"><i></i></button>`;
+    const li = (ic, t, right, tip) => `<div class="sli"><span class="sic"${tip ? TIPA(ic, t, tip) : ''}>${IC(ic, 2)}</span><b class="f16">${t}</b><span class="rsp"></span>${right}</div>`;
+    html += `<div class="pb ofc"><div class="ofr">${IC('歷代', 2)}<div><b class="f16">第 ${S.gen} 代・${esc(h.name)}${alive ? '' : '（已結束）'}</b><div class="f14 mu">${ym(S.day)}</div></div><span class="rsp"></span><button class="scl" id="${cok ? 'bSaveNow' : 'bCloudSt'}" aria-label="${cst}">${IC('雲端', 2, !cok)}${cok && !newer ? IC('打勾', 1) : newer ? IC('驚嘆', 1) : ''}</button></div>
+      ${newer ? `<div class="f14 cr">雲端有比較新的進度：第 ${cr.gen} 代「${esc(cr.name || '')}」，${ym(cr.day || 0)}</div><button class="pb sbtn" id="bCloud">載入雲端存檔（會覆蓋這台裝置）</button>` : ''}</div>`;
+    html += `<div class="ssec">遊戲</div><div class="pb sgp">${li('時間', '速度', seg([[1, '×1'], [3, '×3'], [10, '×10']], S.speed, 'data-spd'), 'x1：約現實 60 秒＝1 個月（睡覺時加快）')}
+      ${li('設定', '看選單時', seg([[0, IC('播放', 2)], [1, '慢'], [2, IC('暫停', 2)]], pref.sl ?? 1, 'data-sl'), '打開下方選單時，時間照常走／放慢成 1/4／先停住')}
+      ${li('暫停', '暫停', tgl(S.paused, 'data-pz'), `暫停時${pron(h)}不會過日子。離線時：每 4 分鐘＝1 個月，最多 15 個月，只發生平安或好的事`)}</div>`;
+    html += `<div class="ssec">顯示</div><div class="pb sgp">${li('文字', '字的大小', seg([[0, '中'], [1, '大']], pref.fz, 'data-fz'), '影響選單和對話')}${li('飄字', '飄字', tgl(pref.fx, 'data-fx'), '說話後在地圖上顯示數值和表情')}</div>`;
+    let arch = null; try { arch = JSON.parse(localStorage.getItem(ARCH_KEY) || 'null'); } catch (e) {}
+    html += `<div class="ssec">存檔</div><div class="pb sgp">${li('還原', '清除前的進度', arch && arch.js ? `<button class="pb sbs${archArm ? ' warn' : ''}" id="bArch">${archArm ? '確定？' : '還原'}</button>` : `<button class="pb sbs" disabled>還原</button>`, arch && arch.js ? `改版清除舊紀錄時先收起來的：第 ${arch.gen || 1} 代「${arch.name}」，${ym(arch.day || 0)}。找回會取代現在這一局（現在這一局會先放進備份）` : '目前沒有收起來的舊進度')}
+      ${li('匯出', '搬家', `<button class="pb sbs" id="bExp">匯出</button><button class="pb sbs" id="bImpShow">匯入</button>`, '匯出會得到一串文字，到別的裝置按「匯入」貼上即可')}
+      <div class="smv"><small id="saveMsg" class="f14 mu"></small><textarea id="saveTxt" rows="4" style="display:none" aria-label="存檔文字"></textarea><div class="sseg" id="saveBtns" style="display:none"><button class="pb sbs" id="bCopy">複製</button><button class="pb sbs g" id="bImp">確定匯入</button></div></div></div>`;
+    { const inApp = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || navigator.standalone);
+      html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
+        ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
+    html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
+    html += `<div class="stFoot">勇者經紀人 v17.70</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });

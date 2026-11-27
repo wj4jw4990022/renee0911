@@ -859,3 +859,25 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 .lsub button.g, .lflt button.g { background-color:var(--ok); }
 .lf3 { justify-content:space-around; } .lf3 .num b { font-size:18px; }
 #app .sb .tline.pb { padding:8px 12px; }
+
+/* ================= v17.70 設定頁 ================= */
+.ssec { font-size:14px; color:var(--muted); margin:4px 2px 6px; }
+.sgp { padding:2px 12px; margin-bottom:14px; }
+.sli { display:flex; align-items:center; gap:10px; min-height:50px; }
+.sli + .sli { border-top:2px solid rgba(122,90,58,.2); }
+.sic { width:30px; display:flex; justify-content:center; flex:none; }
+.sseg { display:flex; gap:4px; }
+.sseg button, .sbs { min-width:44px; height:34px; padding:0 8px; display:flex; align-items:center; justify-content:center; font-size:15px; filter:drop-shadow(2px 2px 0 var(--shd)); }
+.sseg button.g, .sbs.g { background-color:var(--ok); color:#fff; }
+.sbs.warn { background-color:var(--bad); color:#fff; }
+.stg2 { width:50px; height:28px; padding:0; border:3px solid var(--ol); background:#d6ccb4; position:relative; }
+.stg2 i { position:absolute; top:2px; left:2px; width:18px; height:18px; background:var(--paper); border:2px solid var(--ol); }
+.stg2.on { background:var(--ok); } .stg2.on i { left:24px; }
+.scl { background:none; border:none; padding:4px; display:flex; align-items:center; gap:2px; }
+.sbtn { width:100%; height:40px; font-size:14px; }
+.smv textarea { width:100%; margin:6px 0; background:#fffaf0; color:var(--text); border:2px solid var(--ol); padding:8px; font-size:12px; border-radius:0; }
+.smv { padding-bottom:6px; } .smv:empty { display:none; }
+.sreset { width:100%; height:50px; display:flex; align-items:center; gap:10px; padding:0 14px; background-color:#f8d6cf; color:#b03a30; margin-bottom:10px; }
+.sreset.arm { background-color:var(--bad); color:#fff; }
+#app .sh .shh { width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; filter:none; }
+#app .sh .shh[hidden] { display:none; }
