@@ -205,7 +205,7 @@ function shopView(h){
     const nx = cur + 1, q = nx < 4 ? (kind === 'w' ? qw : qa) : null, can = q && S.gold >= q.p, cat = kind === 'w' ? '戰力' : '防具';
     let eff = '', safe = '';
     if (q && kind === 'w') { const P0 = power(h), P1 = P0 / WPN.mul[cur] * WPN.mul[nx], z0 = bestSafeZone(); let z1 = z0; for (let i = 0; i <= topZ(); i++) if (P1 / zD(i) >= 1.3) z1 = i;
-      eff = `${Math.round(P0)} → <b class="cg">${Math.round(P1)}</b>`; if (z1 > z0) safe = `<div class="f14 cg">${esc(ZONES[z1].n)}變安全</div>`; }
+      eff = `${Math.round(P0)} → <b class="cg">${Math.round(P1)}</b>`; }
     if (q && kind === 'a') eff = `×${T0.mul[cur]} → <b class="cg">×${T0.mul[nx]}</b>`;
     return `<div class="pb eqc"><div class="eqh"><span${TIPA(cat, kind === 'w' ? '武器' : '防具', kind === 'w' ? '打怪的強度，越高打得越快、越不容易受傷' : '越好越不容易受傷')}>${IC(cat, 2)}</span>${lvSq(4, cur)}</div>
       <div class="eqr"><div class="eqi2">${img(cur)}<b class="f22">${esc(nm(cur))}</b></div>${q ? `<span class="eqar">→</span><div class="eqi2">${img(nx)}<b class="f22">${esc(nm(nx))}</b></div>` : `<div class="eqi2 mx cg f16">已經是最好的了</div>`}</div>
@@ -1104,8 +1104,8 @@ function renderSheet(){
       const docC = 80 + h.lv * 20, coachC = 150 + h.lv * 40, rows = [];
       const eic = l => l.map(([n, t]) => n ? `<span class="num s">${IC(n, 2)}${t ? `<b class="cg">${t}</b>` : ''}</span>` : `<b class="cg f16">${t}</b>`).join('');
       const row = (ic, t, d, effs, code, price, why) => rows.push(`<div class="pb care"><span class="cbi"${TIPA(ic, t, d)}>${IC(ic, 3)}</span><div class="cbm"><b class="f22">${esc(t)}</b><div class="cbe">${eic(effs)}</div></div>${priceBtn(`data-b="${code}"`, price, !!why || S.gold < price, why)}</div>`);
-      row('醫務室', '看醫生', `健康大幅回復，傷勢少躺一個月（現在健康 ${Math.round(h.health)}）`, [['心情', '+'], ['體力', '+']], 'd', docC, h.health > 95 && !h.bedDays ? '現在不用' : '');
-      row('訓練室', '教練特訓', '跟教練練 2 個月：經驗大增，但很累', [['上升', ''], ['', '經驗'], ['時間', '2月']], 'c', coachC, !['idle', 'rest', 'home'].includes(h.act) ? `${pron(h)}走不開` : '');
+      row('照顧', '看醫生', `健康大幅回復，傷勢少躺一個月（現在健康 ${Math.round(h.health)}）`, [['心情', '+'], ['體力', '+']], 'd', docC, h.health > 95 && !h.bedDays ? '現在不用' : '');
+      row('戰力', '教練特訓 2 月', '經驗大增，但很累', [['上升', ''], ['', '經驗']], 'c', coachC, !['idle', 'rest', 'home'].includes(h.act) ? `${pron(h)}走不開` : '');
       row('照顧', '小藥水', `血少時自動喝，身上最多 ${POT_MAX} 瓶`, [['', `身上 ${h.pots}/${POT_MAX}`]], 'p', POT_PRICE, h.pots >= POT_MAX ? '帶滿了' : '');
       if (hasP(h, 'scar') || hasP(h, 'side')) { const rc = 1500 + h.lv * 80, ok = (S.office.clinic || 0) >= 3, what = hasP(h, 'scar') ? '舊傷' : '後遺症';
         row('醫務室', '復健療程', `治好${what}，要在醫務室躺 3 個月${hasP(h, 'scar') && !hasP(h, 'lame') ? `（不治的話，再 ${Math.max(0, 60 - (S.day - (h.lastHeavy ?? h.born)))} 個月沒受重傷也會好）` : ''}`, [['', '治好' + what]], 'rehab', rc, !ok ? '醫務室 Lv3' : busyAway(h) ? `${pron(h)}不在` : ''); }
