@@ -622,13 +622,17 @@ const QH = {
         if (h.burn > 80 && h.trust < 35) { h.goneDays = ri(2, 5); setAct('gone'); h.alpha = 0; repAdd(-6, '勇者受不了而出走'); ev('bad', '出走', `${h.name}受不了被一直壓榨，離開了村子`); } }
       else { it.agreed = 1; remember('used', { n:it.n }); say(pickS(['……知道了', '你眼裡只有事務所吧'])); } }
     else adj('mood', -3); },
-  scandal(i, d){ const h = H();
-    if (i === 0) { addFame(Math.round(d.hit * .5)); adj('mood', -10); adj('trust', hx(h, 'A') > .5 ? 3 : -4); repAdd(2, '醜聞後讓勇者公開道歉'); say(hx(h, 'A') > .5 ? '……是我不對，我去道歉' : '為什麼要我低頭……'); }
-    else if (i === 1) { if (S.gold >= d.cost) { S.gold -= d.cost; addFame(Math.round(d.hit * .9)); adj('trust', 4); if (chance(.3)) h.pendingSc = { k:d.k, d:S.day + ri(8, 20), leak:1 }; say('謝謝老闆幫我擋下來'); } else { sys('錢不夠，壓不下來'); addFame(-Math.round(d.hit * .2)); } }
-    else if (i === 2) { addFame(Math.round(d.hit * .8)); adj('trust', -30); adj('mood', -20); repAdd(-12, '醜聞時公開切割勇者'); remember('betrayed'); logLife('被經紀人公開切割'); say('……原來對你來說，我只是商品');
-      if (chance(.4)) die('醜聞後被事務所公開切割，傷心地離開', 'left'); }
-    else if (i === 3) { addFame(-Math.round(d.hit * .3)); adj('trust', 15); adj('mood', 10); repAdd(6, '醜聞時力挺勇者'); remember('backed'); logLife('醜聞時經紀人力挺到底'); say(L('backed')); }
-    else { addFame(-Math.round(d.hit * .2)); adj('trust', -3); } },
+  scandal(i, d){ const h = H(), att = d.att || 'sorry';   // v17.77：他的態度（慚愧／喊冤／不在乎）影響後果；被誣陷的話之後會真相大白
+    if (i === 0) { addFame(Math.round(d.hit * .5)); repAdd(2, '醜聞後讓勇者公開道歉');
+      if (att === 'sorry') { adj('mood', -6); adj('trust', 3); say('……是我不對，我去道歉'); }
+      else if (att === 'unfair') { adj('mood', -15); adj('trust', -10); say(d.fake ? '我明明沒做……你寧願相信報紙？' : '我又沒錯，為什麼要我低頭……'); }
+      else { adj('mood', -5); adj('trust', -2); say('好啦好啦，道歉就道歉'); } }
+    else if (i === 1) { if (S.gold >= d.cost) { S.gold -= d.cost; addFame(Math.round(d.hit * .9)); adj('trust', 4); if (!d.fake && chance(.3)) h.pendingSc = { k:d.k, d:S.day + ri(8, 20), leak:1 }; say(att === 'unfair' ? '……壓下來也好，反正他們亂寫' : '謝謝老闆幫我擋下來'); } else { sys('錢不夠，壓不下來'); addFame(-Math.round(d.hit * .2)); } }
+    else if (i === 2) { addFame(Math.round(d.hit * .8)); adj('trust', att === 'unfair' ? -40 : -30); adj('mood', -20); repAdd(-12, '醜聞時公開切割勇者'); remember('betrayed'); logLife('被經紀人公開切割'); say(att === 'unfair' ? '……連你都不信我' : '……原來對你來說，我只是商品');
+      if (chance(att === 'unfair' ? .5 : .4)) die('醜聞後被事務所公開切割，傷心地離開', 'left'); }
+    else if (i === 3) { addFame(-Math.round(d.hit * .3)); adj('trust', att === 'unfair' ? 20 : att === 'shrug' ? 8 : 15); adj('mood', att === 'unfair' ? 15 : 10); repAdd(6, '醜聞時力挺勇者'); remember('backed'); logLife('醜聞時經紀人力挺到底'); say(att === 'shrug' ? '我就說沒事吧！不過……謝啦' : L('backed')); }
+    else { addFame(-Math.round(d.hit * .2)); adj('trust', -3); }
+    if (d.fake && h.act !== 'left') h.scTruth = { d:S.day + ri(3, 6), hit:d.hit, i, ag:pick(RIVAL_AG) }; },
   crisis(i, d){ const h = H();
     if (i < 0 && !d.warned) { ask('crisis', '（最後通知：銀行說再不處理，就要拍賣事務所的設備。你再不決定，會自動幫你借高利貸。）', ['賣掉一項設施', '借高利貸 1,500 金', '接受銀月經紀社的收購', '接受地下商會的幫忙'], { warned:1 }, 3); return; }
     if (i < 0) i = 1;
@@ -1041,14 +1045,32 @@ function crisisTick(){
 // 醜聞
 function scandalTick(){
   const h = H(); if (offline || ['dead', 'retired', 'left', 'dying'].includes(h.act)) return;
-  if (h.pendingSc) { if (S.day >= h.pendingSc.d && !S.q) { const q = h.pendingSc; h.pendingSc = null; revealScandal(q.k, q.leak); } return; }
+  if (h.scTruth && S.day >= h.scTruth.d) { const t = h.scTruth; h.scTruth = null; const back = Math.round(t.hit * (t.i === 3 ? 1.2 : t.i === 1 ? .3 : .6)); addFame(back);
+    ev('good', '真相大白', `原來${h.name}的醜聞是${t.ag}放的假消息，事務所名聲 +${back}`); logLife('醜聞真相大白：是被誣陷的');
+    if (t.i === 3) { adj('trust', 5); repAdd(4, '力挺被誣陷的勇者'); say('看吧！我就說不是我！老闆，謝謝你當時相信我'); }
+    else if (t.i === 0) { adj('trust', -5); say('……我早就說了不是我'); }
+    else if (t.i === 2) { repAdd(-6, '公開切割了被誣陷的勇者'); }
+    return; }
+  if (h.pendingSc) { if (S.day >= h.pendingSc.d && !S.q) { const q = h.pendingSc; h.pendingSc = null; revealScandal(q.k, q.leak, q.fake); } return; }
   if (!chance(.012 + h.stress / 4000 + (h.burn || 0) / 4000 + (S.fame > 200 ? .006 : 0))) return;
   const pool = SCANDALS.map(x => [x, Math.max(0, x.w(h))]).filter(x => x[1] > 0); if (!pool.length) return;
   let r = Math.random() * pool.reduce((a, x) => a + x[1], 0), sc = pool[0][0];
   for (const [x, w] of pool) { r -= w; if (r <= 0) { sc = x; break; } }
-  if (chance(.5) || S.q) h.pendingSc = { k:sc.k, d:S.day + ri(3, 10) }; else revealScandal(sc.k);
+  const fake = chance(.2);   // v17.77：兩成是對手事務所放的假消息
+  if (chance(.5) || S.q) h.pendingSc = { k:sc.k, d:S.day + ri(3, 10), fake }; else revealScandal(sc.k, 0, fake);
 }
-function revealScandal(k, leak){
+// v17.77 醜聞時他的態度：慚愧（sorry）／喊冤（unfair）／不在乎（shrug）。看醜聞種類和個性；被誣陷一定喊冤
+const SC_LEAN = { affair:[.8, 1.2, 1], drunk:[.8, 1.3, .9], fight:[.6, 1.6, .5], bribe:[1.3, .5, .6], noshow:[.9, .6, 1.4], fraud:[1.2, .8, .5] };
+function scAtt(h, k, fake){ if (fake) return 'unfair';
+  const l = SC_LEAN[k] || [1, 1, 1], tn = toneOf(h), w = [l[0] * (.4 + hx(h, 'H')) * (tn === 'warm' ? 1.4 : 1), l[1] * (1.4 - hx(h, 'A')) * (tn === 'blunt' ? 1.6 : 1), l[2] * (.4 + hx(h, 'X')) * (tn === 'cheer' ? 1.5 : 1) * .7];
+  let r = Math.random() * (w[0] + w[1] + w[2]); for (let i = 0; i < 3; i++) { r -= w[i]; if (r <= 0) return ['sorry', 'unfair', 'shrug'][i]; } return 'sorry'; }
+const SC_UNFAIR = { fight:['是對方先動手的！我只是還手', '他先砸我的攤子，報紙怎麼不寫？'], drunk:['我只是喝了兩杯，他們寫得像我拆了酒館', '桌子本來就快壞了好嗎'], affair:['就吃個飯而已，哪來的旅館？', '跟朋友見個面也要上報紙？'],
+  noshow:['那天我明明跟他們說過要改期', '是他們自己沒把時間講清楚'], bribe:['我沒收！那是商會硬塞的謝禮', '放水？那場我是真的打不贏'], fraud:['我只是幫馬可介紹朋友，我哪知道他在騙人', '我也是被騙的那個啊'] };
+function scLine(h, k, att, fake){
+  if (att === 'sorry') return L('scandalAsk');
+  if (att === 'shrug') return pickS(['上新聞而已，過幾天大家就忘了', '反正有人罵就有人愛', '老闆，你看起來比我還緊張', '欸，我上報紙了耶'].concat(k === 'noshow' ? ['那個活動本來就很無聊嘛'] : []));
+  return pickS(['又不是我的錯！', '報紙只寫了一半……', '那些記者根本沒問過我'].concat(SC_UNFAIR[k] || [], fake ? ['我根本沒做這種事！', '這是誰編的？那天我人根本不在那裡'] : [])); }
+function revealScandal(k, leak, fake){
   const h = H(), sc = SCANDALS.find(x => x.k === k); if (!sc) return;
   const rp = npc('reporter'), rpm = rp && rp.alive ? (rp.aff >= 50 ? .7 : rp.aff < 15 ? 1.25 : 1) : 1;
   const hit = Math.round(sc.fame * (1 + rkx() * .3) * (leak ? 1.8 : 1) * rpm);
@@ -1057,7 +1079,8 @@ function revealScandal(k, leak){
   ev('bad', leak ? '醜聞（壓不住了）' : '醜聞', `${sc.t(h)}${leak ? '。而且有人爆料你花錢壓新聞' : ''}，事務所名聲 -${hit}`);
   logLife(`爆出醜聞：${sc.n}`);
   const cost = 300 + rkx() * 300;
-  ask('scandal', leak ? '……老闆，對不起，又上新聞了' : L('scandalAsk'), ['讓他公開道歉', `花 ${fmt(cost)} 金壓新聞`, '公開和他切割', '力挺到底'], { hit, cost, k }, 2);
+  const att = leak ? 'sorry' : scAtt(h, k, fake);
+  ask('scandal', leak ? '……老闆，對不起，又上新聞了' : scLine(h, k, att, fake), ['讓他公開道歉', `花 ${fmt(cost)} 金壓新聞`, '公開和他切割', '力挺到底'], { hit, cost, k, head:sc.t(h), leak:leak ? 1 : 0, att, fake:fake ? 1 : 0 }, 2);
 }
 function closeMission(){ clearInterval(mTimer); $('mission').classList.remove('on'); S.paused = false; mHold = 0; }
 function startMission(o){

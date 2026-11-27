@@ -873,7 +873,9 @@ const HINT = {
   love:(d, h) => { const n = npc(d.id), p = n ? Math.round(clamp(n.aff / 100 + .1, 0, 1) * 100) : 50; return [['成不成看對方的心意', '他會失落、有點不滿', '交給他自己'], [`對方答應的機率約 ${p}%`, '心情 -12、信任 -4（他也可能不聽）', `他會自己去告白，機率約 ${p}%`]]; },
   propose:(d, h) => [['事務所出錢，他會很感激', '他會失落', '用他自己的錢，他會覺得你不夠意思'], ['婚禮辦成、信任 +10', '心情 -10、信任 -5', `他要出 300（他現在有 ${fmt(h.wallet)}）、信任 -2`]],
   retire:(d, h) => [['他會退休，這一代結束', '他會不滿、壓力變大', '他會非常不滿'], ['結局：安穩退休', '信任 -8、壓力 +10，一年後再問你', '信任 -20、心情 -15、壓力 +20']],
-  scandal:(d, h) => [['名聲少扣一些，他可能不服氣', '花錢壓新聞，之後可能又爆出來', '他會非常受傷，可能離開', '名聲扣多一點，他會很感激'], ['名聲傷害減半、口碑 +2', '名聲傷害只剩一成，三成機率之後又爆', '信任 -30、口碑 -12，四成機率他會離開', '名聲多扣三成、信任 +15、口碑 +6']],
+  scandal:(d, h) => { const a = d.att || 'sorry';   // v17.77：照他的態度
+    return [[a === 'unfair' ? '他覺得自己沒錯，會很不服氣' : a === 'shrug' ? '名聲少扣一些，他無所謂' : '他會接受，名聲少扣一些', '花錢壓新聞，之後可能又爆出來', a === 'unfair' ? '他會覺得連你都不信他，很可能離開' : '他會非常受傷，可能離開', a === 'unfair' ? '名聲扣多一點，他會非常感激' : a === 'shrug' ? '名聲扣多一點，他覺得本來就沒事' : '名聲扣多一點，他會很感激'],
+      [a === 'unfair' ? '名聲傷害減半、口碑 +2、信任 -10、心情 -15' : a === 'shrug' ? '名聲傷害減半、口碑 +2、信任 -2' : '名聲傷害減半、口碑 +2、信任 +3', '名聲傷害只剩一成，三成機率之後又爆', a === 'unfair' ? '信任 -40、口碑 -12，一半機率他會離開' : '信任 -30、口碑 -12，四成機率他會離開', `名聲多扣三成、口碑 +6、信任 +${a === 'unfair' ? 20 : a === 'shrug' ? 8 : 15}`]]; },
   family:(d, h) => [['他會趕回去，大概來得及', '可能來不及見最後一面', '他會恨你'], ['回家 4 個月、信任 +8', '一半機率沒趕上：心情 -30、信任 -10', '信任 -20 以上，一半機率家人就這樣走了']],
   rvPoach:(d, h) => { const st = k => Math.round(clamp(h.trust / 100 + .25 - (h.burn || 0) / 200 + (S.cut <= 25 ? .1 : 0) - k, .08, .95) * 100); return [['他一定留下，但你少賺', '看他信不信任你', '他可能真的會走'], ['一定留下、信任 +6，抽成降到 20%', `他留下的機率約 ${st(0)}%`, `他留下的機率約 ${st(.2)}%`]]; },
   plague:(d, h) => [['他會很快好起來', '可能惡化'], ['健康 +40、信任 +6', '三成五機率惡化，嚴重時可能病逝']],
@@ -897,6 +899,7 @@ function evPage(){
       <div class="pb evdue"${TIPA('時間', '還能想多久', '過了這幾個月沒回答，' + pron(h) + '會自己決定')}>${IC('時間', 2)}<b>剩 ${Math.max(0, q.until - S.day) + 1} 月</b></div>
       <canvas id="evFig" width="90" height="78" aria-label="${esc(h.name)}"></canvas></div>
     <div class="evb">
+      ${q.key === 'scandal' && q.data && q.data.head ? `<div class="pb ns evnews"${TIPA('近況', '報紙', '外面現在在傳的事')}>${IC('近況', 2)}<b>${esc(q.data.head)}${q.data.leak ? '。而且有人爆料你花錢壓新聞' : ''}</b></div>` : ''}
       <div class="pb ns evbox">${sys0 ? '' : `<span class="evn">${esc(h.name)}</span>`}<div>${esc(sys0 ? q.text.replace(/^（|）$/g, '') : q.text)}</div></div>
       ${hs ? `<div class="evh"><span class="num s"${TIPA('信任', '信任 ' + Math.round(h.trust), '信任 40 以上才會說後果，70 以上會說清楚')}>${IC('信任', 2)}<b>${Math.round(h.trust)}</b></span><span class="mu f14">${['看不出後果', '只透露大概', '把話說清楚了'][lv]}</span></div>` : ''}
       <div class="evo">${q.opts.map((o, i) => `<button class="pb au opt2" data-ea="${i}"><b>${esc(o)}</b>${hs && lv && hs[lv - 1][i] ? `<small class="${lv === 2 ? 'cg' : 'co'}">${esc(hs[lv - 1][i].replace(/他/g, pron(h)))}</small>` : ''}</button>`).join('')}</div>
@@ -1276,7 +1279,7 @@ function renderSheet(){
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.76</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.77</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });

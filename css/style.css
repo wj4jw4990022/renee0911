@@ -951,3 +951,5 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 #evp .evl { align-self:center; min-height:0; padding:8px 26px; font-size:16px; color:var(--muted); background-color:var(--paper); }
 #evp .opt2, #evp .opt2:first-child { border:3px solid transparent; border-image:var(--pb-au) 3; box-shadow:inset 0 0 0 2px var(--ol); }
 #evp .evbox, #evp .evl { border:3px solid transparent; border-image:var(--pb-dk) 3; }
+#evp .evnews { display:flex; align-items:flex-start; gap:10px; padding:8px 12px; background-color:#efe6d2; font-size:14px; line-height:1.5; }
+#evp .evnews .ic { flex:none; margin-top:2px; }
