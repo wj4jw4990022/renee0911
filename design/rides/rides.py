@@ -102,6 +102,44 @@ def coach(f):
     d.line((30, 19+b, 34, 22+lift), fill=(63, 38, 49)); d.line((30, 20+b, 34, 23+lift), fill=(118, 59, 54))   # 車轅
     im.alpha_composite(hz, (30, 10))
     return im
+def wagon(f):
+    # v17.91 護送用的篷車（貨車）：米白帆布拱頂、木頭車身、露出木箱；大木輪；前面接棕馬（走路）
+    BODY = [
+    "......wwwwwwwwwwwwwww.......",
+    ".....wWwwwwwwwwwwwwwWw......",
+    "....wWwwwwwwwwwwwwwwwWw.....",
+    "....wWwwwwwwwwwwwwwwwWw.....",
+    "....wWwwwwwwwwwwwwwwwWw.....",
+    "....hhhhhhhhhhhhhhhhhhh.....",
+    "....HHoooHHHHHHHHHoooHH.....",
+    "....HHohoHHHHHHHHHohoHH.....",
+    "....HHHHHHHHHHHHHHHHHHHHHHHH",
+    "....hhhhhhhhhhhhhhhhhhhhhhhh",
+    "....HHHHHHHHHHHHHHHHHHH.....",
+    ".....hhhhhhhhhhhhhhhhh......",
+    ]
+    CM = {'w':'#f4eee0','W':'#c8bca4','h':'#763b36','H':'#bd6c4a','o':'#eaa56c','y':'#f2c14e','k':'#262b44','#':OUT}
+    W, Hh = 32, 22; g = [[None]*W for _ in range(Hh)]; b = f % 2
+    for y, row in enumerate(BODY):
+        for x, ch in enumerate(row):
+            if ch != '.': g[y+2+b][x+1] = ch
+    for cx in (9, 21):
+        cy = 16
+        for dy in range(-4, 5):
+            for dx in range(-4, 5):
+                r = math.hypot(dx, dy)
+                if r <= 4.3: g[cy+dy][cx+dx] = 'h' if r > 3.2 else None
+        a0 = [0, 45][f % 2]
+        for a in (a0, a0+90):
+            for k in (range(-3, 4) if a0 == 0 else range(-2, 3)):
+                g[cy+round(math.sin(math.radians(a))*k)][cx+round(math.cos(math.radians(a))*k)] = 'o'
+        g[cy][cx] = 'y'
+    cb = img(outline(g), CM)
+    im = Image.new('RGBA', (62, 36)); hz = img(walk(f), BROWN); lift = 1 if f in (1, 3) else 0
+    im.alpha_composite(cb, (0, 8)); d = ImageDraw.Draw(im)
+    d.line((30, 19+b, 34, 22+lift), fill=(63, 38, 49)); d.line((30, 20+b, 34, 23+lift), fill=(118, 59, 54))
+    im.alpha_composite(hz, (30, 10))
+    return im
 def foot_crop(im, bottom):
     return im.crop((0, 0, im.width, bottom + 1))
 if __name__ == '__main__':
@@ -117,5 +155,6 @@ if __name__ == '__main__':
                 if not (y >= 8 + RUN_PAD + lift or x >= 12 + RUN_X): p[x, y] = (0, 0, 0, 0)
         fr.save(f'{out}/horse_runF_{f}.png')
         cimg = coach(f); bb = cimg.getbbox(); cimg.crop((0, 0, cimg.width, bb[3])).save(f'{out}/coach_{f}.png')
+        wimg = wagon(f); bb = wimg.getbbox(); wimg.crop((0, 0, wimg.width, bb[3])).save(f'{out}/wagon_{f}.png')
     st = img(walk(0), BROWN); st.crop((0, 0, st.width, st.getbbox()[3])).save(f'{out}/horse_stand.png')
     print('ok')
