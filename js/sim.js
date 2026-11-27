@@ -322,39 +322,35 @@ function nearDeath(why, z){
     ev('warn', '被救回', `${h.name}${why}倒下，被路過的冒險者拖回村子`);
     injure('heavy', why); return;
   }
-  h.dyingWhy = why; h.act = 'dying'; S.paused = true; dyingLeft = 15;
+  h.dyingWhy = why; h.dyingZ = z; h.act = 'dying'; S.paused = true; dyingLeft = 15;
   logLife(`${why}，倒下了`);
   openDying();
 }
-function openDying(){
-  const h = H(), cost = healCost(), canPay = S.gold >= cost;
+function openDying(){   // v17.80 新版（design-wip design/ui/草圖_瀕死.png）：倒下的地方（調暗＋紅色暗角）、躺著的 Q 版勇者、紙卡標題；心跳＋倒數；金框選項
+  const h = H(), cost = healCost(), canPay = S.gold >= cost, fN = friendsN();
   const line = h.trust > 60 ? '老闆……對不起，我好像回不去了' : h.trust > 30 ? '……好冷……這就是結局了嗎' : '……早知道……就不聽你的了';
   $('dying').innerHTML = `
-    <div class="scene">
-      <div style="position:absolute;left:0;top:62%;width:100%;height:38%;background:#3d3b36"></div>
-      <canvas id="dcv" width="24" height="12" style="position:absolute;left:50%;top:66%;width:96px;height:48px;margin-left:-48px;image-rendering:pixelated"></canvas>
-      <div class="vig"></div>
-      <div style="position:absolute;left:0;right:0;top:44px;text-align:center">
-        <div class="px" style="font-size:26px;letter-spacing:4px">${h.name}倒下了</div>
-        <div style="font-size:13px;color:#7a5a3a;margin-top:4px">${h.dyingWhy}</div>
-      </div>
-    </div>
-    <div style="padding:6px 22px 0;text-align:center">
-      <svg width="300" height="40" viewBox="0 0 346 44" aria-hidden="true"><path d="M0 24 H120 l8 -4 l6 4 h18 l6 -18 l8 34 l6 -16 h20 H346" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-linejoin="round"/></svg>
-      <div><span style="font-size:13px;color:#7a5a3a">還能撐</span> <b class="px beat" id="dLeft" style="font-size:34px;color:#ff7b7b;font-weight:400">0:15</b></div>
-    </div>
-    <div class="m" style="margin:6px 22px 0;max-width:none;background:#1a1d25;border:1px solid #2c2f38;color:#d6d2ca">${line}</div>
-    <div style="margin:12px 22px 0;display:flex;flex-direction:column;gap:8px">
-      <button class="opt" id="dO1" style="background:#2a1c1f;border-color:#7a3a3a" ${canPay ? '' : 'disabled'}><div class="row"><span>請神官緊急傳送救治</span><span style="color:#f2c14e">${fmt(cost)} 金</span></div><div class="s">${canPay ? '一定能活下來，但會重傷臥床，可能留下殘疾' : '錢不夠'}</div></button>
-      <button class="opt" id="dO2"><div class="row"><span>大喊求救，賭路過的冒險者</span><span style="color:#7a5a3a">免費</span></div><div class="s">看運氣。${pron(h)}的朋友越多，越可能有人來</div></button>
-      <button class="opt" id="dO3" style="background:transparent;border-style:dashed;min-height:48px;color:#7a5a3a;font-size:13.5px">陪${pron(h)}走完最後一段</button>
+    <div class="dsc"><canvas id="dcv" width="120" height="102"></canvas><div class="dvig"></div>
+      <div class="pb dttl"><b>${esc(h.name)}倒下了</b><span>${esc(h.dyingWhy || '')}</span></div></div>
+    <div class="dbd">
+      <div class="dbeat"><svg viewBox="0 0 260 44" preserveAspectRatio="none" aria-hidden="true"><path d="M0 24 H100 l8 -5 l8 5 h14 l10 -20 l11 38 l11 -26 l8 8 H260" fill="none" stroke="#e84537" stroke-width="3" stroke-linejoin="round"/></svg><span class="num"${TIPA('時間', '還能撐多久', '時間到了還沒決定，就來不及了')}>${IC('時間', 2)}<b class="cr beat" id="dLeft">0:15</b></span></div>
+      <div class="pb ns dsay"><span class="dnm">${esc(h.name)}</span><div>${esc(line)}</div></div>
+      <button class="pb au dopt" id="dO1" ${canPay ? '' : 'disabled'}>${IC('生病', 3, !canPay)}<span class="dtx"><b>請神官緊急救治</b><small>${canPay ? '一定活下來，但會重傷臥床' : '錢不夠'}</small></span><span class="pb ns dpr">${IC('金幣', 2, !canPay)}<b>${fmt(cost)}</b></span></button>
+      <button class="pb au dopt" id="dO2">${IC('說話', 3)}<span class="dtx"><b>大喊求救</b><small>看運氣：朋友越多，越可能有人來</small></span><span class="num"${TIPA('人際', '朋友', `交情到「朋友」以上的人有 ${fN} 個`)}>${IC('人際', 2)}<b>×${fN}</b></span></button>
+      <button class="dopt dlast" id="dO3">${IC('空心', 2)}<b>陪${pron(h)}走完最後一段</b></button>
     </div>`;
   $('dying').classList.add('on');
-  drawLying($('dcv'));
+  dyingScene($('dcv'), h);
   $('dO1').onclick = () => dyingChoose(1); $('dO2').onclick = () => dyingChoose(2); $('dO3').onclick = () => dyingChoose(3);
   clearInterval(dyingTimer);
   dyingTimer = setInterval(() => { dyingLeft--; const el = $('dLeft'); if (el) el.textContent = `0:${String(Math.max(0, dyingLeft)).padStart(2, '0')}`; if (dyingLeft <= 0) dyingChoose(0); }, 1000);
 }
+// 倒下的地方：野外前三區用那一區的背景（調暗），其他地方用暗色地面；勇者躺在路上、閉著眼
+function dyingScene(c, h){ if (!c) return; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.fillStyle = '#22262a'; g.fillRect(0, 0, 120, 102);
+  const z = h.dyingZ != null && h.dyingZ >= 0 ? h.dyingZ : (h.zone ?? -1), Y0 = 68;   // 只取野外畫面下半（樹＋路），勇者才夠大
+  try { if (z >= 0 && z <= 2) { const st = zoneStrip(z); g.drawImage(st, Math.max(0, Math.round(st.width / 2 - 60)), Y0, 120, 102, 0, 0, 120, 102); } else { g.fillStyle = '#3a3530'; g.fillRect(0, 124 - Y0, 120, 102); } } catch (e) {}
+  g.fillStyle = 'rgba(16,12,18,.6)'; g.fillRect(0, 0, 120, 102);
+  try { drawSprite(g, h, 60, 142 - Y0, true, 0, { moving:false, noEmo:true, expr:'sick' }); } catch (e) {} }
 const healCost = () => Math.round((200 + H().lv * 120) * (1 - (S.office.clinic || 0) * .2) * (isFr('priest') ? .85 : 1));
 function dyingChoose(k){
   clearInterval(dyingTimer); $('dying').classList.remove('on');
