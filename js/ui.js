@@ -875,7 +875,7 @@ const HINT = {
   retire:(d, h) => [['他會退休，這一代結束', '他會不滿、壓力變大', '他會非常不滿'], ['結局：安穩退休', '信任 -8、壓力 +10，一年後再問你', '信任 -20、心情 -15、壓力 +20']],
   scandal:(d, h) => { const a = d.att || 'sorry';   // v17.77：照他的態度
     return [[a === 'unfair' ? '他覺得自己沒錯，會很不服氣' : a === 'shrug' ? '名聲少扣一些，他無所謂' : '他會接受，名聲少扣一些', '花錢壓新聞，之後可能又爆出來', a === 'unfair' ? '他會覺得連你都不信他，很可能離開' : '他會非常受傷，可能離開', a === 'unfair' ? '名聲扣多一點，他會非常感激' : a === 'shrug' ? '名聲扣多一點，他覺得本來就沒事' : '名聲扣多一點，他會很感激'],
-      [a === 'unfair' ? '名聲傷害減半、口碑 +2、信任 -10、心情 -15' : a === 'shrug' ? '名聲傷害減半、口碑 +2、信任 -2' : '名聲傷害減半、口碑 +2、信任 +3', '名聲傷害只剩一成，三成機率之後又爆', a === 'unfair' ? '信任 -40、口碑 -12，一半機率他會離開' : '信任 -30、口碑 -12，四成機率他會離開', `名聲多扣三成、口碑 +6、信任 +${a === 'unfair' ? 20 : a === 'shrug' ? 8 : 15}${a === 'unfair' && !d.fake ? '；三成機率之後被拆穿' : ''}`]]; },
+      [a === 'unfair' ? '名聲傷害減半、口碑 +2、信任 -10、心情 -15' : a === 'shrug' ? '名聲傷害減半、口碑 +2、信任 -2' : '名聲傷害減半、口碑 +2、信任 +3', '名聲傷害只剩一成，三成機率之後又爆', a === 'unfair' ? '信任 -40、口碑 -12，一半機率他會離開' : '信任 -30、口碑 -12，四成機率他會離開', `名聲多扣三成、口碑 +6、信任 +${a === 'unfair' ? 20 : a === 'shrug' ? 8 : 15}${a === 'unfair' && !d.fake && h.trust >= 90 ? '；三成機率之後被拆穿' : ''}`]]; },
   family:(d, h) => [['他會趕回去，大概來得及', '可能來不及見最後一面', '他會恨你'], ['回家 4 個月、信任 +8', '一半機率沒趕上：心情 -30、信任 -10', '信任 -20 以上，一半機率家人就這樣走了']],
   rvPoach:(d, h) => { const st = k => Math.round(clamp(h.trust / 100 + .25 - (h.burn || 0) / 200 + (S.cut <= 25 ? .1 : 0) - k, .08, .95) * 100); return [['他一定留下，但你少賺', '看他信不信任你', '他可能真的會走'], ['一定留下、信任 +6，抽成降到 20%', `他留下的機率約 ${st(0)}%`, `他留下的機率約 ${st(.2)}%`]]; },
   plague:(d, h) => [['他會很快好起來', '可能惡化'], ['健康 +40、信任 +6', '三成五機率惡化，嚴重時可能病逝']],
@@ -901,7 +901,7 @@ function evPage(){
     <div class="evb">
       ${q.key === 'scandal' && q.data && q.data.head ? `<div class="pb ns evnews"${TIPA('近況', '報紙', '外面現在在傳的事')}>${IC('近況', 2)}<b>${esc(q.data.head)}${q.data.leak ? '。而且有人爆料你花錢壓新聞' : ''}</b></div>` : ''}
       <div class="pb ns evbox">${sys0 ? '' : `<span class="evn">${esc(h.name)}</span>`}<div>${esc(sys0 ? q.text.replace(/^（|）$/g, '') : q.text)}</div></div>
-      ${hs ? `<div class="evh"><span class="num s"${TIPA('信任', '信任 ' + Math.round(h.trust), '信任 40 以上才會說後果，70 以上會說清楚' + (q.key === 'scandal' ? '；也看得出他是不是在說謊' : ''))}>${IC('信任', 2)}<b>${Math.round(h.trust)}</b></span><span class="mu f14">${q.key === 'scandal' && q.data && q.data.att === 'unfair' && lv === 2 ? (q.data.fake ? '他看起來是真的冤枉' : '他眼神有點閃躲') : ['看不出後果', '只透露大概', '把話說清楚了'][lv]}</span></div>` : ''}
+      ${hs ? `<div class="evh"><span class="num s"${TIPA('信任', '信任 ' + Math.round(h.trust), '信任 40 以上才會說後果，70 以上會說清楚' + (q.key === 'scandal' ? '；90 以上看得出他是不是在說謊' : ''))}>${IC('信任', 2)}<b>${Math.round(h.trust)}</b></span><span class="mu f14">${q.key === 'scandal' && q.data && q.data.att === 'unfair' && h.trust >= 90 ? (q.data.fake ? '他看起來是真的冤枉' : '他眼神有點閃躲') : ['看不出後果', '只透露大概', '把話說清楚了'][lv]}</span></div>` : ''}
       <div class="evo">${q.opts.map((o, i) => `<button class="pb au opt2" data-ea="${i}"><b>${esc(o)}</b>${hs && lv && hs[lv - 1][i] ? `<small class="${lv === 2 ? 'cg' : 'co'}">${esc(hs[lv - 1][i].replace(/他/g, pron(h)))}</small>` : ''}</button>`).join('')}</div>
       <div class="qtime evq"${TIPA('時間', '限時回答', `時間到了，${pron(h)}會自己決定`)}>${IC('時間', 2)}<span class="pbar"><i id="evBar" style="width:${rem / tot * 100}%"></i></span><b id="evCd">${Math.ceil(rem / 1000)} 秒</b></div>
       <button class="pb ns evl" id="evLater">晚點再回答</button></div>`;
@@ -1279,7 +1279,7 @@ function renderSheet(){
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.78</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.79</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
