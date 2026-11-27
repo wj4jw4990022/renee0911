@@ -245,9 +245,9 @@ const patrolOn = h => h.act === 'mission' && h.mission && h.mission.ag === 'patr
 let CH = null;   // 抓小偷的追逐（6.5 秒）
 function chaseTick(h, hr, now){
   if (offline) return;
-  if (!S.chR || S.chR.day !== S.day) { const pat = h.act === 'mission' && h.mission && h.mission.ag === 'patrol'; S.chR = { day:S.day, at:pat ? rand(20.5, 23) : rand(9, 19), go:chance(pat ? .35 : .04) }; }
+  if (!S.chR || S.chR.day !== S.day) { const pat = h.act === 'mission' && h.mission && h.mission.ag === 'patrol'; S.chR = { day:S.day, at:pat ? rand(20.5, 25) : rand(9, 19), go:chance(pat ? .35 : .04) }; }
   if (CH) { if (now - CH.t0 > 6500) { CH = null; thiefCaught(h); renderAll(); } return; }
-  if (!S.chR.go || S.chR.done || hr < S.chR.at || hr >= 24) return;
+  if (!S.chR.go || S.chR.done || hr < S.chR.at || hr >= 26) return;
   if (heroMap(h) !== 'vil' || V.inside || V.x == null || V.exiting || V.mv || sleeping() || vCarry()) return;
   const ok = S.npcs.filter(n => n.alive && !n.dark && !['rival', 'rival2'].includes(n.role));
   S.chR.done = 1; CH = { t0:now, x0:clamp(V.x, 80, VW - 200), vic:ok.length ? pick(ok).id : null }; }
@@ -1394,7 +1394,7 @@ function vilStreet(){ if (VSTREET) return VSTREET; const c = document.createElem
 // 委託分成「通勤」（每天回家）和「出差」（在外紮營）；村子裡的事務所任務只在固定時段工作。
 // 只改作息和畫面，不改數值；成敗在接任務時就決定好了（preRoll），最後一天收工時當場結算。
 const TRIP_N = /跨國|出巡|使節|護送公主/;
-const SLOT = { endorse:[9, 14], meet:[13, 17], variety:[9, 14], arena:[9, 14], trial:[8, 18], smith:[10, 15], coach:[9, 14], charity:[13, 17], banquet:[20, 24], patrol:[20, 24] };   // 事務所任務的工作時段（v17.86 開發者指定）
+const SLOT = { endorse:[9, 14], meet:[13, 17], variety:[9, 14], arena:[9, 14], trial:[8, 18], smith:[10, 15], coach:[9, 14], charity:[13, 17], banquet:[20, 24], patrol:[20, 26] };   // v17.92 開發者：巡邏 20 點到凌晨 2 點（hourOf 24 以後是隔天凌晨）   // 事務所任務的工作時段（v17.86 開發者指定）
 const MSG_TALK = ['praise', 'warn', 'cheer', 'scold', 'heart'];   // 出門在外時還能用的互動（傳訊息）
 function mKind(o){
   if (!o) return null;

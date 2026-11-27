@@ -248,7 +248,7 @@ const AGT = {
   banquet:{ n:'王都晚宴',       days:1, fame:40, gold:400, z:-1, d:'王國貴族的晚宴，晚上 20～24 點。名聲很大，想出名的人很開心' },
   herb:   { n:'採集藥草',       days:1, fame:3,  gold:150, z:0, req:1, d:'在草原或森林採草藥，不太需要打。之後半年診所的小藥水打七折' },
   harvest:{ n:'秋收幫忙',       days:1, fame:3,  gold:120, z:0, req:1, d:'9～10 月才有。幫村子割稻，全村的人交情 +1' },
-  patrol: { n:'夜間巡邏',       days:1, fame:5,  gold:200, z:-1, req:1, d:'晚上 20～24 點提燈巡村子，有機會抓到小偷' },
+  patrol: { n:'夜間巡邏',       days:1, fame:5,  gold:200, z:-1, req:1, d:'晚上 20 點到凌晨 2 點提燈巡村子，有機會抓到小偷' },
 };
 const Q_MAX = 4;
 function etaList(){ const h = H(); let off = 1 + (h.act === 'mission' ? Math.max(0, h.actDays) : (h.bedDays || 0) + (h.visit || 0) + (h.goneDays || 0)); return S.queue.map(it => { const st = S.day + off; off += estDays(h, it); return st; }); }

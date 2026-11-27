@@ -228,7 +228,7 @@ function relIcons(n){ const k = relKind(n);
   if (k === 'love') return IC('戀人', 2); if (k === 'rival') return IC('對手', 2); if (k === 'dark') return IC('空心', 2);
   const f = +k[1]; return [0, 1, 2].map(i => IC(i < f ? '心情' : '空心', 1)).join(''); }
 const roleBg = n => ({ tavern:'#d0607a', smith:'#5a5a5a', guild:'#3f6ea0', priest:'#8a8a8a', mayor:'#7a4a2a', reporter:'#4a8a8a', fan:'#c08a30', merc:'#6a3a3a', elder:'#6a5ab0', rival:'#8a3a3a', rival2:'#5a5aa0', merchant:'#4a4a3a' }[n.role] || (n.sex === 'f' ? '#9a5a80' : '#4a7a5a'));
-function npcBody(n){   // 點頭像的小框、村子裡點村民（v17.91）共用
+function npcBody(n){   // 點頭像的小框、村子裡點村民（v17.92）共用
   const h = H(), tr = (n.treat ?? -9) + 3 <= S.day, can = !n.dark && n.role !== 'rival', tags = [`${Math.floor(n.age || 30)} 歲`];
   const m = n.mate && npc(n.mate); if (m && m.alive) tags.push(n.wed ? `和${m.name}結婚了` : `和${m.name}交往中`);
   if (n.kids) tags.push('有小孩'); if (n.owe) tags.push(`欠${h.name} ${n.owe.g} 金`); if ((n.sick || 0) > S.day) tags.push('生病中');
@@ -598,7 +598,7 @@ function artistPool(force){
   if (h.child && h.age - (h.child.born ?? 99) >= 16) out.push({ name:h.child.name, sex:h.child.sex, tag:`${h.name}的${h.child.sex === 'm' ? '兒子' : '女兒'}`, trust:75, kid:1 });
   if (hasU('foreign')) out.push({ tag:'從遙遠國度來的勇者', trust:50, lv:ri(10, 20) });
   if (S.fame >= 800) out.push({ tag:'慕名而來的新人', trust:60 });
-  if ((S.coachUp || 0) > S.day) out.unshift({ tag:'上過你家勇者課的新人', trust:65 });   // v17.91：公會新人教練
+  if ((S.coachUp || 0) > S.day) out.unshift({ tag:'上過你家勇者課的新人', trust:65 });   // v17.92：公會新人教練
   const keep = S.rep < 15 ? 1 : S.rep < 30 ? 2 : out.length;
   S.aPool = fameRecruit(out.slice(0, Math.max(1, keep)).map(o => { const a = newHero({ ...o, gen:S.gen }); a.tag = o.tag; if (o.lv) { a.lv = o.lv; } if (o.shady) { a.hex.H = Math.min(a.hex.H, ri(10, 35)); a.honest = a.hex.H; a.record = 1; } if (o.fanId) a.fanId = o.fanId;
     a.age = o.kid ? 16 + rand(0, 2) : rand(18, 27); a.trust = clamp(a.trust + (S.rep - 60) / 2, 5, 95); return a; }));
@@ -1285,7 +1285,7 @@ function renderSheet(){
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.91</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.92</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
