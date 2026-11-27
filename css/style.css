@@ -662,3 +662,35 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 #app .qopts3 { gap:8px; }
 #app .chH, #app.chatx .chH { display:flex; }
 #app .qopts3 button { font-size:15px; padding:2px 1px; }
+
+/* ================= v17.59 面板外框（標題木條、圖示分頁）＋花錢頁 ================= */
+#app .sheet { background:var(--paper2); border-top:3px solid var(--ol); }
+#app .sh { background:var(--wood); border-bottom:3px solid var(--ol); padding:8px 12px; margin-bottom:10px; }
+#app .sh #shT { display:flex; align-items:center; gap:8px; font-size:22px; color:#fff3d6; text-shadow:0 2px 0 #3b2616; }
+#app .sh #shX { width:40px; height:40px; min-width:0; padding:0; border-radius:0; clip-path:none; border:3px solid transparent; border-image:var(--pb-dk) 3; background:var(--paper); background-clip:padding-box; font-size:20px; box-shadow:none; }
+#app #shS.ptabs { gap:10px; padding:2px 14px 14px; }
+#app #shS.ptabs .ptab { border-radius:0; clip-path:none; box-shadow:none; color:var(--text); text-shadow:none; font-size:14px; min-height:66px; }
+#app #shS.ptabs .ptab.on { background-color:var(--ok); color:#fff; text-shadow:0 2px 0 var(--okd); }
+#app .sb { padding:0 16px 22px; font-size:16px; }
+.g3 { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-bottom:14px; }
+.g3 .num { padding:6px 8px; justify-content:center; } .g3 .num b { font-size:20px; } .g3 .num.cr b { color:#b03a30; }
+.smith { display:flex; align-items:center; gap:8px; padding:6px 10px; margin-bottom:14px; font-size:16px; }
+.smith .sav { width:32px; height:32px; flex:none; overflow:hidden; } .smith .sav img { width:32px; height:32px; image-rendering:pixelated; }
+.eqc, .care { padding:10px 12px; margin-bottom:14px; }
+.eqh { display:flex; align-items:center; gap:10px; }
+.lvsq { display:flex; gap:4px; } .lvsq i { width:14px; height:14px; border:2px solid var(--ol); background:#d6ccb4; } .lvsq i.on { background:var(--gold); }
+.eqr { display:flex; align-items:center; justify-content:space-around; margin:6px 0 8px; }
+.eqi2 { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:96px; }
+.eqi2 img { image-rendering:pixelated; height:48px; width:auto; }
+.eqi2.mx { min-width:0; padding:14px 0; }
+.eqar { font-size:22px; color:var(--muted); }
+.eqb { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.pbw { display:flex; flex-direction:column; align-items:center; gap:4px; flex:none; margin-left:auto; }
+.pbw small { font-size:14px; color:var(--muted); }
+.pbtn { display:flex; align-items:center; justify-content:center; gap:6px; width:112px; height:44px; padding:0 8px; }
+.pbtn b { font-size:20px; }
+.care { display:flex; align-items:center; gap:12px; }
+.care .cbi { width:52px; display:flex; justify-content:center; flex:none; }
+.care .cbm { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+.care .cbe { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.care .cbe .num b { font-size:16px; }

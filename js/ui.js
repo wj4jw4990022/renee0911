@@ -189,27 +189,28 @@ function qCard(h, o, ag){
     ${d ? `<div class="seg"><i class="${d.i === 0 ? 'on' : ''}" style="background:#6fcf97"></i><i class="${d.i === 1 ? 'on' : ''}" style="background:#ffb347"></i><i class="${d.i === 2 ? 'on' : ''}" style="background:#ff7b7b"></i></div><div class="dg ${d.k}" style="font-size:12.5px">${d.n} · 勝率約 ${win}%</div>` : '<div class="dg g" style="font-size:12.5px">不用打</div>'}
     ${o.until ? `<div style="font-size:12px" class="${o.until - S.day <= 1 ? 'dg r' : 'k'}">${dueTxt(o.until)}</div>` : ''}</div></div>`;
 }
+// v17.59 花錢頁新版（design/ui/草圖_花錢.png）：一列一張粗框卡，圖示＋數字，說明收進說明框
+const priceBtn = (attr, p, dis, note) => `<span class="pbw"><button class="pb pbtn" ${attr} ${dis ? 'disabled' : ''}>${IC('金幣', 2, dis)}<b>${fmt(p)}</b></button>${note ? `<small>${esc(note)}</small>` : ''}</span>`;
+const lvSq = (n, cur) => `<span class="lvsq">${Array.from({ length:n }, (_, i) => `<i class="${i <= cur ? 'on' : ''}"></i>`).join('')}</span>`;
 function shopView(h){
   const sm = npc('chen'), smOk = sm && sm.alive, nw = h.wpn + 1, na = h.arm + 1, qw = nw < 4 ? quote(WPN.price[nw], 'agent') : null, qa = na < 4 ? quote(ARM.price[na], 'agent') : null;
   const q0 = qw || qa, base = qw ? WPN.price[nw] : qa ? ARM.price[na] : 0;
-  const line = !q0 ? '你家勇者的裝備已經是最好的了，我也沒什麼能教的。' : q0.p < base ? '看在交情上，算你便宜一點。' : q0.p > base ? '最近鐵很貴，別嫌我算得多。' : '一分錢一分貨，這把我很有信心。';
-  let out = `<div class="shopk"><div style="width:44px;flex:none"><div style="width:30px;height:9px;background:#cfcfcf;margin:0 auto"></div><div style="width:28px;height:20px;background:#e8b98a;margin:0 auto"></div><div style="width:40px;height:30px;background:#5a5a5a;margin:0 auto"></div></div>
-    <div style="flex:1"><div class="sp">「${line}」</div><div style="font-size:12px;color:#e0c89a;margin-top:6px">${smOk ? `鐵匠${sm.name}` : '鐵匠鋪'}${q0 ? ` · 今天的報價${q0.p > base ? `貴 ${Math.round((q0.p / base - 1) * 100)}%` : q0.p < base ? `便宜 ${Math.round((1 - q0.p / base) * 100)}%` : '照定價'}（${q0.why}）` : ''}</div></div></div>`;
-  const ic = (p, c, z = 30) => `<svg width="${z}" height="${z}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" aria-hidden="true">${p}</svg>`;
-  const COL = ['#a3abbd', '#c9cfdb', '#f2c14e', '#59a8ff'];
-  const up = (kind, cur) => { const T0 = kind === 'w' ? WPN : ARM, nm = i => T0.n[i] + (kind === 'w' ? WNAME[h.cls] : ''), p = kind === 'w' ? '<path d="M4 20L18 6M14 4l6 6"/>' : '<path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/>';
-    const nx = cur + 1, q = nx < 4 ? (kind === 'w' ? qw : qa) : null, can = q && S.gold >= q.p;
-    const eff = kind === 'w' ? (() => { if (!q) return ''; const P0 = power(h), P1 = P0 / WPN.mul[cur] * WPN.mul[nx]; const z0 = bestSafeZone(); let z1 = z0; for (let i = 0; i <= topZ(); i++) if (P1 / zD(i) >= 1.3) z1 = i; return `戰力 ${Math.round(P0)} → <b style="color:#2f7a3a">${Math.round(P1)}</b>${z1 > z0 ? ` · <span class="dg g">${ZONES[z1].n}變安全</span>` : ''}`; })()
-      : (q ? `HP ${maxHp(h)} → <b style="color:#2f7a3a">${Math.round(maxHp(h) / ARM.mul[cur] * ARM.mul[nx])}</b>` : '');
-    const ef = i => (kind === 'w' ? (EQ_WP[h.cls] || 'sword') : 'armor') + i;   // v17.31：像素裝備圖示
-    const dots = [0, 1, 2, 3].map(i => `<span class="td ${i < cur ? 'own' : i === cur ? 'cur' : i === nx ? 'nx' : ''}${i > cur ? ' eqoff' : ''}" title="${nm(i)}">${eqImg(ef(i), 16)}</span>`).join('');
-    return `<div class="upc ${can ? 'rec' : ''}"><div class="row"><span class="k" style="font-size:12px">${kind === 'w' ? '武器' : '防具'}</span><span class="tds">${dots}</span></div>
-      <div class="upr"><div class="ub"><div class="ic">${eqImg(ef(cur), 32)}</div><b>${nm(cur)}</b><span class="k" style="font-size:11.5px">使用中 · ×${T0.mul[cur]}</span></div>
-      ${q ? `<span class="ar">→</span><div class="ub nx"><div class="ic">${eqImg(ef(nx), 32)}</div><b>${nm(nx)}</b><span class="k" style="font-size:11.5px">×${T0.mul[nx]}</span></div>` : `<div class="ub" style="flex:2;justify-content:center"><span class="dg g" style="font-size:13px">已經是最好的了</span></div>`}</div>
-      ${q ? `<div style="font-size:12.5px;margin:6px 0">${eff}</div><button class="btn" data-b="${kind}" ${can ? '' : 'disabled'}>${can ? `買${nm(nx)}　${fmt(q.p)}<span style="font-size:11px;opacity:.75;margin-left:6px">買完剩 ${fmt(S.gold - q.p)}</span>` : `${fmt(q.p)} · 還差 ${fmt(q.p - S.gold)}`}</button>` : ''}</div>`; };
-  out += up('w', h.wpn) + up('a', h.arm);
-  out += `<div class="card row"><span style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:10px;background:#3a2030;display:flex;align-items:center;justify-content:center">${ic('<path d="M9 3h6M10 3v5l-5 9a3 3 0 003 4h8a3 3 0 003-4l-5-9V3"/>', '#ff7b7b', 18)}</span><span>小藥水<div class="k" style="font-size:12px">身上 ${h.pots} / ${POT_MAX} 瓶，血少時自動喝</div></span></span><button class="btn" data-b="p" ${S.gold < POT_PRICE || h.pots >= POT_MAX ? 'disabled' : ''}>+1　${POT_PRICE}</button></div>`;
-  return out;
+  const line = !q0 ? '裝備已經是最好的了！' : q0.p < base ? '看在交情上，算你便宜。' : q0.p > base ? '最近鐵很貴！' : '一分錢一分貨。';
+  const why = q0 ? (q0.p > base ? `今天貴 ${Math.round((q0.p / base - 1) * 100)}%（${q0.why}）` : q0.p < base ? `今天便宜 ${Math.round((1 - q0.p / base) * 100)}%（${q0.why}）` : '今天照定價') : '';
+  let out = `<div class="pb smith"${TIPA('鐵匠', smOk ? '鐵匠' + sm.name : '鐵匠鋪', why || '沒有東西可以升級了')}>${smOk ? `<span class="sav">${pimg(sm)}</span>` : ''}${IC('鐵匠', 2)}<span>「${esc(line)}」</span></div>`;
+  const AIC = ['布衣', '皮甲'];
+  const up = (kind, cur) => { const T0 = kind === 'w' ? WPN : ARM, nm = i => T0.n[i] + (kind === 'w' ? WNAME[h.cls] : '');
+    const ef = i => (kind === 'w' ? (EQ_WP[h.cls] || 'sword') : 'armor') + i;
+    const img = i => kind === 'a' && AIC[i] ? IC(AIC[i], 3) : eqImg(ef(i), 48);
+    const nx = cur + 1, q = nx < 4 ? (kind === 'w' ? qw : qa) : null, can = q && S.gold >= q.p, cat = kind === 'w' ? '戰力' : '防具';
+    let eff = '', safe = '';
+    if (q && kind === 'w') { const P0 = power(h), P1 = P0 / WPN.mul[cur] * WPN.mul[nx], z0 = bestSafeZone(); let z1 = z0; for (let i = 0; i <= topZ(); i++) if (P1 / zD(i) >= 1.3) z1 = i;
+      eff = `${Math.round(P0)} → <b class="cg">${Math.round(P1)}</b>`; if (z1 > z0) safe = `<div class="f14 cg">${esc(ZONES[z1].n)}變安全</div>`; }
+    if (q && kind === 'a') eff = `×${T0.mul[cur]} → <b class="cg">×${T0.mul[nx]}</b>`;
+    return `<div class="pb eqc"><div class="eqh"><span${TIPA(cat, kind === 'w' ? '武器' : '防具', kind === 'w' ? '打怪的強度，越高打得越快、越不容易受傷' : '越好越不容易受傷')}>${IC(cat, 2)}</span>${lvSq(4, cur)}</div>
+      <div class="eqr"><div class="eqi2">${img(cur)}<b class="f22">${esc(nm(cur))}</b></div>${q ? `<span class="eqar">→</span><div class="eqi2">${img(nx)}<b class="f22">${esc(nm(nx))}</b></div>` : `<div class="eqi2 mx cg f16">已經是最好的了</div>`}</div>
+      ${q ? `<div class="eqb"><span class="num">${IC(cat, 2)}<span class="f22">${eff}</span></span>${priceBtn(`data-b="${kind}"`, q.p, !can)}</div>${safe}` : ''}</div>`; };
+  return out + up('w', h.wpn) + up('a', h.arm);
 }
 function caravanItems(h){ const c = S.mt && S.mt.caravan; if (!c) return [];
   const it = [['pots', '遠方的藥水 ×3', '身上的藥水 +3 瓶', 120], ['boost', '力量藥劑', '戰力永久 +5%', 900 + rkx() * 300]];
@@ -218,9 +219,12 @@ function caravanItems(h){ const c = S.mt && S.mt.caravan; if (!c) return [];
 function cvBuy(k, p){ const h = H(), c = S.mt && S.mt.caravan; if (!c || S.gold < p) return; if (k === 'charm' && h.charms.length >= CHARM_MAX) return;
   S.gold -= p; if (k === 'pots') h.pots += 3; if (k === 'boost') h.boost = (h.boost || 0) + .05; if (k === 'charm') { ev('good', '商隊', `你在商隊買了${TREASURES[c.t].n}給${h.name}`); h.charms.push(c.t); c.t = null; } else ev('good', '商隊', `你在商隊買了${k === 'pots' ? '藥水' : '力量藥劑'}給${h.name}`); renderAll(); }
 function caravanView(h){ const c = S.mt && S.mt.caravan;
-  if (!c) return `<div class="card" style="text-align:center;padding:22px 12px"><div style="font-size:15px">商隊現在不在村子</div><div class="k" style="font-size:12.5px;margin-top:6px;line-height:1.6">遠方的商隊偶爾會在草原紮營幾個月，賣藥水、力量藥劑和寶物。<br>來的時候，底部「花錢」和右上鈴鐺都會提醒你。</div><div class="k" style="font-size:12px;margin-top:8px">${h.name}身上的寶物在勇者頁的「寶物」分頁</div></div>`;
-  return `<div class="card" style="background:#24301f;border-color:#3f6a3a"><div class="row"><b>遠方來的商隊</b><span class="k" style="font-size:12px">再 ${Math.max(0, c.until - S.day)} 個月就走</span></div><div class="k" style="font-size:12px;margin-top:2px">用事務所的錢買給${h.name}</div></div>
-    <div class="svgrid">${caravanItems(h).map(([k, n, d, p]) => { const full = k === 'charm' && h.charms.length >= CHARM_MAX; return `<div class="svc"><b>${n}</b><div class="k" style="font-size:12px;line-height:1.45">${d}</div>${full ? `<div class="dg o" style="font-size:11.5px">${h.name}身上帶不下了</div>` : ''}<button class="btn" data-cv="${k}" data-cp="${p}" ${S.gold < p || full ? 'disabled' : ''}>${fmt(p)}</button></div>`; }).join('')}</div>`; }
+  if (!c) return `<div class="pb care"><span class="cbi">${IC('商隊', 3, 1)}</span><div class="cbm"><b class="f16">商隊現在不在村子</b><div class="f14 mu">來的時候，鈴鐺會提醒你</div></div></div>`;
+  const CI = { pots:'照顧', boost:'上升', charm:'寶物' };
+  return `<div class="pb care"><span class="cbi">${IC('商隊', 3)}</span><div class="cbm"><b class="f22">遠方來的商隊</b></div><span class="num s"${TIPA('時間', '還會待多久', '商隊離開前都能買')}>${IC('時間', 2)}<b>${Math.max(0, c.until - S.day)} 月</b></span></div>`
+    + caravanItems(h).map(([k, n, d, p]) => { const full = k === 'charm' && h.charms.length >= CHARM_MAX;
+      return `<div class="pb care"><span class="cbi"${TIPA(CI[k], n, d)}>${IC(CI[k], 3)}</span><div class="cbm"><b class="f22">${esc(n)}</b></div>${priceBtn(`data-cv="${k}" data-cp="${p}"`, p, S.gold < p || full, full ? '帶不下了' : '')}</div>`; }).join('');
+}
 // ================= v13：事務所頁的元件 =================
 const FINN = { cut:['委託與打怪抽成', '#6fcf97'], ag:['事務所任務', '#59a8ff'], upkeep:['每月開銷', '#ff7b7b'], loan:['還高利貸', '#ff5a5a'], shop:['買裝備與照顧', '#ffb347'], office:['蓋設施', '#c9b6ff'], other:['其他（賽事、商隊、人情…）', '#a3abbd'], trav:['交通（傳送陣）', '#9a7ac8'] };
 function finView(){
@@ -836,10 +840,12 @@ const SUBS = {
   hero:[['state', '狀態'], ['mind', '個性'], ['life', '生平'], ['charm', '寶物']],
   people:[['ppl', '身邊'], ['team', '事務所'], ['wall', '歷代'], ['news', '近況'], ['ledger', '人情帳']],   // v17.23：標籤縮短，手機上五個都放得下
   quest:[['queue', '排程'], ['take', '接任務']],
-  gear:[['gear', '裝備'], ['care', '照顧'], ['caravan', '商隊'], ['own', '他自己買的']],
+  gear:[['gear', '裝備'], ['care', '照顧'], ['caravan', '商隊']],   // v17.59：「他自己買的」搬到勇者檔案生平
   office:[['main', '概況'], ['art', '旗下'], ['comp', '競爭'], ['fac', '設施']],
   set:[['set', '設定']],
 };
+// v17.59：新版分頁（大圖示＋一行小字）；第二格回傳 true＝整顆變灰不能按
+const PTAB = { gear:{ gear:['戰力'], care:['照顧'], caravan:['商隊', () => !(S.mt && S.mt.caravan)] } };
 const sub = {};
 const SS = k => (sub[sheetT] || SUBS[sheetT][0][0]) === k;
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { const t = b.dataset.t; if (sheetT === t) closeSheet(); else openSheet(t); });
@@ -980,11 +986,14 @@ function teamView(){
 function renderSheet(){
   const h = H(), B = $('shB'), st = B.scrollTop;
   const title = { hero:H().name, quest:'排程與任務', gear:'花錢', life:'生平', people:'人際', office:'經紀人事務所', set:'設定' }[sheetT];
-  $('shT').textContent = title;
+  const TIC = { gear:'金幣', people:'人際', quest:'排程', office:'事務所', set:'設定' }[sheetT];
+  setH($('shT'), (TIC ? IC(TIC, 2) : '') + `<span>${esc(title)}</span>`);
   const subDot = { take:S.agTasks.some(o => o.until - S.day <= 2) || $('dQuest').classList.contains('on'), queue:!S.queue.length };
   const inTabs = sheetT === 'hero';
   $('shS').style.display = inTabs ? 'none' : '';
-  $('shS').innerHTML = inTabs ? '' : (SUBS[sheetT] || []).length > 1 ? SUBS[sheetT].map(([k, n]) => `<button role="tab" data-s="${k}" class="${SS(k) ? 'on' : ''}">${n}${sheetT === 'quest' && subDot[k] && !SS(k) ? '<i></i>' : ''}</button>`).join('') : '';
+  const PT = PTAB[sheetT]; $('shS').classList.toggle('ptabs', !!PT); $('shS').classList.toggle('subs', !PT);
+  if (PT) $('shS').innerHTML = SUBS[sheetT].map(([k, n]) => { const off = PT[k][1] && PT[k][1](); return `<button role="tab" data-s="${k}" class="pb ptab${SS(k) ? ' on' : ''}" ${off && !SS(k) ? 'disabled' : ''}>${IC(PT[k][0], 3)}<span>${n}</span></button>`; }).join('');
+  else $('shS').innerHTML = inTabs ? '' : (SUBS[sheetT] || []).length > 1 ? SUBS[sheetT].map(([k, n]) => `<button role="tab" data-s="${k}" class="${SS(k) ? 'on' : ''}">${n}${sheetT === 'quest' && subDot[k] && !SS(k) ? '<i></i>' : ''}</button>`).join('') : '';
   $('shS').querySelectorAll('[data-s]').forEach(b => b.onclick = () => { sub[sheetT] = b.dataset.s; B.scrollTop = 0; renderSheet(); });
   let html = '';
   if (sheetT === 'hero') html += heroCard(h) + `<div class="subs intabs">${SUBS.hero.map(([k, n]) => `<button role="tab" data-s="${k}" class="${SS(k) ? 'on' : ''}">${n}</button>`).join('')}</div>`;
@@ -1088,30 +1097,27 @@ function renderSheet(){
   }
   if (sheetT === 'gear') {
     { const up = upkeep() + (S.loan ? Math.min(60, S.loan) : 0), mo = up > 0 ? Math.floor(Math.max(0, S.gold) / up) : 99;
-      html += `<div class="gbar"><span>金庫 <b style="color:var(--gold)">${fmt(S.gold)}</b></span><span>每月開銷 <b style="color:#b03a30">-${fmt(up)}</b></span><span class="${mo < 6 ? 'dg r' : 'k'}">不賺錢還撐 ${mo >= 99 ? '很久' : mo + ' 個月'}</span></div>`; }
+      html += `<div class="g3"><span class="pb num"${TIPA('金幣')}>${IC('金幣', 2)}<b>${fmt(S.gold)}</b></span><span class="pb num cr"${TIPA('下降', '每月開銷', '每個月固定花掉的錢（含還債）')}>${IC('下降', 2)}<b>${fmt(up)}/月</b></span><span class="pb num${mo < 6 ? ' cr' : ''}"${TIPA('時間', '還能撐多久', '不賺錢的話，金庫還能付幾個月開銷')}>${IC('時間', 2)}<b>${mo >= 99 ? '很久' : mo + ' 月'}</b></span></div>`; }
     if (SS('gear')) html += shopView(h);
-    if (SS('own')) { const bs = (h.buys || []).slice(-20).reverse();
-      html += `<div class="k" style="font-size:12px;margin:4px 0 8px">${pron(h)}會用自己的錢買裝備、藥水、看病、進修，買多少看${pron(h)}的人生目標（${GOALS[h.goal].n}）。${pron(h)}的錢包：${fmt(h.wallet)} 金</div>`;
-      html += bs.length ? `<div class="card">${bs.map(b => `<div class="kv"><span>${esc(b.t)}</span><span class="k" style="flex:none;margin-left:8px">${ym(b.d)}</span></div>`).join('')}</div>` : '<div class="card k">還沒有自己買過東西</div>'; }
     if (SS('caravan')) html += caravanView(h);
     if (SS('care')) {
-      const docC = 80 + h.lv * 20, coachC = 150 + h.lv * 40, sv = (p, c) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" aria-hidden="true">${p}</svg>`;
-      const cards = [];
-      const card = (ic, col, t, eff, code, price, why) => cards.push(`<div class="svc"><div class="si" style="background:${col}22">${sv(ic, col)}</div><b>${t}</b><div class="k" style="font-size:12px;line-height:1.45">${eff}</div>${why ? `<div class="dg o" style="font-size:11.5px">${why}</div>` : ''}<button class="btn" data-b="${code}" ${why || S.gold < price ? 'disabled' : ''}>${fmt(price)}${!why && S.gold >= price ? `<span class="k" style="font-size:11px;margin-left:4px">剩 ${fmt(S.gold - price)}</span>` : ''}</button></div>`);
-      card('<path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z"/>', '#ff7b7b', '看醫生', `健康大幅回復，傷勢少躺一個月（目前健康 ${Math.round(h.health)}）`, 'd', docC, h.health > 95 && !h.bedDays ? '現在很健康，不用看' : '');
-      card('<path d="M6 4v16M18 4v16M3 8h3M18 8h3M3 16h3M18 16h3M6 12h12"/>', '#59a8ff', '請教練特訓 2 個月', '經驗大增，但很累', 'c', coachC, !['idle', 'rest', 'home'].includes(h.act) ? `${pron(h)}現在走不開` : '');
+      const docC = 80 + h.lv * 20, coachC = 150 + h.lv * 40, rows = [];
+      const eic = l => l.map(([n, t]) => n ? `<span class="num s">${IC(n, 2)}${t ? `<b class="cg">${t}</b>` : ''}</span>` : `<b class="cg f16">${t}</b>`).join('');
+      const row = (ic, t, d, effs, code, price, why) => rows.push(`<div class="pb care"><span class="cbi"${TIPA(ic, t, d)}>${IC(ic, 3)}</span><div class="cbm"><b class="f22">${esc(t)}</b><div class="cbe">${eic(effs)}</div></div>${priceBtn(`data-b="${code}"`, price, !!why || S.gold < price, why)}</div>`);
+      row('醫務室', '看醫生', `健康大幅回復，傷勢少躺一個月（現在健康 ${Math.round(h.health)}）`, [['心情', '+'], ['體力', '+']], 'd', docC, h.health > 95 && !h.bedDays ? '現在不用' : '');
+      row('訓練室', '教練特訓', '跟教練練 2 個月：經驗大增，但很累', [['上升', ''], ['', '經驗'], ['時間', '2月']], 'c', coachC, !['idle', 'rest', 'home'].includes(h.act) ? `${pron(h)}走不開` : '');
+      row('照顧', '小藥水', `血少時自動喝，身上最多 ${POT_MAX} 瓶`, [['', `身上 ${h.pots}/${POT_MAX}`]], 'p', POT_PRICE, h.pots >= POT_MAX ? '帶滿了' : '');
       if (hasP(h, 'scar') || hasP(h, 'side')) { const rc = 1500 + h.lv * 80, ok = (S.office.clinic || 0) >= 3, what = hasP(h, 'scar') ? '舊傷' : '後遺症';
-        card('<path d="M4 12h16M12 4v16"/>', '#6fcf97', `復健療程`, `治好${what}，要在醫務室躺 3 個月${hasP(h, 'scar') && !hasP(h, 'lame') ? `（不治的話，再 ${Math.max(0, 60 - (S.day - (h.lastHeavy ?? h.born)))} 個月沒受重傷也會好）` : ''}`, 'rehab', rc, !ok ? '醫務室升到 Lv3 才能做' : busyAway(h) ? `${pron(h)}現在不在` : ''); }
+        row('醫務室', '復健療程', `治好${what}，要在醫務室躺 3 個月${hasP(h, 'scar') && !hasP(h, 'lame') ? `（不治的話，再 ${Math.max(0, 60 - (S.day - (h.lastHeavy ?? h.born)))} 個月沒受重傷也會好）` : ''}`, [['', '治好' + what]], 'rehab', rc, !ok ? '醫務室 Lv3' : busyAway(h) ? `${pron(h)}不在` : ''); }
       if (hasP(h, 'lame')) { const aid = h.aid || 0;
-        if (aid < 2) card('<path d="M8 3v18M8 12h8l2 9"/>', '#ffb347', ['拐杖', '魔導義足'][aid], `跛腳治不好，但能減輕：戰力 ${['-15% → -10%', '-10% → -5%'][aid]}，走路也比較快`, 'aid', [300, 2000][aid], '');
-        else cards.push(`<div class="svc"><b>魔導義足</b><div class="k" style="font-size:12px">已經裝上，跛腳只剩戰力 -5%</div></div>`); }
-      if (h.addict) card('<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/>', '#c99aff', '送神殿戒癮', `艾琳修女會陪${pron(h)}戒掉魔藥，要休養 2 個月`, 'rehab', 600, '');
-      card('<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10h4a1.5 1.5 0 010 3h-3a1.5 1.5 0 000 3h4"/>', '#f2c14e', `給${pron(h)}零用錢`, `${pron(h)}的錢包：${fmt(h.wallet)} 金（${h.wallet < 20 ? '快空了' : h.wallet < 150 ? '還夠用' : '很充裕'}）`, 'm', 100, '');
-      html += `<div class="sec">花錢照顧${pron(h)}</div><div class="svgrid">${cards.join('')}</div>`;
+        if (aid < 2) row('上升', ['拐杖', '魔導義足'][aid], `跛腳治不好，但能減輕：戰力 ${['-15% → -10%', '-10% → -5%'][aid]}，走路也比較快`, [['戰力', '+']], 'aid', [300, 2000][aid], ''); }
+      if (h.addict) row('醫務室', '送神殿戒癮', `艾琳修女會陪${pron(h)}戒掉魔藥，要休養 2 個月`, [['', '戒掉魔藥']], 'rehab', 600, '');
+      row('金幣', '給零用錢', `${pron(h)}的錢包：${fmt(h.wallet)} 金（${h.wallet < 20 ? '快空了' : h.wallet < 150 ? '還夠用' : '很充裕'}）`, [['心情', '+']], 'm', 100, '');
+      html += rows.join('');
     }
   }
   const lifeIs = k => sheetT === 'hero' && SS('life') && (S.lifeT || 'log') === k;
-  if (sheetT === 'hero' && SS('life')) html += `<div class="ff2">${[['log', '年表'], ['mem', '回憶'], ['regret', '遺憾']].map(([k, n]) => `<button class="${(S.lifeT || 'log') === k ? 'on' : ''}" data-lt="${k}">${n}</button>`).join('')}</div>`;
+  if (sheetT === 'hero' && SS('life')) html += `<div class="ff2">${[['log', '年表'], ['mem', '回憶'], ['regret', '遺憾'], ['own', '自己買']].map(([k, n]) => `<button class="${(S.lifeT || 'log') === k ? 'on' : ''}" data-lt="${k}">${n}</button>`).join('')}</div>`;
   if (lifeIs('log')) {
     const rg = regrets(h), hp = happyOf(rg), worst = rg.filter(r => r.lv).sort((a, b) => b.lv - a.lv)[0], wn = (h.mem || []).filter(m => m.k === 'wishOk').length;
     html += `<div class="card" style="margin-top:4px"><div class="row k" style="font-size:12px"><span>18 歲</span><span>現在 ${Math.floor(h.age)} 歲</span><span>50 歲</span></div><div class="lifebar"><i style="width:${clamp((h.age - 18) / 32 * 100, 2, 100)}%"></i></div>
@@ -1122,6 +1128,9 @@ function renderSheet(){
     const logs = [...h.log].reverse().filter(e => !lc || lifeColor(e.t) === lc);
     html += logs.length ? `<div class="tline">${logs.map(e => `<div class="te"><span class="dot2" style="background:${lifeColor(e.t)}"></span><div class="ag">${Math.floor(e.age)} 歲</div><div class="tx">${esc(e.t)}</div></div>`).join('')}</div>` : `<div class="k">${lc ? '這一類還沒有發生過' : '還沒有發生值得記下的事'}</div>`;
   }
+  if (lifeIs('own')) { const bs = (h.buys || []).slice(-20).reverse();   // v17.59：從花錢頁搬來
+    html += `<div class="k" style="font-size:12px;margin:4px 0 8px">${pron(h)}會用自己的錢買裝備、藥水、看病、進修，買多少看${pron(h)}的人生目標（${GOALS[h.goal].n}）。${pron(h)}的錢包：${fmt(h.wallet)} 金</div>`;
+    html += bs.length ? `<div class="card">${bs.map(b => `<div class="kv"><span>${esc(b.t)}</span><span class="k" style="flex:none;margin-left:8px">${ym(b.d)}</span></div>`).join('')}</div>` : '<div class="card k">還沒有自己買過東西</div>'; }
   if (lifeIs('mem')) {
     const GOOD = ['saved', 'gift', 'wishOk', 'familyOk', 'backed'], BAD = ['forced', 'used', 'wishFail', 'familyNo', 'familyLate', 'betrayed'];
     const ms = [...(h.mem || [])].reverse().map(m => [m, memText(m)]).filter(x => x[1]);
