@@ -95,7 +95,7 @@ function renderTop(){
   updBadges(h);
   $('gold').textContent = fmt(S.gold); $('fame').textContent = fmt(Math.round(S.fame));
   setH($('bars'), [['體力', h.sta, '#43c878'], ['心情', h.mood, '#f7c94a'], ['壓力', h.stress, '#e84537']].map(([n, v, c]) => `<span class="bi"${TIPA(n)}>${IC(n, 1)}<i><b style="width:${Math.round(clamp(v, 0, 100))}%;background:${c}"></b></i></span>`).join(''));
-  { const hr = hourOf(), H24 = Math.floor(hr) % 24; $('date').textContent = `${ym(S.day)} ${H24}:${String(Math.floor((hr % 1) * 6) * 10).padStart(2, '0')}${{ rain:' · 雨', snow:' · 雪', storm:' · 颱風' }[S.weather] || ''}`; }
+  { const hr = hourOf(), H24 = Math.floor(hr) % 24; $('date').textContent = `${ym(S.day).replace(/ /g, '')} ${H24}:${String(Math.floor((hr % 1) * 6) * 10).padStart(2, '0')}${{ rain:' · 雨', snow:' · 雪', storm:' · 颱風' }[S.weather] || ''}`; }
   const mk0 = menuMul(), sp = !S.paused && mk0 < 1 ? (mk0 ? '慢' : '停') : S.speed > 1 ? '×' + S.speed : '';
   setH($('bSpeed'), IC('快轉', 2) + (sp ? `<small>${sp}</small>` : '')); setH($('bPause'), IC(S.paused ? '播放' : '暫停', 2)); $('bPause').classList.toggle('on', !!S.paused);
   $('hname').textContent = h.name;
