@@ -377,7 +377,7 @@ function drawMap(now){
       RIDE_FRONT = null; RIDE_HA = 1; const ride = view === 'vil' ? 0 : drawRide(now, h, Math.round(hx0), Math.round(hy0));   // v17.12：馬、驛馬車、傳送陣
       ctx.globalAlpha = h.alpha * vfa * RIDE_HA;
       const am = view === 'vil' && !lying ? arenaMode(h) : null, pm = view === 'vil' && !lying && !am ? plazaPose(h, now) : null;
-      if (pm) { drawSprite(ctx, h, Math.round(hx0), Math.round(hy0) - pm.hop, false, now, { moving:false, left:pm.left, expr:pm.expr || 'happy' }); if (pm.hand) pm.hand(Math.round(hx0), Math.round(hy0)); }   // v17.51：代言、綜藝、見粉絲
+      if (pm) { drawSprite(ctx, h, Math.round(hx0), Math.round(hy0) - pm.hop, false, now, { moving:false, left:pm.left, expr:pm.expr || 'happy', noEmo:!!pm.expr }); if (pm.hand) pm.hand(Math.round(hx0), Math.round(hy0)); }   // v17.51：代言、綜藝、見粉絲
       else if (am && am.fight) { const R = arenaRound(now, am.kind); let ox = 0; if (R.p > .1 && R.p < .38) ox = 3;   // v17.49：鬥技場：踏步揮擊；對手回擊時後退＋閃
         if (am.kind !== 'train' && R.r % 2 && R.p > .75 && R.p < 1) { ox = -2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * vfa * .35; }
         drawSprite(ctx, h, Math.round(hx0 + ox), Math.round(hy0), false, now, { moving:false, left:false, atkT:R.t0 }); ctx.globalAlpha = h.alpha * vfa; }
