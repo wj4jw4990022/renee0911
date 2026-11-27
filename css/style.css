@@ -770,3 +770,40 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 #app .duty { border:3px solid transparent; border-image:var(--pb-dk) 3; background:var(--paper); background-clip:padding-box; border-radius:0; font-size:14px; margin-bottom:10px; }
 #app .duty.risk { background-color:#f8d6cf; } #app .duty.ok { background-color:#e6f4dc; }
 .qcr .dg { font-size:14px; }
+
+/* ================= v17.67 人際頁、點頭像小框、互動選單 ================= */
+.pgrid2 { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; margin-bottom:10px; }
+.pt2 { display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px 6px; min-width:0; font-size:14px; }
+.pt2 > b { font-size:14px; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pa2 { position:relative; width:52px; height:52px; display:block; border:3px solid #a3998a; }
+.pa2 .pimg { width:100%; height:100%; image-rendering:pixelated; }
+.pa2.big { width:60px; height:60px; flex:none; }
+.pt2.r-f2 .pa2, .pt2.r-f3 .pa2 { border-color:var(--ok); } .pt2.r-love .pa2 { border-color:#f078a0; } .pt2.r-rival .pa2 { border-color:var(--bad); }
+.psk { position:absolute; right:-8px; top:-8px; }
+.hts { display:flex; gap:1px; align-items:center; height:16px; }
+.lgc { padding:8px 12px; margin-bottom:12px; }
+.lgh { display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+.lgr { display:flex; align-items:center; gap:12px; padding:4px 0 2px 4px; }
+.lgr + .lgr { border-top:2px dashed rgba(122,90,58,.3); }
+.lgr .num b { font-size:18px; }
+#app .popbox { pointer-events:auto; max-width:300px; min-width:240px; display:none; flex-direction:column; gap:6px; }
+#app .popbox.on { display:flex; }
+.npw { display:flex; align-items:center; gap:10px; }
+.npn { display:flex; align-items:center; gap:6px; }
+.npb { display:flex; align-items:center; gap:10px; }
+.npa { display:flex; align-items:center; gap:6px; height:38px; padding:0 12px; font-size:14px; }
+/* 互動選單 */
+#tmenu .tbox.pb { border-radius:0; border:3px solid transparent; border-image:var(--pb-dk) 3; background:var(--paper); background-clip:padding-box; box-shadow:none; filter:drop-shadow(6px 6px 0 var(--shd)); }
+#tmenu .th { display:flex; align-items:center; gap:6px; justify-content:flex-start; }
+#tmenu .th > b { font-size:16px; color:var(--text); font-weight:700; }
+#tmenu .th .num b { font-size:14px; color:var(--text); }
+#tmenu .tg3 { gap:8px; }
+#tmenu .tc2 { min-height:72px; padding:6px 2px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; position:relative; filter:drop-shadow(3px 3px 0 var(--shd)); }
+#tmenu .tc2 b { font-size:14px; }
+#tmenu .tc2 i { font-style:normal; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:3px; }
+#tmenu .tc2.red i { color:#b03a30; }
+#tmenu .tc2.gy { opacity:1; }
+#tmenu .tc2 .tg { position:absolute; top:-8px; right:-4px; background:var(--gold); color:var(--text); font-size:11px; padding:0 4px; border:2px solid var(--ol); }
+/* 還沒換新版的舊卡片也套用粗框（照同一套規則） */
+#app .sb .card, #app .sb .grp, #app .sb .wc, #app .sb .rgc, #app .sb .memc, #app .sb .upc, #app .sb .svc, #app .sb .vsc { border-radius:0; border:3px solid transparent; border-image:var(--pb-dk) 3; background-color:var(--paper); background-clip:padding-box; filter:drop-shadow(4px 4px 0 var(--shd)); box-shadow:none; }
+#app .sb .sec { font-size:15px; color:var(--text); }

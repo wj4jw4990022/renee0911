@@ -26,6 +26,15 @@ function actIc(h, t){
   if (['gone', 'private', 'dying', 'strike'].includes(h.act)) return '驚嘆';
   return '村子';
 }
+function placeAt(bx, el){   // 小框放在被點的東西下面（放不下就上面），箭頭指著它
+  const app = $('app').getBoundingClientRect(), r = el.getBoundingClientRect();
+  bx.classList.add('on'); const w = bx.offsetWidth * UIZ, h = bx.offsetHeight * UIZ, cx = r.left + r.width / 2 - app.left;
+  const x = clamp(cx - w / 2, 8, app.width - w - 8), below = r.bottom - app.top + h + 14 < app.height;
+  bx.style.left = x / UIZ + 'px'; bx.style.top = (below ? r.bottom - app.top + 10 : r.top - app.top - h - 10) / UIZ + 'px';
+  bx.classList.toggle('up', !below); bx.querySelector('.tar').style.left = clamp(cx - x, 12, w - 12) / UIZ + 'px';
+}
+function popAt(el, html){ const bx = $('popbox'); bx.innerHTML = html + '<i class="tar"></i>'; placeAt(bx, el); }
+document.addEventListener('click', e => { const p = $('popbox'); if (p && p.classList.contains('on') && !p.contains(e.target) && !(e.target.closest && e.target.closest('[data-np]'))) p.classList.remove('on'); }, true);
 function showTip(el){
   const [n, nm, d] = el.dataset.tip.split('|'), bx = $('tipbox'), app = $('app').getBoundingClientRect(), r = el.getBoundingClientRect();
   bx.innerHTML = `<div class="tbr">${IC(n, 2)}<b>${esc(nm)}</b></div>${d ? `<div class="tbd">${esc(d)}</div>` : ''}<i class="tar"></i>`;
@@ -191,6 +200,22 @@ function qCard(h, o, ag){
     <div class="qb"><div class="qn px">${o.n}</div><div style="font-size:12.5px;color:#6b4e33">${o.ug ? `${fmt(o.gold)} 金 · 惡名 +${o.inf}${o.violent ? ' · 要動手' : ''}` : ag ? `名聲 +${o.fame} · ${fmt(o.gold)} 金` : `報酬 <b style="color:var(--gold)">${fmt(o.reward)}</b> 金`}</div>
     ${d ? `<div class="seg"><i class="${d.i === 0 ? 'on' : ''}" style="background:#6fcf97"></i><i class="${d.i === 1 ? 'on' : ''}" style="background:#ffb347"></i><i class="${d.i === 2 ? 'on' : ''}" style="background:#ff7b7b"></i></div><div class="dg ${d.k}" style="font-size:12.5px">${d.n} · 勝率約 ${win}%</div>` : '<div class="dg g" style="font-size:12.5px">不用打</div>'}
     ${o.until ? `<div style="font-size:12px" class="${o.until - S.day <= 1 ? 'dg r' : 'k'}">${dueTxt(o.until)}</div>` : ''}</div></div>`;
+}
+// v17.67 人際：關係種類、愛心圖示、頭像底色、點頭像的小框
+const relKind = n => { const h = H(); return n.dark ? 'dark' : n.role === 'rival' ? 'rival' : n.id === h.partner ? 'love' : n.aff >= 80 ? 'f3' : n.aff >= 50 ? 'f2' : n.aff >= 25 ? 'f1' : 'f0'; };
+function relIcons(n){ const k = relKind(n);
+  if (k === 'love') return IC('戀人', 2); if (k === 'rival') return IC('對手', 2); if (k === 'dark') return IC('空心', 2);
+  const f = +k[1]; return [0, 1, 2].map(i => IC(i < f ? '心情' : '空心', 1)).join(''); }
+const roleBg = n => ({ tavern:'#d0607a', smith:'#5a5a5a', guild:'#3f6ea0', priest:'#8a8a8a', mayor:'#7a4a2a', reporter:'#4a8a8a', fan:'#c08a30', merc:'#6a3a3a', elder:'#6a5ab0', rival:'#8a3a3a', rival2:'#5a5aa0', merchant:'#4a4a3a' }[n.role] || (n.sex === 'f' ? '#9a5a80' : '#4a7a5a'));
+function npcPop(el, id){
+  const n = npc(id); if (!n || !n.alive) return; const h = H();
+  const tr = (n.treat ?? -9) + 3 <= S.day, can = !n.dark && n.role !== 'rival', tags = [`${Math.floor(n.age || 30)} 歲`];
+  const m = n.mate && npc(n.mate); if (m && m.alive) tags.push(n.wed ? `和${m.name}結婚了` : `和${m.name}交往中`);
+  if (n.kids) tags.push('有小孩'); if (n.owe) tags.push(`欠${h.name} ${n.owe.g} 金`); if ((n.sick || 0) > S.day) tags.push('生病中');
+  popAt(el, `<div class="npw"><span class="pa2 big" style="background:${roleBg(n)}">${pimg(n)}</span><div class="npm"><div class="npn"><b class="f22">${esc(n.name)}</b>${relIcons(n)}</div><div class="f14 mu">${esc(n.title || '')}</div></div></div>
+    ${can ? `<div class="npb"><button class="pb npa" data-treat="${n.id}" ${tr && S.gold >= 30 ? '' : 'disabled'}>${IC('金幣', 2, !(tr && S.gold >= 30))}<span>${tr ? '請客 30' : '剛請過'}</span></button>${canComp(n) ? `<span class="num s">${IC('一起出任務', 2)}<b class="cg">+${Math.round(n.pw * 100)}%</b></span>` : ''}</div>` : ''}
+    <div class="f14 mu">${n.role === 'rival' ? '' : `交情 ${Math.round(n.aff)}・`}${relWord(n)}・${tags.join('・')}</div>${ROLE_FX[n.role] ? `<div class="f14 mu">${esc(ROLE_FX[n.role])}</div>` : ''}`);
+  $('popbox').querySelectorAll('[data-treat]').forEach(b => b.onclick = e => { e.stopPropagation(); if (S.gold < 30) return; S.gold -= 30; n.treat = S.day; affAdd(n.id, 4); toast(`${h.name}和${n.name}吃了頓飯`); $('popbox').classList.remove('on'); renderAll(); });
 }
 // v17.66 任務卡（新版）：標頭（事務所紫、委託棕）＋名稱＋名聲／報酬＋危險＋期限；右下加號＝排進去，排了變打勾
 let qSel = null;
@@ -862,7 +887,7 @@ const SUBS = {
   set:[['set', '設定']],
 };
 // v17.59：新版分頁（大圖示＋一行小字）；第二格回傳 true＝整顆變灰不能按
-const PTAB = { gear:{ gear:['戰力'], care:['照顧'], caravan:['商隊', () => !(S.mt && S.mt.caravan)] } };
+const PTAB = { gear:{ gear:['戰力'], care:['照顧'], caravan:['商隊', () => !(S.mt && S.mt.caravan)] }, people:{ ppl:['人際'], team:['事務所'], wall:['歷代'], news:['近況'], ledger:['人情帳'] } };
 const sub = {};
 const SS = k => (sub[sheetT] || SUBS[sheetT][0][0]) === k;
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { const t = b.dataset.t; if (sheetT === t) closeSheet(); else openSheet(t); });
@@ -1053,24 +1078,24 @@ function renderSheet(){
   if (sheetT === 'people' && SS('team')) html += teamView();
   if (sheetT === 'people' && SS('news')) { const nw = (S.news || []).slice().reverse();
     html += `<div class="sec" style="margin-top:2px">村子近況（最近 ${nw.length} 則）</div>` + (nw.length ? `<div class="card">${nw.map(x => `<div class="kv" style="padding:5px 0"><span style="min-width:0">${esc(x.t)}</span><span class="k" style="flex:none;margin-left:8px">${S.day - x.d <= 0 ? '這個月' : (S.day - x.d) + ' 個月前'}</span></div>`).join('')}</div>` : '<div class="card k">最近很平靜</div>'); }
-  if (sheetT === 'people' && SS('ledger')) {
+  if (sheetT === 'people' && SS('ledger')) {   // v17.67：人情帳新版，一組一張卡
     const owe = S.npcs.filter(n => n.alive && n.owe), fav = S.queue.filter(it => it.favor), comps = S.npcs.filter(canComp), helped = (h.mem || []).filter(m => m.k === 'helped').slice(-5).reverse();
     const pa = h.partner && npc(h.partner), sick = S.npcs.filter(n => n.alive && (n.sick || 0) > S.day && n.aff >= 35);
-    html += `<div class="sec" style="margin-top:2px">欠${h.name}錢的人</div><div class="card">${owe.length ? owe.map(n => `<div class="kv"><span>${esc(n.name)}</span><span>${fmt(n.owe.g)} 金 · <span class="${n.owe.due - S.day <= 1 ? 'dg o' : 'k'}">說好 ${Math.max(0, n.owe.due - S.day)} 個月內還</span></span></div>`).join('') : '<div class="k">沒有人欠錢</div>'}</div>`;
-    html += `<div class="sec">答應要幫的忙</div><div class="card">${fav.length ? fav.map(it => `<div class="kv"><span>${esc(it.n)}</span><span class="k">${dueTxt(it.until)}</span></div>`).join('') : '<div class="k">目前沒有</div>'}</div>`;
-    html += `<div class="sec">生病中的朋友</div><div class="card">${sick.length ? sick.map(n => `<div class="kv"><button class="lnk" data-npc="${n.id}">${esc(n.name)}</button><span class="dg r">還要 ${n.sick - S.day} 個月</span></div>`).join('') : '<div class="k">大家都很健康</div>'}</div>`;
-    html += `<div class="sec">可以找來一起出任務的人</div><div class="card">${comps.length ? comps.map(n => `<div class="kv"><button class="lnk" data-npc="${n.id}">${esc(n.name)}</button><span><span class="dg g">戰力 +${Math.round(n.pw * 100)}%</span>${compCost(n) ? ` · 傭金 ${fmt(compCost(n))}` : ''}</span></div>`).join('') : '<div class="k">還沒有，交情到「朋友」以上才願意同行</div>'}</div>`;
-    if (helped.length) html += `<div class="sec">${h.name}幫過的人</div><div class="card">${helped.map(m => `<div class="kv"><span>${esc(m.n)}</span><span class="k">${ym(m.d)}</span></div>`).join('')}</div>`;
-    if (pa && pa.alive) html += `<div class="k" style="font-size:12px;margin:2px 2px 8px">${h.name}的${h.married ? '伴侶' : '戀人'}：${esc(pa.name)}</div>`;
+    const grp = (ic, t, rows) => rows.length ? `<div class="pb lgc"><div class="lgh">${IC(ic, 2)}<b class="f16">${t}</b></div>${rows.join('')}</div>` : '';
+    const row = (nm, right, npcId) => `<div class="lgr"${npcId ? ` data-np="${npcId}" role="button"` : ''}><b class="f22">${esc(nm)}</b><span class="rsp"></span>${right}</div>`;
+    const tm = (n, red) => `<span class="num s${red ? ' cr' : ''}">${IC('時間', 2)}<b>${Math.max(0, n)} 月</b></span>`;
+    const out = grp('金幣', '欠錢', owe.map(n => row(n.name, `<span class="num s">${IC('金幣', 2)}<b>${fmt(n.owe.g)}</b></span>${tm(n.owe.due - S.day, n.owe.due - S.day <= 1)}`, n.id)))
+      + grp('幫忙', '答應幫忙', fav.map(it => row(it.n.replace(/^幫/, '').replace(new RegExp('^' + ((npc(it.favor) || {}).name || '@@')), ''), tm(it.until - S.day, it.until - S.day <= 1))))
+      + grp('生病', '生病中', sick.map(n => row(n.name, tm(n.sick - S.day), n.id)))
+      + grp('一起出任務', '可以一起出任務', comps.map(n => row(n.name, `<span class="num s">${IC('戰力', 2)}<b class="cg">+${Math.round(n.pw * 100)}%</b></span>${compCost(n) ? `<span class="num s">${IC('金幣', 2)}<b>${fmt(compCost(n))}</b></span>` : ''}`, n.id)));
+    html += out || `<div class="pb care f16 mu">目前沒有人情往來</div>`;
+    if (helped.length) html += grp('幫忙', `${h.name}幫過的人`, helped.map(m => `<div class="lgr f14"><span>${esc(m.n)}</span><span class="rsp"></span><span class="mu">${ym(m.d)}</span></div>`));
   }
-  if (sheetT === 'people' && SS('ppl')) {
+  if (sheetT === 'people' && SS('ppl')) {   // v17.67：身邊新版：頭像一排四個、關係用愛心；點頭像跳小框
     const live = S.npcs.filter(n => n.alive).sort((a, b) => (b.id === h.partner) - (a.id === h.partner) || b.aff - a.aff), gone = S.npcs.filter(n => !n.alive).slice(-8);
-    { const nw = (S.news || []).slice(-2).reverse(); if (nw.length) html += `<button class="card lnkc" data-ps="news" style="width:100%;text-align:left;display:block;margin-top:2px"><span class="k" style="font-size:11.5px">村子近況 ›</span>${nw.map(x => `<div style="font-size:13px;margin-top:2px">${esc(x.t)}</div>`).join('')}</button>`; }
-    html += `<div class="sec">${h.name}身邊的人（${live.length}）· 點頭像看詳細和請客</div><div class="pgrid">` + live.map(n => { const rc = n.id === h.partner ? '#e88aa8' : n.dark || n.role === 'rival' ? '#ff7b7b' : n.aff >= 50 ? '#6fcf97' : n.aff >= 25 ? '#8b93a7' : '#4a5470';
-      const bg = { tavern:'#d0607a', smith:'#5a5a5a', guild:'#3f6ea0', priest:'#8a8a8a', mayor:'#7a4a2a', reporter:'#4a8a8a', fan:'#c08a30', merc:'#6a3a3a', elder:'#6a5ab0', rival:'#8a3a3a', rival2:'#5a5aa0', merchant:'#4a4a3a' }[n.role] || (n.sex === 'f' ? '#9a5a80' : '#4a7a5a');
-      return `<button class="pt" data-npc="${n.id}"><span class="pa" style="background:${bg};box-shadow:0 0 0 2px ${rc}">${pimg(n, (n.sick || 0) > S.day ? 'sick' : 'normal')}${(n.sick || 0) > S.day ? '<i class="ps">病</i>' : ''}</span><b>${esc(n.name)}</b><span class="pr" style="color:${rc}">${relWord(n)}</span></button>`; }).join('') + '</div>';
-    if (gone.length) html += `<div class="k" style="font-size:12px;margin:8px 2px">已經不在：${gone.map(n => `${n.name}（${relWord(n)}）`).join('、')}</div>`;
-    html += `<div class="k" style="font-size:12px;margin:2px 2px 8px">交情到「朋友」以上，就能找${pron(h)}們一起出任務。請客可以拉近關係。</div>`;
+    html += `<div class="pgrid2">` + live.map(n => { const r = relKind(n), sk = (n.sick || 0) > S.day;
+      return `<button class="pb pt2 r-${r}" data-np="${n.id}"><span class="pa2" style="background:${roleBg(n)}">${pimg(n, sk ? 'sick' : 'normal')}${sk ? `<i class="psk">${IC('生病', 1)}</i>` : ''}</span><b>${esc(n.name)}</b><span class="hts">${relIcons(n)}</span></button>`; }).join('') + '</div>';
+    if (gone.length) html += `<div class="f14 mu" style="margin:4px 2px 8px">已經不在：${gone.map(n => `${esc(n.name)}（${relWord(n)}）`).join('、')}</div>`;
   }
   if (sheetT === 'quest') {   // v17.66：排程和挑任務合成一頁（design/ui/草圖_任務.png）
     const eta = etaList(), busyD = h.act === 'mission' ? Math.max(0, h.actDays) : (h.bedDays || 0) + (h.visit || 0) + (h.goneDays || 0), mo0 = S.day % 12;
@@ -1257,6 +1282,7 @@ function renderSheet(){
   B.querySelectorAll('[data-rest]').forEach(b => b.onclick = () => { qSel = null; if (S.queue.length >= Q_MAX) return; S.queue.push({ id:Date.now(), kind:'rest', n:'休息', days:1 }); queueComment(); renderAll(); });
   B.querySelectorAll('.intabs [data-s]').forEach(b => b.onclick = () => { sub[sheetT] = b.dataset.s; renderSheet(); const t = B.querySelector('.intabs'); if (t && B.scrollTop > t.offsetTop) B.scrollTop = t.offsetTop; });
   B.querySelectorAll('[data-npc]').forEach(b => b.onclick = () => openNpcPop(b.dataset.npc));
+  B.querySelectorAll('[data-np]').forEach(b => b.onclick = e => { e.stopPropagation(); npcPop(b, b.dataset.np); });
   B.querySelectorAll('[data-hx]').forEach(b => b.onclick = () => { hexSel = b.dataset.hx; renderSheet(); });
   B.querySelectorAll('[data-b]').forEach(b => b.onclick = () => buy(b.dataset.b));
   const pc = $('pcv'); if (pc) drawPortrait(pc);

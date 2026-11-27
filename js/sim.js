@@ -1984,6 +1984,7 @@ const TALK_CD = { praise:1, cheer:1, warn:2, scold:2, drink:3, meal:2, heart:4, 
 const talkLeft = (h, k) => { const l = h.talked[k]; return l == null ? 0 : Math.max(0, TALK_CD[k] - (S.day - l)); };
 const talkMul = (h, k) => 1 / (1 + ((h.talkLog || {})[k] || []).filter(d => S.day - d < 12).length * .35);
 // v17.22：開羅式互動選單（3×3 方格，寫清楚花費、冷卻、效果減弱）
+const TALK_PIX = { praise:'口碑', warn:'驚嘆', cheer:'心情', scold:'打叉', drink:'酒窖', meal:'幫忙', heart:'說話', train:'訓練室', gift:'寶物' };   // v17.67：互動選單的像素圖示
 const TALK_IC = {
   praise:'<path d="M7 11v9H4v-9z"/><path d="M7 11l4-7c1.5 0 2.5 1 2 3l-1 3h6c1 0 2 1 1.7 2.2l-1.6 6.3c-.3 1-1 1.5-2 1.5H7"/>',
   warn:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
@@ -2005,8 +2006,8 @@ function openTalkMenu(){
   const h = H(); closeTalkMenu();
   const away = h.act === 'mission' && !mHome(h);
   const cells = TALK.map((t, i) => { const st = talkState(h, t);
-    return `<button class="tc${st.off ? ' off' : ''}${st.red || st.cd ? ' red' : ''}" data-ti="${i}" ${st.off ? 'aria-disabled="true"' : ''}>${st.weak ? '<span class="tg">效果減弱</span>' : ''}<svg viewBox="0 0 24 24" aria-hidden="true">${TALK_IC[t.k] || ''}</svg><b>${t.n}</b><i>${st.t}</i></button>`; }).join('');
-  const d = document.createElement('div'); d.id = 'tmenu'; d.innerHTML = `<div class="tdim"></div><div class="tbox" role="dialog" aria-label="跟${esc(h.name)}互動"><div class="th"><b>跟${esc(h.name)}互動</b><span>信任 ${Math.round(h.trust)} · 心情 ${Math.round(h.mood)}</span></div>${away ? `<div class="tn">${pron(h)}出門在外，只能傳訊息</div>` : ''}<div class="tg3">${cells}</div></div>`;
+    return `<button class="pb tc2${st.off ? ' gy' : ''}${st.red || st.cd ? ' red' : ''}" data-ti="${i}" ${st.off ? 'aria-disabled="true"' : ''}>${st.weak ? '<span class="tg">減弱</span>' : ''}${IC(TALK_PIX[t.k], 2, st.off)}<b>${t.n}</b><i>${st.cd ? IC('時間', 1) : t.cost && !st.off ? IC('金幣', 1) : ''}${st.t.replace(' 金', '')}</i></button>`; }).join('');   // v17.67：像素圖示
+  const d = document.createElement('div'); d.id = 'tmenu'; d.innerHTML = `<div class="tdim"></div><div class="tbox pb" role="dialog" aria-label="跟${esc(h.name)}互動"><div class="th">${IC('互動', 2)}<b>跟${esc(h.name)}互動</b><span class="rsp"></span><span class="num s">${IC('信任', 1)}<b>${Math.round(h.trust)}</b></span><span class="num s">${IC('心情', 1)}<b>${Math.round(h.mood)}</b></span></div>${away ? `<div class="tn">${pron(h)}出門在外，只能傳訊息</div>` : ''}<div class="tg3">${cells}</div></div>`;
   document.body.appendChild(d);
   d.querySelector('.tdim').onclick = closeTalkMenu;
   d.querySelectorAll('[data-ti]').forEach(b => b.onclick = () => { const i = +b.dataset.ti, st = talkState(H(), TALK[i]); if (st.off) { toast(st.cd ? `${TALK[i].n}還要等 ${talkLeft(H(), TALK[i].k)} 個月` : st.t); return; } closeTalkMenu(); talk(i); });
