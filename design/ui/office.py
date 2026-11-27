@@ -22,7 +22,7 @@ NEW = {
 }
 for k, v in NEW.items(): ICON[k] = outline(v)
 ICON['酒窖'] = kt('06_10')
-OFFICE = Image.open('os.path.join(os.path.dirname(os.path.abspath(__file__)), 'office_1.png')').convert('RGBA')
+OFFICE = Image.open(os.path.dirname(os.path.abspath(__file__)) + '/office_1.png').convert('RGBA')
 
 def otabs(im, d, y, sel):
     for i, (n, lab) in enumerate((('事務所', '概況'), ('人際', '旗下'), ('對手', '競爭'), ('設定', '設施'))):

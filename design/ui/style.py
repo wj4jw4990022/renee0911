@@ -1,10 +1,11 @@
 # 介面風格樣張：粗線外框、Q 版、圖示代替文字
 import sys
-sys.path.insert(0, '/home/claude/dw/design/rooms'); sys.path.insert(0, '/home/claude/dw/design/wild')
+import os
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE + '/../rooms'); sys.path.insert(0, HERE + '/../wild')
 from PIL import Image, ImageDraw, ImageFont
 import wild
 TD = wild.TD
-FONT = '/home/claude/sk_gate/cubic11.ttf'
+FONT = HERE + '/../rooms/cubic11.ttf'
 O = (63, 38, 49, 255)
 C = {'Y': (247, 201, 74), 'y': (214, 150, 40), 'W': (255, 255, 255), 'R': (232, 69, 55), 'r': (160, 40, 44), 'B': (67, 160, 220), 'b': (40, 96, 160),
      'G': (67, 200, 120), 'g': (37, 149, 106), 'N': (189, 108, 74), 'n': (118, 59, 54), 'K': (192, 203, 220), 'k': (139, 155, 180), 'P': (240, 120, 160), 'p': (190, 70, 110),
@@ -41,7 +42,7 @@ ICON = {
  '任務': grid(['NNLLLLLNN', '.NLLLLLN.', '.LDDDDDL.', '.LLLLLLL.', '.LDDDDL..', '.LLLLLLL.', '.LDDDDDL.', '.NLLLLLN.', 'NNLLLLLNN']),
  '危險': grid(['.WWWWW.', 'WWWWWWW', 'WkkWkkW', 'WkkWkkW', 'WWWkWWW', '.WWWWW.', '.WkWkW.']),
  '人際': grid(['..SS..SS.', '.SSSSSSSS', '.SSSSSSSS', '..SS..SS.', '.BBBBRRRR', 'BBBBBRRRR', 'BBBBBRRRR']),
- '事務所': grid(['....R....', '...RRR...', '..RRRRR..', '.RRRRRRR.', 'RRRRRRRRR', '.LLLLLLL.', '.LBLLNNL.', '.LLLLNNL.', '.LLLLNNL.']),
+ '事務所': grid(['...NNN...', '..N...N..', 'NNNNNNNNN', 'NNNNYNNNn', 'nnnnYnnnn', 'NNNNNNNNn', 'NNNNNNNNn', 'nnnnnnnnn']),   # 公事包（不用房子）
  '設定': grid(['...KK...', '.K.KK.K.', '..KKKK..', 'KKKkkKKK', 'KKKkkKKK', '..KKKK..', '.K.KK.K.', '...KK...']),
  '上升': grid(['...G...', '..GGG..', '.GGGGG.', 'GGGGGGG', '..GGG..', '..GGG..', '..GGG..']),
  '下降': grid(['..RRR..', '..RRR..', '..RRR..', 'RRRRRRR', '.RRRRR.', '..RRR..', '...R...']),

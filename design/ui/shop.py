@@ -1,6 +1,6 @@
 # 花錢面板新版草圖（裝備、照顧兩頁＋點圖示的說明框）
-import sys
-import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image, ImageDraw
 from style import *
 
