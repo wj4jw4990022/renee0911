@@ -98,7 +98,7 @@ function vilGoal(h){
   if (h.act === 'strike') return ['office', 0];
   if (h.act === 'side') return ['stage', 0];
   if (h.act === 'train') return ['arena', 0];
-  if (h.act === 'rest') return ['home', 0];
+  if (h.act === 'rest') return ['home', 1];   // v17.89：在家休息就進屋（原本站在家門口的路上）
   if (h.act === 'mission' && h.mission) { const ph = mPhase(h);   // v17.7：任務期間不在工作時，照常在村子裡生活
     if (ph === 'prep') return ['home', 0];
     if (ph === 'nout') return ['gate', 0];
@@ -1890,7 +1890,7 @@ Object.assign(BLD_ART, {
 
 // ================= v17.14：急報（整頁大事件）20 秒；v17.58：一般問題也改成限時 15 秒（拿掉「已讀不回」），時間到勇者自己決定 =================
 // 一般問題只在看著主畫面時倒數（打開選單、暫停、切到別的 App 時停住）；剩多少存在 q.rem（毫秒），重開頁面接著倒數
-const URGENT_MS = 20000, ASK_MS = 15000;
+const URGENT_MS = 15000, ASK_MS = 15000;   // v17.89 開發者：大事件也統一 15 秒
 let qLast = Date.now();
 function qTick(){
   const now = Date.now(), dt = Math.min(1000, now - qLast); qLast = now;
