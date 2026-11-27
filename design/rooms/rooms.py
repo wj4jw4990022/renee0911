@@ -222,6 +222,17 @@ def dummy():   # 稻草人（特訓用）：木柱、橫桿、稻草頭和身體
         d.ellipse([3, 0, 12, 8], fill=(234, 196, 110, 255)); d.rectangle([4, 10, 11, 19], fill=(234, 196, 110, 255))
         d.line([(4, 13), (11, 13)], fill=BRd); d.line([(4, 17), (11, 17)], fill=BRd); d.point((6, 4), fill=O); d.point((9, 4), fill=O)
     return shape(16, 27, f)
+def billboard():   # 代言看板：木框、兩支腳、紅色橫條、淺藍大頭貼底、三顆小星星
+    def f(d):
+        d.rectangle([3, 25, 4, 36], fill=BR); d.rectangle([27, 25, 28, 36], fill=BR)
+        d.rectangle([0, 0, 31, 26], fill=BR); d.rectangle([2, 2, 29, 24], fill=(250, 240, 214, 255))
+        d.rectangle([2, 2, 29, 5], fill=RD); d.rectangle([7, 7, 24, 23], fill=(142, 198, 240, 255))
+        for x, y in ((4, 9), (26, 12), (4, 19)): d.rectangle([x, y, x + 1, y + 1], fill=YL)
+    return shape(32, 37, f)
+def cam_man():   # 攝影師：路人拿相機
+    sp = kt('07_01').copy(); d = ImageDraw.Draw(sp); d.rectangle([10, 8, 15, 12], fill=NVd); d.rectangle([14, 9, 15, 10], fill=GYd); d.rectangle([11, 7, 12, 7], fill=NVd); return sp
+def host():   # 主持人：拿麥克風
+    sp = kt('07_04').copy(); d = ImageDraw.Draw(sp); d.rectangle([2, 7, 3, 11], fill=O); d.rectangle([1, 5, 4, 7], fill=GYd); d.point((2, 5), fill=GY); return sp
 def items():
     RB, RBd = (122, 140, 106, 255), (90, 104, 80, 255)
     return {
@@ -236,6 +247,8 @@ def items():
       'foe_viking':kt('07_03'), 'foe_knight':kt('08_01'), 'foe_archer':kt('09_04'), 'coach':kt('07_02'),
       'cw0':kt('07_01'), 'cw1':kt('08_03'), 'cw2':kt('08_04'), 'cw3':kt('09_04'), 'cw4':kt('07_04'),
       'dummy':dummy(),
+      # v17.51 廣場：代言看板（大頭貼在遊戲裡貼：看板左上角往右 11、往下 10，16×15）、攝影師、主持人
+      'billboard':billboard(), 'cam_man':cam_man(), 'host':host(),
     }
 if __name__ == '__main__':
     if sys.argv[1] == '--sketch':
