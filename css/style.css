@@ -721,3 +721,5 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 #app .qopts3 { gap:6px; }
 #app #replies.asking { gap:8px; }
 .qtime .pbar { height:12px; } .qtime b { font-size:14px; }
+#app .qopts3 button { font-size:13px; line-height:1.15; padding:2px 2px; min-height:32px; }
+#app .qopts3 button { font-size:12px; padding:2px 0; }
