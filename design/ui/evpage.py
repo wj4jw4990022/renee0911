@@ -9,9 +9,10 @@ from style import *
 from sendoff import FS, face, OKD, ORANGE
 W, H = 780, 1800
 
-def bubble(im, d, x, y):   # 表情泡泡（遊戲裡用 Kenney 表情）
-    box(d, x, y, x + 84, y + 70, fill=(255, 255, 255), shadow=False); d.polygon([(x + 14, y + 66), (x + 34, y + 66), (x + 10, y + 90)], fill=O[:3]); d.polygon([(x + 18, y + 64), (x + 30, y + 64), (x + 15, y + 80)], fill=(255, 255, 255))
-    icon_c(im, '壓力', x + 42, y + 35, 4, True)
+def bubble(im, d, x, y):   # 表情泡泡（遊戲裡用 Kenney 表情）：放大，約勇者頭的大小
+    w, h = 140, 116
+    box(d, x, y, x + w, y + h, fill=(255, 255, 255), shadow=False); d.polygon([(x + 20, y + h - 4), (x + 50, y + h - 4), (x + 12, y + h + 34)], fill=O[:3]); d.polygon([(x + 26, y + h - 6), (x + 44, y + h - 6), (x + 18, y + h + 22)], fill=(255, 255, 255))
+    icon_c(im, '壓力', x + w // 2, y + h // 2, 7, True)
 
 def page(kind, tag, left, who, text_, trust, lv, opts, sec, scene):
     im = Image.new('RGBA', (W, H), PAPER2 + (255,)); d = ImageDraw.Draw(im)
@@ -19,7 +20,7 @@ def page(kind, tag, left, who, text_, trust, lv, opts, sec, scene):
     d.rectangle([0, 0, W, 560], fill=scene); d.rectangle([0, 430, W, 560], fill=tuple(max(0, c - 22) for c in scene))
     for k in range(6): d.rectangle([0, 430 + k * 4, W, 431 + k * 4], fill=tuple(max(0, c - 10) for c in scene))
     sp = Image.open(TD + '07_01.png').convert('RGBA'); im.alpha_composite(sp.resize((176, 176), Image.NEAREST), (302, 290))
-    bubble(im, d, 470, 220)
+    bubble(im, d, 470, 150)
     # 左上：事件標籤（驚嘆＋事件名＋誰），右上：還剩幾個月要回答
     box(d, 24, 70, 24 + 300, 132, fill=PAPER); iw = icon_c(im, '驚嘆' if '驚嘆' in ICON else '危險', 44, 101, 3); text_c(d, 44 + iw + 12, 101, f'{tag}・{who}', 16)
     box(d, 560, 70, 756, 132, fill=PAPER); iw = icon_c(im, '時間', 580, 101, 3); text_c(d, 580 + iw + 10, 101, f'剩 {left} 月', 16)
