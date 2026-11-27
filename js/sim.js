@@ -2096,27 +2096,56 @@ function openEnd(){
   if (!h.walled) { addFame(h.lv * 2 + (h.act === 'retired' ? 30 : 0)); h.walled = 1; S.wall.push({ happy, rel:h.rel || '', name:h.name, cls:jobName(h), age:Math.floor(h.age), lv:h.lv, end:tag, why:h.endWhy, gen:h.gen, kills:h.kills }); }
   const cands = S.cands || makeCands();
   S.cands = cands;
-  $('end').innerHTML = `
-    <div class="k" style="font-size:12px">第 ${h.gen} 代勇者 · 生平紀錄</div>
-    <div class="px" style="font-size:28px;margin-top:4px">${h.name}</div>
-    <div style="font-size:13px;color:#6b4e33;margin-top:2px">${jobName(h)} · Lv${h.lv} · ${Math.floor(h.age)} 歲 · <b style="color:${h.act === 'dead' ? '#b03a30' : h.act === 'retired' ? '#2f7a3a' : '#a8681a'}">${tag}</b></div>
-    <div class="card" style="margin-top:12px;font-size:13.5px;line-height:1.6">${h.endWhy}<div class="k" style="font-size:12px;margin-top:4px">個性：${Object.keys(HEX).map(k => hexWord(k, h.hex[k])).filter(w => !w.startsWith('介於')).join('、') || '很平均'}<br>最在乎：${h.des.map(k => DESIRES[k].n).join('、')}<br>人生目標：${GOALS[h.goal] ? GOALS[h.goal].n : ''}${h.said !== h.goal ? `（對你說的是${GOALS[h.said].n}）` : ''}${h.sentHome ? `，一共寄了 ${fmt(h.sentHome)} 金回老家` : ''}</div></div>
-    <div class="grid2" style="margin:8px 0">
-      <div class="card" style="margin:0">打倒魔物<br><b class="px" style="font-size:20px">${fmt(h.kills)}</b></div>
-      <div class="card" style="margin:0">交到的朋友<br><b class="px" style="font-size:20px">${friendsN()}</b></div>
-    </div>
-    <div class="sec">臨終的遺憾 · 幸福分數 <b style="color:${happy >= 70 ? '#2f7a3a' : happy >= 40 ? '#a8681a' : '#b03a30'}">${happy}</b></div>
-    <div class="card" style="padding:4px 12px">${rg.map(r => `<div class="tl"><span class="d" style="width:22px;color:${['#2f7a3a', '#a8681a', '#b03a30'][r.lv]}">${['✓', '△', '✗'][r.lv]}</span><span><b style="font-weight:500">${r.n}</b><br><span class="k" style="font-size:12px">${r.why}</span></span></div>`).join('')}</div>
-    <div class="k" style="font-size:12px;margin:-2px 2px 8px">你的事務所從${pron(h)}身上賺到的錢，和${pron(h)}過得幸不幸福，是兩回事。</div>
-    <div class="sec">人生年表</div>
-    ${h.log.slice(-14).map(e => `<div class="tl"><span class="d">${Math.floor(e.age)} 歲</span><span>${e.t}</span></div>`).join('') || '<div class="k">（沒有特別的事）</div>'}
-    <div class="sec" style="margin-top:18px">選下一位勇者${S.rep < 30 ? `（口碑太差，只有 ${S.rep < 15 ? 1 : 2} 個人願意來）` : ''}${h.wpn || h.charms.length ? `（繼承遺物：${[h.wpn ? WPN.n[h.wpn] + '武器' : '', h.charms.length ? '傳家寶「' + TREASURES[h.charms[0]].n + '」' : ''].filter(Boolean).join('、')}）` : ''}</div>
-    ${cands.map((c, i) => `<button class="cand" data-c="${i}"><div class="row"><b class="px" style="font-size:16px;font-weight:400;display:flex;align-items:center;gap:8px"><span class="cav" style="width:40px;height:40px">${pimg(c)}</span>${c.name}</b><span class="k" style="font-size:12px">${c.tag}</span></div>
-      <div style="font-size:12.5px;margin-top:3px">${CLS[c.cls].n} · ${TRAITS[c.trait].n}・${TRAITS[c.trait2].n} · 自稱${GOALS[c.said].n}${c.perks.length ? ' · ' + c.perks.map(p => PERKS[p].n).join('、') : ''}</div>
-      <div class="k" style="font-size:11.5px;margin-top:2px">${TRAITS[c.trait].d}</div></button>`).join('')}`;
-  $('end').classList.add('on'); $('end').scrollTop = 0;
-  $('end').querySelectorAll('[data-c]').forEach(b => b.onclick = () => nextGen(+b.dataset.c));
+  endStep = 0; endView(h, tag, rg, happy, cands); $('end').classList.add('on'); $('end').scrollTop = 0;
 }
+// v17.81 結局新版（design-wip design/ui/草圖_結局.png）：①他的一生 ②選下一位勇者
+let endStep = 0;
+function endView(h, tag, rg, happy, cands){
+  const col = h.act === 'dead' ? 'r' : h.act === 'retired' ? 'g' : 'o', hc = happy >= 70 ? 'cg' : happy >= 40 ? 'co' : 'cr';
+  const hexW = Object.keys(HEX).map(k => hexWord(k, h.hex[k])).filter(w => !w.startsWith('介於')).map(w => w.replace(/^比較/, '')).join('・') || '很平均';
+  const goal = (GOALS[h.goal] ? GOALS[h.goal].n : '') + (h.said !== h.goal && GOALS[h.said] ? `（對你說的是${GOALS[h.said].n}）` : '') + (h.sentHome ? `，寄了 ${fmt(h.sentHome)} 金回老家` : '');
+  if (endStep === 0) {
+    $('end').innerHTML = `<div class="eh">${IC('歷代', 2)}<b>第 ${h.gen} 代・生平</b></div>
+      <canvas id="endSc" class="esc" width="96" height="48"></canvas>
+      <div class="ebd">
+        <div class="pb eme">${pimg(h)}<div><div class="enm"><b class="f22">${esc(h.name)}</b><span class="pb ns etag ${col}">${tag}</span></div><span class="num s mu">${IC('戰力', 2)}<b>${jobName(h)}・Lv${h.lv}・${Math.floor(h.age)} 歲</b></span></div></div>
+        <div class="pb ns ewhy f16">${esc(h.endWhy || '')}</div>
+        <div class="e3">${[['危險', fmt(h.kills), '打倒的魔物'], ['人際', friendsN(), '交到的朋友'], ['心情', happy, '幸福分數']].map(([ic, v, n], i) => `<span class="pb num"${TIPA(ic, n, '')}>${IC(ic, 2)}<b class="${i === 2 ? hc : ''}">${v}</b></span>`).join('')}</div>
+        <div class="pb erows">${[['個性', hexW], ['心願', '最在乎：' + h.des.map(k => DESIRES[k].n).join('・')], ['生平', '人生目標：' + goal]].map(([ic, t]) => `<div>${IC(ic, 2)}<span class="f14">${esc(t)}</span></div>`).join('')}</div>
+        <div class="esec"><span>臨終的遺憾</span><span class="num s"${TIPA('心情', '幸福分數', '看他臨終時有幾個遺憾')}>${IC('心情', 2)}<b class="${hc}">幸福 ${happy}</b></span></div>
+        <div class="pb erg">${rg.map(r => `<div><span class="erk">${r.lv === 0 ? IC('打勾', 2) : r.lv === 2 ? IC('打叉', 2) : '<b class="co">△</b>'}</span><span><b class="f16">${esc(r.n)}</b><small class="mu">${esc(r.why)}</small></span></div>`).join('')}</div>
+        <div class="f14 mu">你從${pron(h)}身上賺到的錢，和${pron(h)}過得幸不幸福，是兩回事。</div>
+        <div class="esec"><span>人生年表</span></div>
+        <div class="pb etl">${h.log.slice(-14).map(e => `<div><span class="mu">${Math.floor(e.age)} 歲</span><span>${esc(e.t)}</span></div>`).join('') || '<div class="mu">（沒有特別的事）</div>'}</div>
+        <button class="pb au ego" id="endNext">${IC('歷代', 2)}<b>選下一位勇者</b></button>
+      </div>`;
+    endScene($('endSc'), h);
+    $('endNext').onclick = () => { endStep = 1; endView(h, tag, rg, happy, cands); $('end').scrollTop = 0; };
+  } else {
+    const inh = [h.wpn ? ['戰力', WPN.n[h.wpn] + (WNAME[h.cls] || '武器')] : null, h.charms.length ? ['寶物', TREASURES[h.charms[0]].n] : null].filter(Boolean);
+    $('end').innerHTML = `<div class="eh">${IC('歷代', 2)}<b>第 ${h.gen + 1} 代</b></div>
+      <div class="ebd">
+        ${inh.length ? `<div class="einh"><span class="mu f16">繼承</span>${inh.map(([ic, t]) => `<span class="pb ns num s"${TIPA(ic, t, '上一代留下來的')}>${IC(ic, 2)}<b>${esc(t)}</b></span>`).join('')}</div>` : ''}
+        ${S.rep < 30 ? `<div class="f14 cr">口碑太差，只有 ${S.rep < 15 ? 1 : 2} 個人願意來</div>` : ''}
+        ${cands.map((c, i) => { const t0 = (c.tag || '').replace(/（.*）/g, ''), sub = ((c.tag || '').match(/（(.*?)）/g) || []).map(x => x.slice(1, -1)).join('・');
+          return `<div class="pb ecand"><span class="eav">${pimg(c)}</span><div class="ecm">
+            <div class="enm"><b class="f22">${esc(c.name)}</b><span class="pb ns etag p">${esc(t0)}</span></div>
+            ${sub ? `<div class="f14 cr">${esc(sub)}</div>` : ''}
+            <div class="etr"><span class="num s">${IC('戰力', 2)}<b>${CLS[c.cls].n}</b></span>${[c.trait, c.trait2].filter(Boolean).map(t => `<span class="num s"${TIPA('個性', TRAITS[t].n, TRAITS[t].d)}>${IC('個性', 2)}<b>${TRAITS[t].n}</b></span>`).join('')}</div>
+            <div class="etr"><span class="num s mu">${IC('心願', 2)}<b class="f14">自稱${GOALS[c.said].n}</b></span>${c.perks.map(p => `<span class="pb ns etag ${PERKS[p].bad ? 'r' : 'y'}"${TIPA('經驗', PERKS[p].n, PERKS[p].d || '')}>${PERKS[p].n}</span>`).join('')}</div>
+          </div><button class="pb au epick" data-c="${i}">就是他</button></div>`; }).join('')}
+      </div>`;
+    $('end').querySelectorAll('[data-c]').forEach(b => b.onclick = () => nextGen(+b.dataset.c));
+  }
+}
+// 結局場景：草原背景＋戰死＝墓碑和花／退休＝開心地站著／離開＝一個人站在路邊
+function endScene(c, h){ if (!c) return; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.fillStyle = '#96bed7'; g.fillRect(0, 0, 96, 48);
+  try { const st = zoneStrip(0); g.drawImage(st, Math.min(st.width - 96, 150), 78, 96, 48, 0, 0, 96, 48); } catch (e) { g.fillStyle = '#62a05c'; g.fillRect(0, 30, 96, 18); }
+  if (h.act === 'dead') { const G = ['..KKKKK..', '.KKKKKKK.', 'KKKKOKKKk', 'KKOOOOOKk', 'KKKKOKKKk', 'KKKKOKKKk', 'KKKKKKKKk', 'KKKKKKKKk', 'kkkkkkkkk'], C = { K:'#c0cbdc', k:'#8b9bb4', O:'#3f2631' }, x0 = 39, y0 = 20, P = (x, y, w, hh, cl) => { g.fillStyle = cl; g.fillRect(x0 + x * 2, y0 + y * 2, w * 2, hh * 2); };
+    P(-1, 1, 11, 9, '#3f2631'); P(1, -1, 7, 2, '#3f2631'); P(0, 0, 9, 1, '#3f2631');
+    G.forEach((r, y) => [...r].forEach((ch, x) => { if (C[ch]) P(x, y, 1, 1, C[ch]); }));
+    [[30, 36], [60, 36]].forEach(([x, y]) => { g.fillStyle = '#43c878'; g.fillRect(x + 1, y + 2, 1, 4); g.fillStyle = '#e84537'; g.fillRect(x, y, 3, 3); g.fillStyle = '#f7c94a'; g.fillRect(x + 1, y + 1, 1, 1); }); }
+  else { try { drawSprite(g, h, h.act === 'left' ? 72 : 48, 40, false, 0, { moving:false, expr:h.act === 'retired' ? 'happy' : 'sad' }); } catch (e) {} } }
 function makeCands(){
   const h = H(), out = [];
   const pupil = { trait:pick([h.trait, h.trait2]), cls:h.cls, perks:h.perks.filter(p => !PERKS[p].bad).slice(0, 1), tag:`${h.name}的徒弟`, master:h.name };
