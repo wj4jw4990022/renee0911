@@ -29,10 +29,10 @@ function actIc(h, t){
 function showTip(el){
   const [n, nm, d] = el.dataset.tip.split('|'), bx = $('tipbox'), app = $('app').getBoundingClientRect(), r = el.getBoundingClientRect();
   bx.innerHTML = `<div class="tbr">${IC(n, 2)}<b>${esc(nm)}</b></div>${d ? `<div class="tbd">${esc(d)}</div>` : ''}<i class="tar"></i>`;
-  bx.classList.add('on'); const w = bx.offsetWidth, h = bx.offsetHeight, cx = r.left + r.width / 2 - app.left;
+  bx.classList.add('on'); const w = bx.offsetWidth * UIZ, h = bx.offsetHeight * UIZ, cx = r.left + r.width / 2 - app.left;
   const x = clamp(cx - w / 2, 8, app.width - w - 8), below = r.bottom - app.top + h + 14 < app.height;
-  bx.style.left = x + 'px'; bx.style.top = (below ? r.bottom - app.top + 10 : r.top - app.top - h - 10) + 'px';
-  bx.classList.toggle('up', !below); bx.querySelector('.tar').style.left = clamp(cx - x, 12, w - 12) + 'px';
+  bx.style.left = x / UIZ + 'px'; bx.style.top = (below ? r.bottom - app.top + 10 : r.top - app.top - h - 10) / UIZ + 'px';   // 說明框自己也縮放，位置要除回去
+  bx.classList.toggle('up', !below); bx.querySelector('.tar').style.left = clamp(cx - x, 12, w - 12) / UIZ + 'px';
 }
 document.addEventListener('click', e => {   // 點有 data-tip 的東西＝看說明；點別的地方＝關掉
   const t = e.target.closest && e.target.closest('[data-tip]');
@@ -153,8 +153,11 @@ function renderAll(){ renderTop(); renderArow(); renderReplies(); if (sheetT) re
 $('bell').onclick = e => { e.stopPropagation(); const on = $('alerts').classList.toggle('open'); $('bell').classList.toggle('open', on); };
 $('chH').onclick = () => $('chX').onclick();
 $('chX').onclick = () => { const on = $('app').classList.toggle('chatx'); $('chX').textContent = on ? '收合' : '展開 ›'; $('chT').textContent = on ? H().name : '最新動態'; if (!on) { S.feedF = 'all'; } renderFeed(); $('feed').scrollTop = $('feed').scrollHeight; };
-function setNavH(){ document.documentElement.style.setProperty('--navh', $('nav').offsetHeight + 'px'); }
-window.addEventListener('resize', setNavH); setTimeout(setNavH, 50);
+// v17.62 響應式：介面照螢幕寬度等比例縮放（以 390 寬為 1 倍，0.8～1.25）；地圖畫布本來就會自己撐滿，不縮放
+let UIZ = 1;
+function fitZoom(){ UIZ = clamp(($('app').clientWidth || 390) / 390, .8, 1.25); document.documentElement.style.setProperty('--z', UIZ); }
+function setNavH(){ fitZoom(); document.documentElement.style.setProperty('--navh', $('nav').offsetHeight + 'px'); }
+fitZoom(); window.addEventListener('resize', setNavH); setTimeout(setNavH, 50);
 // ================= v12：分頁的小元件 =================
 function drawPortrait(c){ drawFace(c); }
 function heroCard(h){

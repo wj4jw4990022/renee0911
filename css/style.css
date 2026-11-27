@@ -710,3 +710,5 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 #app .rbar .mpill { gap:10px; padding:2px 8px; }
 #app .mbtn { width:36px; height:36px; }
 #app .bars .bi > i { width:clamp(22px, 7.5vw, 34px); } #app .cap .bars { gap:6px; }
+/* v17.62 響應式：介面零件照螢幕寬度縮放（--z 由 ui.js fitZoom 算） */
+#app .rbar, #app .hud, #app .bell, #app .mtabs, #app .act, #app .stage .alerts, #app .arow, #app .chat, #app nav, #app .sheet, #app .tipbox, #app .toast, #tmenu .tbox, #mission .box, #evp > * { zoom:var(--z, 1); }
