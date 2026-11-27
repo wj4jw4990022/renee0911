@@ -271,6 +271,7 @@ def items():
       'billboard':billboard(), 'cam_man':cam_man(), 'host':host(),
       # v17.53 罷工、接外快
       'placard':placard(), 'stall':stall(),
+      **__import__('rooms2').items2(),   # v17.55 第二批：事務所、紮營、臥底／失聯、地下夜班、私事、回老家
     }
 if __name__ == '__main__':
     if sys.argv[1] == '--sketch':
