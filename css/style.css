@@ -882,3 +882,8 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 .sreset.arm { background-color:var(--bad); color:#fff; }
 #app .sh .shh { width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; filter:none; }
 #app .sh .shh[hidden] { display:none; }
+
+/* v17.72 開發者手機回報：對話區往上加大；花錢頁內容縮小（分頁不變）；人際固定高度在 fixH() */
+#app .chat, #app:not(.chatx) .chat { height:276px; }
+#app:not(.chatx) .chat:has(#replies.asking) { height:370px; }
+#app #shB.sm > * { zoom:.8; }

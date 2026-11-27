@@ -917,7 +917,9 @@ $('shHelp').onclick = e => { e.stopPropagation(); const h = H(); popAt($('shHelp
 $('cap').onclick = () => { if (sheetT === 'hero') closeSheet(); else openSheet('hero', 'state'); };
 function openSheet(t, sb){ sheetT = t; if (t === 'quest' && ['ag', 'offer', 'due'].includes(sb)) { S.takeF = sb; sb = 'take'; } if (sb) sub[t] = sb; if (t === 'quest') $('dQuest').classList.remove('on'); if (t === 'office') $('dOffice').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); renderSheet(); $('sheet').style.bottom = $('nav').offsetHeight + 'px'; sheetMax(); $('sheet').classList.add('on'); }
 // v17.65：面板高度看內容，最高長到勇者卡下面（勇者卡一直看得到）
-function sheetMax(){ try { const c = $('cap').getBoundingClientRect(), n = $('nav').getBoundingClientRect(); if (c.height && n.height) $('sheet').style.maxHeight = Math.max(240, (n.top - c.bottom - 8) / UIZ) + 'px'; } catch (e) {} }
+function sheetMax(){ try { const c = $('cap').getBoundingClientRect(), n = $('nav').getBoundingClientRect(); if (c.height && n.height) $('sheet').style.maxHeight = Math.max(240, (n.top - c.bottom - 8) / UIZ) + 'px'; } catch (e) {}  fixH(); }
+// v17.72 人際：換分頁時高度不變，固定撐到最高（勇者卡下面）
+function fixH(){ const sh = $('sheet'), on = sheetT === 'people'; sh.style.height = on && sh.style.maxHeight ? sh.style.maxHeight : ''; if (on) sh.style.minHeight = ''; }
 let archArm = false;
 function closeSheet(){ qSel = null; $('sheet')._t = null; resetArm = false; archArm = false; artScroll = null; sheetT = null; $('sheet').classList.remove('on'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('on')); }
 
@@ -1051,7 +1053,7 @@ function teamView(){
 }
 function renderSheet(){
   const h = H(), B = $('shB'), st = B.scrollTop;
-  { const sh = $('sheet'); if (sh.classList.contains('on') && sh._t === sheetT) sh.style.minHeight = Math.max(parseFloat(sh.style.minHeight) || 0, sh.offsetHeight) + 'px'; else sh.style.minHeight = ''; sh._t = sheetT; }   // v17.69：同一個面板換分頁時不縮回去（高度只長不縮，免得跳動）
+  { const sh = $('sheet'); if (sh.classList.contains('on') && sh._t === sheetT) sh.style.minHeight = Math.max(parseFloat(sh.style.minHeight) || 0, sh.offsetHeight) + 'px'; else sh.style.minHeight = ''; sh._t = sheetT; B.classList.toggle('sm', sheetT === 'gear'); fixH(); }   // v17.72：花錢頁內容縮小、人際固定高度；v17.69：同一個面板換分頁時不縮回去（高度只長不縮，免得跳動）
   const title = { hero:H().name, quest:'任務', gear:'花錢', life:'生平', people:'人際', office:'事務所', set:'設定' }[sheetT];
   const TIC = { gear:'金幣', people:'人際', quest:'排程', office:'事務所', set:'設定' }[sheetT];
   setH($('shT'), (TIC ? IC(TIC, 2) : '') + `<span>${esc(title)}</span>`);
@@ -1264,7 +1266,7 @@ function renderSheet(){
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.71</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.72</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
