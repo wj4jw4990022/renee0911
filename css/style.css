@@ -712,3 +712,12 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 #app .bars .bi > i { width:clamp(22px, 7.5vw, 34px); } #app .cap .bars { gap:6px; }
 /* v17.62 響應式：介面零件照螢幕寬度縮放（--z 由 ui.js fitZoom 算） */
 #app .rbar, #app .hud, #app .bell, #app .mtabs, #app .act, #app .stage .alerts, #app .arow, #app .chat, #app nav, #app .sheet, #app .tipbox, #app .toast, #tmenu .tbox, #mission .box, #evp > * { zoom:var(--z, 1); }
+/* v17.63：對話區的按鈕縮小（篩選、互動、三個選項） */
+#app .ff, #app:not(.chatx) .ff { gap:6px; }
+#app .ff .fbtn { width:36px; height:30px; font-size:14px; filter:drop-shadow(2px 2px 0 var(--shd)); }
+#app .tbtn { height:30px; padding:0 10px; gap:4px; font-size:14px; filter:drop-shadow(2px 2px 0 var(--shd)); }
+#app .chh, #app:not(.chatx) .chh { padding:4px 12px; }
+#app .qopts3 button { min-height:36px; font-size:14px; }
+#app .qopts3 { gap:6px; }
+#app #replies.asking { gap:8px; }
+.qtime .pbar { height:12px; } .qtime b { font-size:14px; }
