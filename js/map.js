@@ -57,7 +57,8 @@ function isoPlace(b, name){ const B = ART.bld[name], cx = b.x + (b.k === 'statio
   b.path = ['gate', 'stage', 'telepad'].includes(b.k) || B.door === B.ax ? 0 : Math.max(0, V_BASE - b.dy);   // 門前小路往右下延伸到人行道
   b.door = Math.round(b.dx + b.path * 2); if (b.k !== 'house') VD[b.k] = b.door; }
 VSLOTS.forEach(b => { if (b.k !== 'house') VD[b.k] = b.door; });
-{ const b = VSLOTS.find(b => b.k === 'house' && b.i === 0); if (b) VD.shop = b.door; }   // v17.87：逛街＝第一間民宅（有村民開店時是店面）
+{ const b = VSLOTS.find(b => b.k === 'house' && b.i === 0); if (b) VD.shop = b.door; }
+VD.pond = VD.gate - 64;   // v17.90：釣魚的位置（村口內側、驛馬車站前，池塘在右下的草地）   // v17.87：逛街＝第一間民宅（有村民開店時是店面）
 // ================= v17.11：一條長路（村子在最左邊，村口在右端直接接著野外） =================
 // 村子和野外共用同一條橫軸。勇者「在村子裡」時，模擬座標就停在村口（GX, GY）；x 超過村口就是在野外。
 const GX = VD.gate, GY = V_WALK;
@@ -70,7 +71,7 @@ let WW = VW + 24;
 WSEG.forEach(([t, z, w]) => { const x0 = WW, x1 = WW + w; if (t === 'z') { ZONES[z].rect = [x0, RY0, x1, RY1]; ZONES[z].map = 'wild'; } else { CAP.x0 = x0; CAP.x1 = x1; } WW = x1 + 14; });
 WW += 40;
 const CARX = CAP.x1 - 24;   // 旅行商隊停在王都出口
-const MSPOT_B = { endorse:'stage', variety:'stage', meet:'stage', arena:'arena', trial:'clinic' };   // 村子裡的事務所任務在哪棟
+const MSPOT_B = { endorse:'stage', variety:'stage', meet:'stage', arena:'arena', trial:'clinic', smith:'smith', coach:'arena', charity:'stage', banquet:'station' };   // 村子裡的事務所任務在哪棟
 const V = { x:null, y:V_WALK, mv:false, left:false, inside:null, pk:null, p:0, fa:1, cx:null, tagId:null, tagT:0, exiting:0, wander:null, wait:0, pan:null, panT:0, drag:null, noClick:0 };
 const vilPos = new Map();
 let vilHits = [];
@@ -103,7 +104,8 @@ function vilGoal(h){
     if (ph === 'prep') return ['home', 0];
     if (ph === 'nout') return ['gate', 0];
     if (ph === 'home' || ph === 'free' || ph === 'back') return hr >= 22.5 ? ['home', 1] : null; }
-  if (h.act === 'mission' && h.mission && MSPOT_B[h.mission.ag]) return [MSPOT_B[h.mission.ag], h.mission.ag === 'trial' ? 1 : 0];   // v17.51：代言、綜藝、見粉絲都站在廣場前面的路上
+  if (h.act === 'mission' && h.mission && h.mission.ag === 'patrol') return null;   // v17.90：夜間巡邏＝在街上來回走
+  if (h.act === 'mission' && h.mission && MSPOT_B[h.mission.ag]) return [MSPOT_B[h.mission.ag], h.mission.ag === 'trial' || h.mission.ag === 'banquet' ? 1 : 0];   // v17.51：代言、綜藝、見粉絲都站在廣場前面的路上
   if (h.act === 'hunt' && hr < 7) return ['home', 0];
   if (h.act === 'hunt' || h.act === 'mission') return ['gate', 0];
   return null;   // 閒晃
@@ -130,6 +132,7 @@ function vilTick(dt, now){
   if (V.lastRaw && V.lastRaw !== 'vil' && raw === 'vil') { V.x = VD.gate; V.y = V_WALK; V.exiting = 0; V.pk = null; V.p = 0; V.fa = 1; }   // 回村：從村口走進來
   V.lastRaw = raw;
   if (raw !== 'vil' && !V.exiting) { V.inside = null; V.pk = null; V.p = 0; V.fa = 1; return; }
+  if (CH && !V.inside) { const c = chasePos(now); V.x = c.hx; V.y += clamp(V_WALK - V.y, -40 * dt, 40 * dt); V.mv = c.run; V.left = false; V.pk = null; V.p = 0; V.fa = 1; return; }   // v17.90：抓小偷
   let goal = V.exiting ? ['gate', 0] : vilGoal(h), tx;
   const inGoal = goal && goal[1] ? goal[0] : null;
   if (V.x == null && inGoal && vDoor(inGoal)) { V.pk = inGoal; V.p = 1; V.fa = 0; vOnPath(); V.inside = inGoal; return; }   // 剛載入：直接在屋裡
@@ -166,16 +169,16 @@ const LZ = {
   drink: { n:'自己去喝一杯', g:['tavern', 1], txt:() => '在酒館喝一杯' },
   tchat: { n:'在酒館聊天',   g:['tavern', 1], txt:z => `在酒館和${z.nm}聊天` },
   walk:  { n:'散步',         g:['stage', 0], txt:() => '在廣場散步' },
-  fish:  { n:'釣魚',         g:null,         txt:() => '釣魚' },   // 池塘草圖確定後才開（LZ_OFF）
+  fish:  { n:'釣魚',         g:['pond', 0],  txt:() => '在池塘邊釣魚' },
   shop:  { n:'逛街',         g:['shop', 0],  txt:() => '逛街買東西' },
   train: { n:'自主練習',     g:['arena', 0], txt:() => '在鬥技場自主練習' },
   read:  { n:'看書',         g:['home', 1],  txt:() => '在家看書' },
   sleep: { n:'早點睡',       g:['home', 1],  txt:() => '累了，早點睡' },
   boss:  { n:'和老闆出去',   g:['tavern', 1], txt:z => z.meal ? '和老闆一起吃飯' : '和老闆喝一杯' },
 };
-const LZ_OFF = { fish:1 };
+const LZ_OFF = {};
 const LZ_SAY = { chat:['今天跟朋友聊了好多', '工作完聊個天真放鬆'], date:['今晚約會！', '嘿嘿，今天約好了'], drink:['今天想自己喝一杯', '來一杯就回家'], tchat:['酒館今天好熱鬧'],
-  walk:['去廣場走走', '晚上的噴水池很漂亮'], shop:['去逛逛有什麼新東西', '想買點東西犒賞自己'], train:['再練一下！', '今天的動作還不夠好'], read:['今天在家看書', '這本書好好看'], sleep:['好累……先睡了', '今天早點睡'] };
+  walk:['去廣場走走', '晚上的噴水池很漂亮'], fish:['去池塘釣魚', '今天會釣到大魚嗎'], shop:['去逛逛有什麼新東西', '想買點東西犒賞自己'], train:['再練一下！', '今天的動作還不夠好'], read:['今天在家看書', '這本書好好看'], sleep:['好累……先睡了', '今天早點睡'] };
 // 現在是不是收工後的空檔（人在村子裡、22:30 前）
 function lzFree(h){ const hr = hourOf();
   if (offline || hr >= 22.5 || hr < 12 || heroMapRaw(h) !== 'vil' || h.jailed || (h.bedDays || 0) > 0) return false;
@@ -233,6 +236,45 @@ const lzAt = (h, k) => { const z = lzOn(h); return z && z.k === k && heroMap(h) 
 function lzGuest(now){ const h = H(); for (const k of ['chat', 'date']) { if (!lzAt(h, k)) continue; const n = npc(S.lz.id); if (!n || !n.alive) return;
   const x = V.x + 16; V.left = false; drawSprite(ctx, n, x, V_WALK, false, now, { moving:false, left:true });
   const t = Math.floor(now / 1600) % 2; emoAt(k === 'date' ? '戀愛' : t ? '開心' : '想到了', t ? x : V.x, V_WALK - 22, now); } }
+
+// ================= v17.90：蹲下、夜間巡邏、抓小偷、釣魚 =================
+function heroCrouch(h, now){ const s = SCN; if (!s || s.off || !s.work || h !== H() || h.act !== 'mission') return false;
+  return Math.abs((h.tx ?? h.x) - h.x) < .6 && Math.abs((h.ty ?? h.y) - h.y) < .6 && Math.floor(now / 700) % 2 === 0; }   // 到了採集點：一蹲一起
+const lzAt2 = (h, k) => { const z = lzOn(h); return !!z && z.k === k; };
+const patrolOn = h => h.act === 'mission' && h.mission && h.mission.ag === 'patrol' && mPhase(h) === 'slot' && hourOf() >= 20;
+let CH = null;   // 抓小偷的追逐（6.5 秒）
+function chaseTick(h, hr, now){
+  if (offline) return;
+  if (!S.chR || S.chR.day !== S.day) { const pat = h.act === 'mission' && h.mission && h.mission.ag === 'patrol'; S.chR = { day:S.day, at:pat ? rand(20.5, 23) : rand(9, 19), go:chance(pat ? .35 : .04) }; }
+  if (CH) { if (now - CH.t0 > 6500) { CH = null; thiefCaught(h); renderAll(); } return; }
+  if (!S.chR.go || S.chR.done || hr < S.chR.at || hr >= 24) return;
+  if (heroMap(h) !== 'vil' || V.inside || V.x == null || V.exiting || V.mv || sleeping() || vCarry()) return;
+  const ok = S.npcs.filter(n => n.alive && !n.dark && !['rival', 'rival2'].includes(n.role));
+  S.chR.done = 1; CH = { t0:now, x0:clamp(V.x, 80, VW - 200), vic:ok.length ? pick(ok).id : null }; }
+// 追逐中勇者的位置：小偷搶完往右跑，勇者跟在後面，最後撲倒
+function chasePos(now){ const p = (now - CH.t0) / 1000, k = clamp((p - .8) / 4.2, 0, 1);
+  return { p, hx:CH.x0 + k * 120, tx:CH.x0 + 22 + k * 124 + (p > 5 ? 4 : 0), run:p > .8 && p < 5 }; }
+function chaseDraw(now){ if (!CH) return; const c = chasePos(now), y = V_WALK, v = CH.vic && npc(CH.vic);
+  if (v) { const vx = CH.x0 - 22; drawSprite(ctx, v, vx, y, false, now, { moving:false, left:false, noEmo:true }); if (c.p < 4) emoAt('驚訝', vx, y - 22, now - CH.t0); }
+  if (c.p < 5) { rPerson('hood', c.tx, y + 1, false, null, c.run ? Math.floor(now / 120) % 2 : 0); pR2(c.tx + 4, y - 10, 5, 5, '#3f2631'); pR2(c.tx + 5, y - 9, 3, 3, '#9a7a5a'); }   // 抱著錢袋
+  else { const cv = rideCanvas('hood', 'room'); ctx.save(); ctx.translate(c.tx, y); ctx.rotate(Math.PI / 2); ctx.drawImage(cv, -cv.width, -Math.floor(cv.width / 2)); ctx.restore();   // 跌倒、錢袋掉地上
+    pR2(c.tx + 10, y - 4, 6, 5, '#3f2631'); pR2(c.tx + 11, y - 3, 4, 3, '#9a7a5a'); pR2(c.tx + 12, y - 2, 2, 1, '#f7c94a'); }
+  if (c.run) { for (let i = 0; i < 3; i++) pR2(c.tx - 14 - i * 2, y - 8 + i * 3, 6, 1, 'rgba(255,255,255,.6)'); if (Math.floor(now / 1500) % 2 === 0) emoAt('生氣', c.hx, y - 22, now % 1500); } }
+// 夜間巡邏：勇者手上的提燈照出一圈光
+// 提燈的光（畫在夜色之後，螢幕座標）
+function patrolLight(now){ const h = H(); if (!patrolOn(h) || heroMap(h) !== 'vil' || V.inside || V.x == null) return; const wx = V.x + (V.left ? -7 : 7), wy = V_WALK - 6, f = .85 + .15 * Math.sin(now / 180);
+  const x = 180 + (wx - cam.x) * cam.z, y = SH / 2 + (wy - cam.y) * cam.z, r = 40 * cam.z; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(x, y, 2, x, y, r); g.addColorStop(0, `rgba(255,200,110,${.5 * f})`); g.addColorStop(1, 'rgba(255,200,110,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, r, r * .7, 0, 0, 7); ctx.fill(); ctx.restore(); }
+function patrolDraw(now){ const h = H(); if (!patrolOn(h) || heroMap(h) !== 'vil' || V.inside || V.x == null) return; const x = V.x + (V.left ? -7 : 7), y = V_WALK - 9, f = .85 + .15 * Math.sin(now / 180);
+  pR2(x - 2, y - 3, 5, 7, '#3f2631'); pR2(x - 1, y - 2, 3, 5, '#fadc6e'); pR2(x - 1, y - 4, 3, 1, '#8b9bb4'); }
+// 釣魚：村口外的小池塘（畫在人物前面），勇者蹲在岸邊甩竿，浮標上下動，偶爾沉下去＋驚訝
+function pondDraw(now){ const cx = VD.pond + 30, cy = V_ROAD_B + 11, hw = 180 / cam.z; if (Math.abs(cx - cam.x) > hw + 40) return;
+  ctx.fillStyle = '#3f2631'; ctx.beginPath(); ctx.ellipse(cx, cy, 25, 7, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#4082c8'; ctx.beginPath(); ctx.ellipse(cx, cy, 23.5, 5.6, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#549cdc'; ctx.beginPath(); ctx.ellipse(cx + 2, cy + 1, 16, 3.4, 0, 0, 7); ctx.fill(); pR2(cx - 10, cy - 1, 5, 1, '#bee6fa'); pR2(cx + 8, cy + 2, 4, 1, '#bee6fa');
+  [[cx - 24, 0], [cx + 22, 1]].forEach(([x, k]) => { for (let i = 0; i < 3; i++) pR2(x + i * 2, cy - 7 - (i + k) % 2 * 2, 1, 7 + (i + k) % 2 * 2, '#3c783c'); });
+  const h = H(); if (!lzAt(h, 'fish')) return; const t = (now % 6000) / 6000, bite = t > .8, hx = V.x + 6, hy = V_WALK - 8, bx = cx - 6, by = cy - 1 + (bite ? 2 : Math.round(Math.sin(now / 300)));
+  ctx.strokeStyle = '#8a5a3a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + 14, hy - 12); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,240,.85)'; ctx.beginPath(); ctx.moveTo(hx + 14, hy - 12); ctx.lineTo(bx, by - 1); ctx.stroke();
+  pR2(bx - 1, by - 2, 3, 2, '#e84537'); pR2(bx - 1, by, 3, 1, '#f4eee0'); if (bite) emoAt('驚訝', V.x, V_WALK - 18, (t - .8) * 6000); }
 // 鏡頭：村子永遠讓整條街的高度剛好塞滿畫面，左右跟著勇者（或玩家滑到的地方）
 function vilCam(h, hm, now){
   const z = SH / VH, panning = V.drag || (V.pan != null && now - V.panT < 3500);
@@ -310,6 +352,7 @@ function drawVilFront(now){
   VPROPS.forEach(([x, k]) => { if (x < cam.x - hw - 30 || x > cam.x + hw + 30) return;
     drawIso(ctx, 'p_' + k, x, VH - 4, k === 'lamp' ? bm : 'day'); });
   const g = VSLOTS.find(b => b.k === 'gate'); if (g && Math.abs(g.ax - cam.x) < hw + 30) drawIso(ctx, 'post', g.ax, V_ROAD_B + 3, 'day');   // 村口前面那根木樁（蓋在人物前面）
+  pondDraw(now);   // v17.90
 }
 // 小地圖：畫面最上方一條細長條，標出每棟建築、勇者位置和目前看到的範圍；點一下跳過去
 const MINI = { x0:120, x1:352, y:3, h:6 };
@@ -464,9 +507,9 @@ function drawMap(now){
       const am = view === 'vil' && !lying ? arenaMode(h) : null, pm = view === 'vil' && !lying && !am ? plazaPose(h, now) : null;
       if (pm) { drawSprite(ctx, h, Math.round(hx0), Math.round(hy0) - pm.hop, false, now, { moving:false, left:pm.left, expr:pm.expr || 'happy', noEmo:!!pm.expr }); if (pm.hand) pm.hand(Math.round(hx0), Math.round(hy0)); }   // v17.51：代言、綜藝、見粉絲
       else if (am && am.fight) { const R = arenaRound(now, am.kind); let ox = 0; if (R.p > .1 && R.p < .38) ox = 3;   // v17.49：鬥技場：踏步揮擊；對手回擊時後退＋閃
-        if (am.kind !== 'train' && R.r % 2 && R.p > .75 && R.p < 1) { ox = -2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * vfa * .35; }
+        if (!['train', 'coach', 'smith'].includes(am.kind) && R.r % 2 && R.p > .75 && R.p < 1) { ox = -2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * vfa * .35; }
         drawSprite(ctx, h, Math.round(hx0 + ox), Math.round(hy0), false, now, { moving:false, left:false, atkT:R.t0 }); ctx.globalAlpha = h.alpha * vfa; }
-      else if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left }); else if (ride !== 'hide') { const fx = heroFx(h, now), foe = h.target || (fx && (fx.ghost || fx.tg)) || scnFoe(h, now), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
+      else if (view === 'vil') drawSprite(ctx, h, Math.round(hx0), Math.round(hy0), lying, now, { moving:V.mv, left:V.left, crouch:!V.mv && lzAt(h, 'fish') }); else if (ride !== 'hide') { const fx = heroFx(h, now), foe = h.target || (fx && (fx.ghost || fx.tg)) || scnFoe(h, now), d = foe && foe.x < hx0 ? -1 : 1; let ox = 0;
         if (fx && fx.charge) { const p = Math.max(0, now - fx.t) / 1000; if (p > 1.42 && p < 2.2) { ox = -d * Math.round(6 * Math.min(1, (p - 1.42) * 4) * (p < 1.9 ? 1 : (2.2 - p) / .3)); if (p < 1.75 && Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * .35; } }   // v17.45：魔王反擊，被擊退
         else if (fx) { const p = Math.max(0, now - fx.t) / 1000; if (p > .1 && p < .4) ox = d * 2; if (fx.hurt && !fx.kill && p > .72 && p < .95) { ox = -d * 2; if (Math.floor(now / 60) % 2) ctx.globalAlpha = h.alpha * .35; } }   // 出手往前踏、被打到往後退＋閃
         drawHero(ctx, Math.round(hx0 + ox), Math.round(hy0) - (ride || 0), lying, now); if (RIDE_FRONT) drawRideSpr(ctx, RIDE_FRONT[0], RIDE_FRONT[1], RIDE_FRONT[2], RIDE_FRONT[3], RIDE_AX); ctx.globalAlpha = h.alpha * vfa;
@@ -501,6 +544,7 @@ function drawMap(now){
     if (BLD_LIT.length) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = Math.min(1, k * 1.3); BLD_LIT.forEach(([cv0, x, y, w, hh]) => ctx.drawImage(cv0, x, y, w, hh)); ctx.restore(); }
     if (hr >= 20 && S.weather !== 'rain' && S.weather !== 'storm') { ctx.fillStyle = `rgba(255,255,255,${Math.min(.8, (hr - 20) * .4)})`; [[30,12],[80,30],[140,8],[210,20],[260,10],[330,28],[300,6],[110,50],[60,70],[350,60]].forEach(([x, y], i) => { if ((Math.floor(now / 700) + i) % 5) ctx.fillRect(x, y, 1.5, 1.5); }); }
   }
+  try { patrolLight(now); } catch (e) {}   // v17.90
   const m = h.mood, st = h.stress;
   if (m < 50) { ctx.fillStyle = `rgba(50,62,90,${(50 - m) / 50 * .38})`; ctx.fillRect(0, 0, W, Hh); }
   else if (m > 75) { ctx.fillStyle = `rgba(255,190,90,${(m - 75) / 25 * .1})`; ctx.fillRect(0, 0, W, Hh); }
@@ -901,7 +945,8 @@ function kenCanvas(h, kind, f, expr){
       if (P.fx === 'stab') for (let i = 0; i < 4; i++) fx(hx + 15 + i, hy + 9 + (i % 2));
       if (P.fx === 'glow' || P.fx === 'glow2') { const cx = hx - 3 + 12, cy = hy - 14 + 3, n2 = P.fx === 'glow' ? 4 : 8; for (let i = 0; i < n2; i++) { const t = i / n2 * 6.283; fx(Math.round(cx + Math.cos(t) * 5), Math.round(cy + Math.sin(t) * 5), '#bfe8ff'); } }
       if (P.fx === 'cast') { const cx = hx - 3 + 12, cy = hy - 14 + 3; fx(cx + 5, cy - 2); fx(cx + 6, cy - 3, '#bfe8ff'); fx(cx + 7, cy - 1, '#bfe8ff'); fx(cx + 8, cy - 2); } }
-  } else blit(kenWalk(B, kind === 'walk' ? f % 4 : 0), KEN_OX, KEN_OY);
+  } else if (kind === 'crouch') { const G = kenWalk(B, 0); blit(G.slice(0, 11), KEN_OX, KEN_OY + 3); blit(G.slice(12).map((r, i) => r), KEN_OX, KEN_OY + 12); }   // v17.90：蹲下（上半身往下壓 3 格）
+  else blit(kenWalk(B, kind === 'walk' ? f % 4 : 0), KEN_OX, KEN_OY);
   cv = document.createElement('canvas'); cv.width = KEN_W; cv.height = KEN_H;
   const g = cv.getContext('2d'); O.forEach((row, y) => row.forEach((c, x) => { if (c) { g.fillStyle = c; g.fillRect(x, y, 1, 1); } }));
   SPR_CACHE.set(key, cv); return cv;
@@ -962,6 +1007,7 @@ function drawSprite(c, h, x, y, lying, now, opt){
   else if (opt && opt.atkT != null && now >= opt.atkT && now - opt.atkT < 600) { kind = 'attack'; f = Math.min(5, Math.floor((now - opt.atkT) / 100)); }   // v17.49：指定這一下揮擊的時間（村子裡的鬥技場）
   else if (!opt && heroFx(h, now) && !heroFx(h, now).charge && Math.max(0, now - heroFx(h, now).t) < 600) { const t0 = heroFx(h, now).t; kind = 'attack'; f = Math.min(5, Math.floor(Math.max(0, now - t0) / 100)); }   // v17.35：每回合揮一次
   else if ((h.act === 'hunt' || (h.act === 'mission' && h.mission && !MSPOT[h.mission.ag] && !(SCN && !SCN.off))) && h.flash > 0) { kind = 'attack'; f = Math.floor(now / 100) % 6; }
+  else if (opt ? opt.crouch : heroCrouch(h, now)) kind = 'crouch';
   else if (moving) { kind = 'walk'; f = Math.floor(now / 140) % 4; }
   const expr = opt && opt.expr || exprOf(h), cv = kenCanvas(h, kind, f, expr), sc = opt && opt.scale || KEN_SCALE;
   // 像素對齊：在螢幕座標用整數倍放大，每個像素一樣大
@@ -1348,7 +1394,7 @@ function vilStreet(){ if (VSTREET) return VSTREET; const c = document.createElem
 // 委託分成「通勤」（每天回家）和「出差」（在外紮營）；村子裡的事務所任務只在固定時段工作。
 // 只改作息和畫面，不改數值；成敗在接任務時就決定好了（preRoll），最後一天收工時當場結算。
 const TRIP_N = /跨國|出巡|使節|護送公主/;
-const SLOT = { endorse:[9, 14], meet:[13, 17], variety:[9, 14], arena:[9, 14], trial:[8, 18] };   // 事務所任務的工作時段（v17.86 開發者指定）
+const SLOT = { endorse:[9, 14], meet:[13, 17], variety:[9, 14], arena:[9, 14], trial:[8, 18], smith:[10, 15], coach:[9, 14], charity:[13, 17], banquet:[20, 24], patrol:[20, 24] };   // 事務所任務的工作時段（v17.86 開發者指定）
 const MSG_TALK = ['praise', 'warn', 'cheer', 'scold', 'heart'];   // 出門在外時還能用的互動（傳訊息）
 function mKind(o){
   if (!o) return null;
@@ -1530,7 +1576,7 @@ function rPerson(n, x, y, flip, tint, hop){ if (!ART.room || !ART.room[n]) retur
 function arenaMode(h){ if (heroMap(h) !== 'vil' || V.inside || V.mv || V.x == null) return null;
   const k = tourRound(); if (k >= 0) { const hr = hourOf(), mm = S.tourShow.pl.my[k]; return { kind:'tour', fight:!!mm && hr >= tR(k) && hr < tR(k) + 2 }; }
   if (h.act === 'train' || lzAt(h, 'train')) return { kind:'train', fight:true };
-  if (h.act === 'mission' && h.mission && h.mission.ag === 'arena' && mPhase(h) === 'slot') return { kind:'arena', fight:true };
+  if (h.act === 'mission' && h.mission && ['arena', 'coach', 'smith'].includes(h.mission.ag) && mPhase(h) === 'slot') return { kind:h.mission.ag, fight:true };
   return null; }
 // 一回合：對打 1.2 秒、特訓 1 秒；r＝第幾回合（單數回合對手回擊）
 function arenaRound(now, kind){ const P = kind === 'train' ? 1000 : 1200, t0 = now - now % P; return { t0, p:(now - t0) / 1000, r:Math.floor(now / P) }; }
@@ -1555,25 +1601,34 @@ function arenaShow(now, kind){
       arenaCrowd(now, cx, [[F, [-90, -76, -62, -48, -34, -20, 20, 34, 48, 62, 76, 90]]]); return; }
     if (!am) return;
     if (kind === 'arena') { arenaCrowd(now, cx, [[B, [-44, -32, 32, 44]]]); arenaFoe(now, 'foe_viking', hx + 36, y, arenaRound(now, 'arena'), arenaRound(now, 'arena').r % 2); arenaCrowd(now, cx, [[F, [-60, -46, -32, -18, 18, 32, 46, 60]]]); return; }
-    if (kind === 'train') { const R = arenaRound(now, 'train'), p = R.p, dx = hx + 24, tilt = p > .3 && p < .55 ? (p < .42 ? 8 : 4) : 0, cv = rideCanvas('dummy', 'room');   // 稻草人被打到會晃、掉稻草
+    if (kind === 'train' || kind === 'coach') { const R = arenaRound(now, 'train'), p = R.p, dx = hx + 24, tilt = p > .3 && p < .55 ? (p < .42 ? 8 : 4) : 0, cv = rideCanvas('dummy', 'room');   // 稻草人被打到會晃、掉稻草
       ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(dx, y + 1, 7, 2, 0, 0, 7); ctx.fill();
       ctx.save(); ctx.translate(dx, y + 1); ctx.rotate(tilt * Math.PI / 180); ctx.drawImage(cv, -Math.floor(cv.width / 2), -cv.height); ctx.restore();
       if (p > .3 && p < .45) { const k = (p - .3) / .15; ctx.fillStyle = '#eac46e'; for (let i = 0; i < 4; i++) ctx.fillRect(Math.round(dx + 2 + i * 2 + k * 4), Math.round(y - 16 - i + k * (i - 1) * 3), 1, 1); }
+      if (kind === 'coach') { [44, 58, 72].forEach((dx, i) => { const x = hx + dx, sw = Math.floor(now / 500 + i) % 2;   // v17.90：新人在稻草人另一邊拿木劍跟著揮
+          rPerson('cw' + (i + 1), x, y + 4, true, null, sw); pR2(x - 7, y - 13 - sw * 2, 2, 8, '#d6aa6e'); pR2(x - 7, y - 5 - sw * 2, 2, 2, '#763b36'); });
+        if (Math.floor(now / 3000) % 2 === 0) emoAt('認真', hx, y - 22, now % 3000); arenaCrowd(now, cx, [[F, [-30, 40, 54]]]); return; }
       const kx = hx + 52; rPerson('coach', kx, y - 2, true);   // 教練站旁邊，偶爾說「好！」
       if (Math.floor(now / 2000) % 2 === 0) pxSay(kx, y - 24, '好！');
       arenaCrowd(now, cx, [[F, [-38, -24, 46]]]); }
   } catch (e) { if (!scnErr++) console.error(e); }
 }
+// v17.90：鐵匠鋪試刀：門口的稻草木樁被砍到會晃、掉稻草；老陳在旁邊看，路人圍觀
+function smithShow(now){ const h = H(), am = arenaMode(h); if (!am || am.kind !== 'smith') return; const hx = V.x, y = V_WALK, R = arenaRound(now, 'smith'), p = R.p, px = hx + 22, tilt = p > .3 && p < .55 ? (p < .42 ? 8 : 4) : 0;
+  ctx.save(); ctx.translate(px, y + 1); ctx.rotate(tilt * Math.PI / 180); pR2(-2, -22, 5, 22, '#3f2631'); pR2(-1, -21, 3, 21, '#8a5a3a'); pR2(-4, -19, 9, 12, '#3f2631'); pR2(-3, -18, 7, 10, '#e2c46e'); pR2(-3, -14, 7, 1, '#a07a3a'); pR2(-3, -11, 7, 1, '#a07a3a'); ctx.restore();
+  if (p > .3 && p < .45) { const k = (p - .3) / .15; for (let i = 0; i < 4; i++) pR2(Math.round(px + 2 + i * 2 + k * 4), Math.round(y - 16 - i + k * (i - 1) * 3), 1, 1, '#eac46e'); }
+  const sm = npc('chen'); if (sm && sm.alive) { drawSprite(ctx, sm, hx + 44, y, false, now, { moving:false, left:true, noEmo:true }); if (Math.floor(now / 2400) % 2 === 0) emoAt('開心', hx + 44, y - 22, now % 2400); }
+  plazaCrowd(now, hx, [-44, -30, 64], V_ROAD_B + 12, '驚訝'); }
 // ================= v17.51：廣場（代言、綜藝、見粉絲）：Kenney 路人小人＋勇者大頭貼看板 =================
 // 勇者站在廣場門口前的路上（V.x、V_WALK）；觀眾在路下方一排（V_ROAD_B + 12），輪流跳一下
 function plazaMode(h){ if (heroMap(h) !== 'vil' || V.inside || V.mv || V.x == null) return null;
   if (h.act === 'strike' || h.act === 'side') return h.act;   // v17.53：罷工（事務所門口）、接外快（廣場邊擺攤）
-  return h.act === 'mission' && h.mission && ['endorse', 'variety', 'meet'].includes(h.mission.ag) && mPhase(h) === 'slot' ? h.mission.ag : null; }
+  return h.act === 'mission' && h.mission && ['endorse', 'variety', 'meet', 'charity'].includes(h.mission.ag) && mPhase(h) === 'slot' ? h.mission.ag : null; }
 // 勇者的姿勢：代言每 1.2 秒換一個（右、左、比讚）；綜藝每 2 秒轉圈＋跳；見粉絲面向右，握手、遞簽名
 function plazaPose(h, now){ const k = plazaMode(h); if (!k) return null;
   if (k === 'strike') return { left:false, expr:'angry', hop:Math.floor(now / 500) % 2, hand:(x, y) => { const cv = rideCanvas('placard', 'room'); ctx.drawImage(cv, x - 6, y - 38 - (now % 1000 < 500 ? 3 : 0));   // 舉抗議牌一上一下、跺腳、頭上生氣
     if (Math.floor(now / 1500) % 2 === 0) emoAt('生氣', x - 10, y - 16, now % 1500); } };
-  if (k === 'side') return { left:false, hop:5, hand:(x, y) => { const cv = rideCanvas('stall', 'room'); ctx.drawImage(cv, x - Math.floor(cv.width / 2), y + 4 - cv.height); } };   // 站在攤子後面露出上半身
+  if (k === 'side' || k === 'charity') return { left:false, hop:5, hand:(x, y) => { const cv = rideCanvas('stall', 'room'); ctx.drawImage(cv, x - Math.floor(cv.width / 2), y + 4 - cv.height); } };   // 站在攤子後面露出上半身
   if (k === 'endorse') { const pose = Math.floor(now / 1200) % 3, p = now % 1200;
     return { left:pose === 1, hop:p < 120 ? 2 : 0, hand:pose === 2 ? (x, y) => { pR2(x + 7, y - 18, 2, 5, '#f7c282'); pR2(x + 7, y - 19, 1, 1, '#3f2631'); } : null }; }
   if (k === 'variety') { const p = (now % 2000) / 1000; return { left:p < .5 && Math.floor(p / .12) % 2 === 1, hop:p >= .5 && p < .8 ? [0, 3, 5, 5, 3, 0][Math.min(5, Math.floor((p - .5) / .05))] : 0 }; }
@@ -1585,9 +1640,13 @@ function plazaCrowd(now, cx, xs, y, emo){ xs.forEach((dx, i) => { const x = cx +
 function plazaShow(now, ag){
   try { const h = H(), k = plazaMode(h); if (k !== ag) return; const hx = V.x, y = V_WALK, F = V_ROAD_B + 12;
     if (ag === 'strike') { const q = (now / 3600) % 1; let px = hx - 80 + q * 160; if (Math.abs(px - hx) < 22) px = px < hx ? hx - 22 : hx + 22; rPerson('cw2', px, y + 6, px > hx); return; }   // 路人經過，繞開勇者
-    if (ag === 'side') { const P = 2400, n = Math.floor(now / P), p = (now % P) / P, cx = p < .35 ? hx + 66 - p / .35 * 34 : p < .7 ? hx + 32 : hx + 32 + (p - .7) / .3 * 50;   // 客人走過來買、投幣、走開
+    if (ag === 'charity') { pR2(hx - 23, y - 46, 2, 22, '#8a5a3a'); pR2(hx + 21, y - 46, 2, 22, '#8a5a3a'); pR2(hx - 21, y - 46, 42, 11, '#3f2631'); pR2(hx - 20, y - 45, 40, 9, '#f4eee0');   // v17.90：白底紅心布條、捐款罐
+      [[-2, 0], [-1, 0], [1, 0], [2, 0], [-3, 1], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 1], [3, 1], [-2, 2], [-1, 2], [0, 2], [1, 2], [2, 2], [-1, 3], [0, 3], [1, 3], [0, 4]].forEach(([a, b]) => pR2(hx + a, y - 44 + b, 1, 1, '#e84537'));
+      pR2(hx + 13, y - 19, 6, 7, '#3f2631'); pR2(hx + 14, y - 18, 4, 5, '#aad2e6'); pR2(hx + 15, y - 15, 2, 2, '#f7c94a'); }
+    if (ag === 'side' || ag === 'charity') { const P = 2400, n = Math.floor(now / P), p = (now % P) / P, cx = p < .35 ? hx + 66 - p / .35 * 34 : p < .7 ? hx + 32 : hx + 32 + (p - .7) / .3 * 50;   // 客人走過來買、投幣、走開
       rPerson('cw' + n % 5, cx, y + 2, p < .7);
       if (p > .4 && p < .6) { const t = (p - .4) / .2, X = Math.round(cx - 10 - t * 6), Y = Math.round(y - 20 - Math.sin(t * Math.PI) * 6); pR2(X - 1, Y - 1, 5, 5, '#3f2631'); pR2(X, Y, 3, 3, '#f7c94a'); }
+      if (ag === 'charity' && p > .6 && p < .9) emoAt('戀愛', cx + 2, y - 18, (p - .6) * 3000);
       return; }
     if (ag === 'endorse') { const bx = hx + 28, cv = rideCanvas('billboard', 'room'), L = Math.round(bx - cv.width / 2), T = V_ROAD - 3 - cv.height;   // 看板在人行道，海報貼勇者當下的大頭貼
       ctx.drawImage(cv, L, T); ctx.drawImage(kenCanvas(h, 'idle', 0, 'happy'), KEN_OX, KEN_OY + 1, 16, 15, L + 11, T + 10, 16, 15);
@@ -1610,10 +1669,10 @@ function drawVilGuests(now){
     if (w && w.alive) { const x = VD.gate + 20; drawSprite(ctx, w, x, 146, false, now, { moving:false, left:true }); if (heroMap(h) === 'vil' && V.x != null && Math.abs(V.x - x) < 50) pxSay(x, 112, '歡迎回來！'); }
     const t = S.thank && S.thank.day === S.day && hr >= 18.5 && hr < 22 ? npc(S.thank.id) : null;
     if (t && t.alive) { const x = VD.home + 18; drawSprite(ctx, t, x, 140, false, now, { moving:false, left:true }); pxSay(x, 106, '謝謝你！'); }
-    lzGuest(now);
+    lzGuest(now); patrolDraw(now); chaseDraw(now);
   } catch (e) { if (!scnErr++) console.error(e); }
 }
-const guestIds = () => { const hr = hourOf(), a = EPC ? [EPC.npc] : []; if (S.welcome && S.welcome.day === S.day && hr < 20) a.push(S.welcome.id); if (S.thank && S.thank.day === S.day && hr >= 18.5 && hr < 22) a.push(S.thank.id); { const z = lzOn(H()); if (z && (z.k === 'chat' || z.k === 'date') && z.id) a.push(z.id); } return a; };
+const guestIds = () => { const hr = hourOf(), a = EPC ? [EPC.npc] : []; if (S.welcome && S.welcome.day === S.day && hr < 20) a.push(S.welcome.id); if (S.thank && S.thank.day === S.day && hr >= 18.5 && hr < 22) a.push(S.thank.id); { const z = lzOn(H()); if (z && (z.k === 'chat' || z.k === 'date') && z.id) a.push(z.id); } { const m = H().mission; if (m && m.ag === 'smith' && H().act === 'mission' && mPhase(H()) === 'slot') a.push('chen'); } if (CH && CH.vic) a.push(CH.vic); return a; };
 
 // 武鬥大會打完才公布（內容和原本的 runTour 後半段一樣）
 function tourApply(pl){
@@ -1983,6 +2042,7 @@ function pipCtx(h){
   if (h.act === 'mission' && m) {
     if (m.ag === 'spy') return { k:'spy' };
     if (m.ug && hr >= 20 && hr < 24) return { k:'ug' };
+    if (m.ag === 'banquet' && hr >= 20 && hr < 24) return { k:'banquet' };   // v17.90
     if (mPhase(h) === 'camp' && isAsleep()) return { k:'camp', sig:'c' + (h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1) };
   }
   if (h.act === 'private') return { k:'private' };
@@ -1990,7 +2050,7 @@ function pipCtx(h){
   if (h.act === 'gone') return { k:'gone' };
   if (heroMap(h) !== 'vil' || !V.inside) return null;
   const sig = [h.house ? 1 : 0, h.married ? 1 : 0, h.child ? 1 : 0, pipHurt(h) ? 1 : pipTired(h) ? 2 : 0, h.mood >= 70 ? 2 : h.mood < 35 ? 0 : 1].join('');
-  if (V.inside === 'home') return { k:isAsleep() ? 'sleep' : 'home', sig };
+  if (V.inside === 'home') return { k:isAsleep() ? 'sleep' : lzAt2(h, 'read') ? 'read' : 'home', sig };
   if (V.inside === 'clinic') return { k:m && m.ag === 'trial' ? 'trial' : 'clinic', sig };
   return { k:V.inside, sig };
 }
@@ -2068,6 +2128,16 @@ const PIP_DRAW = {
     const up = Math.floor(now / 1750) % 2; drawSprite(ctx, h, 74, 43, false, now, { moving:false, expr:h.mood < 35 ? 'sad' : 'happy' }); RM('mug', 78, 34 - up * 3); RM('patron', 84, 44);
     if (up) { ctx.fillStyle = '#f3c86a'; ctx.font = '9px Cubic11, sans-serif'; ctx.fillText('♪', 62, 28); } },
   clinic(h, now){ rClinic(h, now); },
+  read(h, now){ rHome(h, now); const x = h.house ? 58 : 38; drawSprite(ctx, h, x, 47, false, now, { moving:false, expr:'happy', noEmo:true });   // v17.90：在家看書（書本 8×6）
+    const t = Math.floor(now / 2500) % 4 === 3; pR(x + 2, 34, 9, 7, '#3f2631'); pR(x + 3, 35, 7, 5, t ? '#f4eee0' : '#e84537'); pR(x + 4, 35, 5, 5, '#f4eee0'); pR(x + 6, 35, 1, 5, '#8b9bb4'); pR(x + 4, 37, 2, 1, '#8b9bb4'); pR(x + 7, 37, 2, 1, '#8b9bb4');
+    if (hx(h, 'O') >= .6 && Math.floor(now / 4000) % 3 === 0) emoAt('想到了', x, 26, now % 4000); },
+  banquet(h, now){ pR(0, 0, 100, 41, '#963c46'); for (let x = 6; x < 100; x += 12) pR(x, 0, 1, 40, '#7a2c38'); pR(0, 40, 100, 1, '#f7c94a'); pR(0, 41, 100, 13, '#7a583c'); pR(0, 47, 100, 1, '#644630');   // v17.90：王都晚宴
+    [22, 62].forEach(cx => { pR(cx + 10, 0, 1, 5, '#8b9bb4'); pR(cx + 2, 5, 17, 2, '#f7c94a'); [3, 9, 15].forEach(d => { pR(cx + d, 2, 2, 3, '#f4eee0'); if ((Math.floor(now / 300) + d) % 3) pR(cx + d, 1, 1, 1, '#ffc850'); }); });
+    RM('mom', 22, 40); RM('dad', 36, 40); RM('patron', 74, 40); drawSprite(ctx, h, 56, 40, false, now, { moving:false, expr:'happy', noEmo:true });
+    pR(16, 37, 68, 6, '#f4eee0'); pR(16, 43, 68, 1, '#c0cbdc'); pR(19, 44, 2, 5, '#763b36'); pR(79, 44, 2, 5, '#763b36');
+    [24, 42, 64, 78].forEach(x => { pR(x, 31, 1, 6, '#f4eee0'); pR(x, 30, 1, 1, (Math.floor(now / 200) + x) % 2 ? '#ffb43c' : '#ffe08a'); });
+    const up = Math.floor(now / 1500) % 2; pR(61, 26 - up * 3, 3, 4, '#c83c50'); pR(61, 25 - up * 3, 3, 1, '#f4eee0'); pR(62, 30 - up * 3, 1, 2, '#f4eee0');
+    if (dw(h, 'status') && Math.floor(now / 3000) % 2) emoAt('戀愛', 56, 20, now % 3000); },
   trial(h, now){ rClinic(h, now); RM('stool', 82, 48); RM('flask', 83, 38); const b = Math.floor(now / 250) % 3; pR(87 + b % 2, 22 - b, 1, 1, '#c8f0a0'); pR(86 - b % 2, 20 - b * 2, 1, 1, '#c8f0a0'); },
   // v17.55：第二批改 Kenney Q 版（design/rooms/rooms2.py）；不會動的在背景圖裡，會動的在這裡畫
   office(h, now){ RM('bg_office', 0, 54); rWin(40, 6); drawSprite(ctx, h, 38, 47, false, now, { moving:false }); if (Math.floor(now / 1000) % 2) pR(66, 30, 1, 4, '#3f2631'); },   // 櫃檯小姐在寫字
@@ -2093,6 +2163,8 @@ function pipCap(h, c){ const n = h.name, p = h.married && h.partner && npc(h.par
     case 'home': return h.act === 'slack' ? `${n}在家耍廢` : `${n}在家休息`;
     case 'tavern': return mood === 0 ? `${n}一個人在酒館喝悶酒` : `${n}在酒館喝一杯`;
     case 'clinic': return `${n}躺在診所的病床上`;
+    case 'read': return `${n}在家看書`;
+    case 'banquet': return `${n}在王都的貴族晚宴`;
     case 'trial': return `新藥試驗中……${n}有點緊張`;
     case 'office': return `${n}在事務所`;
     case 'camp': return `${n}在野外紮營過夜`;
@@ -2174,6 +2246,7 @@ const winOf = (o, p) => o && o.win != null ? !!o.win : chance(p);
 // 依委託名稱決定演法
 function scnType(o){
   if (o.boss || o.boss2 || o.ag === 'exam') return 'boss';
+  if (o.ag === 'herb' || o.ag === 'harvest') return 'search';   // v17.90
   const n = o.n || '';
   if (/護送|出巡|使節/.test(n)) return 'escort';
   if (/救出|救/.test(n) || o.rescue) return 'rescue';
@@ -2206,9 +2279,9 @@ function scnMake(h){
   s.total = { slay:Math.min(14, 3 * d + 2), guard:Math.min(16, 3 * d + 3), escort:2 * d, rescue:3, probe:d, search:0, boss:1 }[t];
   if (t === 'search' || t === 'probe') { const k = t === 'search' ? 2 * d + 1 : d + 1; for (let i = 0; i < k; i++) s.pts.push([clamp(sx + Math.cos(i * 2.3 + a * 6) * (18 + i * 6), x0 + 10, x1 - 10), clamp(sy + Math.sin(i * 2.3 + a * 6) * 6, 124, 140)]); }
   if (t === 'escort') { s.p0 = [x0 + 14, sy + 6]; s.p1 = [x1 - 14, sy + 6]; }
-  s.elite = s.examiner = o.ag === 'exam'; s.fav = o.favor || null;
+  s.elite = s.examiner = o.ag === 'exam'; s.fav = o.favor || null; s.work = o.ag === 'herb' || o.ag === 'harvest' ? o.ag : null;
   if (o.boss || o.boss2) s.sx = x1 - 70;   // v17.11：魔王在區域盡頭
-  s.prop = /田|農/.test(o.n) ? 'field' : /遺跡|調查|偵察/.test(o.n) ? 'ruins' : /沉船/.test(o.n) ? 'wreck' : /礦/.test(o.n) ? 'mine' : null;
+  s.prop = o.ag === 'harvest' || /田|農/.test(o.n) ? 'field' : /遺跡|調查|偵察/.test(o.n) ? 'ruins' : /沉船/.test(o.n) ? 'wreck' : /礦/.test(o.n) ? 'mine' : null;
   return s;
 }
 // 進度：照時間走；會失敗的最多做到七成
@@ -2281,7 +2354,12 @@ function drawScene(now, view){
     const s = SCN; if (!s || s.off || ZONES[s.z].map !== view) return;
     if (s.prop && s.z <= 2 && ART.wild && (s.prop === 'field' || s.prop === 'ruins')) drawRideSpr(ctx, s.prop === 'field' ? 'field' : 'pillar', s.sx, V_ROAD - 2, false);   // v17.40：新風格
     else if (s.prop) drawBld(ctx, s.prop, s.sx - 22, V_ROAD - 31, 44, 30, 'day');   // 田、遺跡等放在路邊，不擋路
-    if (s.t === 'search' || s.t === 'probe') s.pts.forEach((p, i) => { if (i < s.found) { ctx.fillStyle = 'rgba(111,207,151,.9)'; ctx.fillRect(p[0] - 1, p[1] - 3, 3, 3); return; }
+    if (s.work) { const h0 = H(); s.pts.forEach((p, i) => { const [x, y] = [Math.round(p[0]), Math.round(p[1])];   // v17.90：藥草／稻子
+        if (s.work === 'herb') { if (i < s.found) return; pR2(x, y - 4, 1, 4, '#25956a'); pR2(x - 1, y - 3, 1, 1, '#43e1b3'); pR2(x + 1, y - 4, 1, 1, '#43e1b3'); pR2(x, y - 5, 1, 1, '#f078c8'); }
+        else if (i < s.found) { pR2(x - 2, y - 8, 5, 8, '#3f2631'); pR2(x - 1, y - 7, 3, 6, '#e8c45a'); pR2(x - 1, y - 4, 3, 1, '#8a5a3a'); }
+        else for (let k = -2; k <= 2; k++) { pR2(x + k * 2, y - 7, 1, 7, '#deb650'); pR2(x + k * 2, y - 8, 1, 1, '#fadc78'); } });
+      if (!h0.leg) { const bx = Math.round(h0.x) + 8, by = Math.round(h0.y); pR2(bx - 1, by - 6, 9, 6, '#3f2631'); pR2(bx, by - 5, 7, 4, '#c8964f'); pR2(bx, by - 3, 7, 1, '#a0703a'); if (s.found) pR2(bx + 1, by - 6, 5, 1, s.work === 'herb' ? '#43b45a' : '#fadc78'); } }
+    else if (s.t === 'search' || s.t === 'probe') s.pts.forEach((p, i) => { if (i < s.found) { ctx.fillStyle = 'rgba(111,207,151,.9)'; ctx.fillRect(p[0] - 1, p[1] - 3, 3, 3); return; }
       const a = .5 + .5 * Math.sin(now / 220 + i); ctx.fillStyle = s.t === 'probe' ? `rgba(159,208,255,${a})` : `rgba(255,240,170,${a})`;
       ctx.fillRect(p[0] - 1, p[1] - 5, 2, 6); ctx.fillRect(p[0] - 3, p[1] - 3, 6, 2);
       if (s.t === 'probe' && i === s.found) { ctx.font = fz(9) + 'px Cubic11, sans-serif'; ctx.fillStyle = '#9fd0ff'; ctx.fillText('?', p[0] - 2, p[1] - 9 - Math.sin(now / 300) * 1.5); } });
@@ -2342,6 +2420,9 @@ function drawVilShow(now){
     const cols = ['#c0563f', '#3f6ea0', '#5a9a5a', '#c87aa0', '#d8a02e', '#7a6ac0'];
     if (ag === 'endorse' || ag === 'variety' || ag === 'meet') plazaShow(now, ag);   // v17.51
     if (ag === 'arena') arenaShow(now, 'arena');   // v17.49
+    if (ag === 'coach') arenaShow(now, 'coach');   // v17.90
+    if (ag === 'charity') plazaShow(now, 'charity');
+    if (ag === 'smith') smithShow(now);
   } catch (e) { if (!scnErr++) console.error(e); }
 }
 // 演出用的小東西

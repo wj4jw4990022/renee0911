@@ -228,7 +228,7 @@ function relIcons(n){ const k = relKind(n);
   if (k === 'love') return IC('戀人', 2); if (k === 'rival') return IC('對手', 2); if (k === 'dark') return IC('空心', 2);
   const f = +k[1]; return [0, 1, 2].map(i => IC(i < f ? '心情' : '空心', 1)).join(''); }
 const roleBg = n => ({ tavern:'#d0607a', smith:'#5a5a5a', guild:'#3f6ea0', priest:'#8a8a8a', mayor:'#7a4a2a', reporter:'#4a8a8a', fan:'#c08a30', merc:'#6a3a3a', elder:'#6a5ab0', rival:'#8a3a3a', rival2:'#5a5aa0', merchant:'#4a4a3a' }[n.role] || (n.sex === 'f' ? '#9a5a80' : '#4a7a5a'));
-function npcBody(n){   // 點頭像的小框、村子裡點村民（v17.89）共用
+function npcBody(n){   // 點頭像的小框、村子裡點村民（v17.90）共用
   const h = H(), tr = (n.treat ?? -9) + 3 <= S.day, can = !n.dark && n.role !== 'rival', tags = [`${Math.floor(n.age || 30)} 歲`];
   const m = n.mate && npc(n.mate); if (m && m.alive) tags.push(n.wed ? `和${m.name}結婚了` : `和${m.name}交往中`);
   if (n.kids) tags.push('有小孩'); if (n.owe) tags.push(`欠${h.name} ${n.owe.g} 金`); if ((n.sick || 0) > S.day) tags.push('生病中');
@@ -247,8 +247,8 @@ function qCard2(h, o, ag, inQ){
   const Z = o.z >= 0 ? ZONES[o.z] : null, d = o.D ? danger(ratio(h, o.D) * compMul(o.comp)) : null, win = o.D ? Math.round(winP(ratio(h, o.D) * compMul(o.comp)) * 100) : null;
   const left = o.until ? o.until - S.day : null, dur = durTxt(h, o).replace(/ ?個月/, '月').replace('約 ', '約');
   const tip = `${typeTag(o)}${Z ? Z.n : '村子'}${o.comp && npc(o.comp) ? ` · 和${npc(o.comp).name}同行` : ''}${o.ug ? ` · 惡名 +${o.inf}` : ''}`;
-  return `<div class="pb qc2${o.ug ? ' ug' : ag ? ' ag' : ''}${o.boss || o.boss2 ? ' boss' : ''}"${inQ ? '' : ` role="button" tabindex="0" ${ag ? `data-ag="${o.id}"` : `data-o="${o.id}"`}`}>
-    <div class="qch">${IC(ag ? '事務所' : '任務', 2)}<b>${Z ? Z.n : '村子'}</b><span class="rsp"></span>${IC('時間', 1)}<b>${dur}</b></div>
+  return `<div class="pb qc2${o.ug ? ' ug' : ag && !o.req ? ' ag' : ''}${o.boss || o.boss2 ? ' boss' : ''}"${inQ ? '' : ` role="button" tabindex="0" ${ag ? `data-ag="${o.id}"` : `data-o="${o.id}"`}`}>
+    <div class="qch">${IC(ag && !o.req ? '事務所' : '任務', 2)}<b>${Z ? Z.n : '村子'}</b><span class="rsp"></span>${IC('時間', 1)}<b>${dur}</b></div>
     <div class="qcb"><div class="qcn">${esc(o.n)}</div>
     <div class="qcr">${ag ? `<span class="num s">${IC('名聲', 2)}<b>+${o.fame}</b></span>` : ''}<span class="num s">${IC('金幣', 2)}<b>${fmt(ag ? o.gold : o.ug ? o.gold : o.reward)}</b></span></div>
     <div class="qcr f14">${d ? `${Array.from({ length:d.i + 1 }, () => IC('危險', 2)).join('')}<b class="dg ${d.k}">勝率 ${win}%</b>` : `${IC('心情', 1)}<b class="cg">不用打</b>`}</div>
@@ -598,6 +598,7 @@ function artistPool(force){
   if (h.child && h.age - (h.child.born ?? 99) >= 16) out.push({ name:h.child.name, sex:h.child.sex, tag:`${h.name}的${h.child.sex === 'm' ? '兒子' : '女兒'}`, trust:75, kid:1 });
   if (hasU('foreign')) out.push({ tag:'從遙遠國度來的勇者', trust:50, lv:ri(10, 20) });
   if (S.fame >= 800) out.push({ tag:'慕名而來的新人', trust:60 });
+  if ((S.coachUp || 0) > S.day) out.unshift({ tag:'上過你家勇者課的新人', trust:65 });   // v17.90：公會新人教練
   const keep = S.rep < 15 ? 1 : S.rep < 30 ? 2 : out.length;
   S.aPool = fameRecruit(out.slice(0, Math.max(1, keep)).map(o => { const a = newHero({ ...o, gen:S.gen }); a.tag = o.tag; if (o.lv) { a.lv = o.lv; } if (o.shady) { a.hex.H = Math.min(a.hex.H, ri(10, 35)); a.honest = a.hex.H; a.record = 1; } if (o.fanId) a.fanId = o.fanId;
     a.age = o.kid ? 16 + rand(0, 2) : rand(18, 27); a.trust = clamp(a.trust + (S.rep - 60) / 2, 5, 95); return a; }));
@@ -1184,7 +1185,7 @@ function renderSheet(){
       const row = (ic, t, d, effs, code, price, why) => rows.push(`<div class="pb care"><span class="cbi"${TIPA(ic, t, d)}>${IC(ic, 3)}</span><div class="cbm"><b class="f22">${esc(t)}</b><div class="cbe">${eic(effs)}</div></div>${priceBtn(`data-b="${code}"`, price, !!why || S.gold < price, why)}</div>`);
       row('照顧', '看醫生', `健康大幅回復，傷勢少躺一個月（現在健康 ${Math.round(h.health)}）`, [['心情', '+'], ['體力', '+']], 'd', docC, h.health > 95 && !h.bedDays ? '現在不用' : '');
       row('戰力', '教練特訓 2 月', '經驗大增，但很累', [['上升', ''], ['', '經驗']], 'c', coachC, !['idle', 'rest', 'home'].includes(h.act) ? `${pron(h)}走不開` : '');
-      row('照顧', '小藥水', `血少時自動喝，身上最多 ${POT_MAX} 瓶`, [['', `身上 ${h.pots}/${POT_MAX}`]], 'p', POT_PRICE, h.pots >= POT_MAX ? '帶滿了' : '');
+      row('照顧', '小藥水', `血少時自動喝，身上最多 ${POT_MAX} 瓶`, [['', `身上 ${h.pots}/${POT_MAX}`]], 'p', potP(), h.pots >= POT_MAX ? '帶滿了' : '');
       if (hasP(h, 'scar') || hasP(h, 'side')) { const rc = 1500 + h.lv * 80, ok = (S.office.clinic || 0) >= 3, what = hasP(h, 'scar') ? '舊傷' : '後遺症';
         row('醫務室', '復健療程', `治好${what}，要在醫務室躺 3 個月${hasP(h, 'scar') && !hasP(h, 'lame') ? `（不治的話，再 ${Math.max(0, 60 - (S.day - (h.lastHeavy ?? h.born)))} 個月沒受重傷也會好）` : ''}`, [['', '治好' + what]], 'rehab', rc, !ok ? '醫務室 Lv3' : busyAway(h) ? `${pron(h)}不在` : ''); }
       if (hasP(h, 'lame')) { const aid = h.aid || 0;
@@ -1284,7 +1285,7 @@ function renderSheet(){
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.89</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.90</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
@@ -1378,9 +1379,9 @@ function buy(k){ const g0 = S.gold; buy0(k); finAdd('shop', S.gold - g0); }
 function buy0(k){
   const h = H();
   if (k === 'rehab') { if (!h.addict || S.gold < 600) return; S.gold -= 600; h.addict = 0; h.bedDays = (h.bedDays || 0) + 2; affAdd('priest', 5); adj('trust', 6); ev('good', '戒癮', `${h.name}住進神殿，由艾琳修女陪著戒魔藥`); logLife('在神殿戒掉魔藥'); return; }
-  if (k === 'w') { if (h.wpn >= 3) return; const p = quote(WPN.price[h.wpn + 1], 'agent').p; if (S.gold < p) return; S.gold -= p; h.wpn++; adj('trust', 6); adj('mood', 10); say(`${WPN.n[h.wpn]}${WNAME[h.cls]}！謝謝老闆！`); logLife(`經紀人送了${WPN.n[h.wpn]}${WNAME[h.cls]}`); remember('gift'); affAdd('chen', 6); }
-  if (k === 'a') { if (h.arm >= 3) return; const p = quote(ARM.price[h.arm + 1], 'agent').p; if (S.gold < p) return; S.gold -= p; h.arm++; affAdd('chen', 4); adj('trust', 4); say(`穿上${ARM.n[h.arm]}，安心多了`); }
-  if (k === 'p') { if (S.gold < POT_PRICE || h.pots >= POT_MAX) return; S.gold -= POT_PRICE; h.pots++; }
+  if (k === 'w') { if (h.wpn >= 3) return; const p = quote(WPN.price[h.wpn + 1], 'agent').p; if (S.gold < p) return; S.gold -= p; S.smithDisc = 0; h.wpn++; adj('trust', 6); adj('mood', 10); say(`${WPN.n[h.wpn]}${WNAME[h.cls]}！謝謝老闆！`); logLife(`經紀人送了${WPN.n[h.wpn]}${WNAME[h.cls]}`); remember('gift'); affAdd('chen', 6); }
+  if (k === 'a') { if (h.arm >= 3) return; const p = quote(ARM.price[h.arm + 1], 'agent').p; if (S.gold < p) return; S.gold -= p; S.smithDisc = 0; h.arm++; affAdd('chen', 4); adj('trust', 4); say(`穿上${ARM.n[h.arm]}，安心多了`); }
+  if (k === 'p') { const pp = potP(); if (S.gold < pp || h.pots >= POT_MAX) return; S.gold -= pp; h.pots++; }
   if (k === 'd') { const c = 80 + h.lv * 20; if (S.gold < c) return; S.gold -= c; h.health = clamp(h.health + 35, 0, 100); if (h.bedDays > 0) h.bedDays--; adj('trust', 3); sys('你帶' + pron(h) + '去看了醫生'); }
   if (k === 'c') { const c = 150 + h.lv * 40; if (S.gold < c) return; S.gold -= c; h.trainDays = 2; setAct('train'); h.tx = 250; h.ty = 255; say(h.trait === 'lazy' ? '咦……特訓？非去不可嗎' : '特訓！來吧！'); }
   if (k === 'rehab') { const c = 1500 + h.lv * 80; if (S.gold < c || (S.office.clinic || 0) < 3) return; const what = hasP(h, 'scar') ? 'scar' : 'side'; if (!hasP(h, what)) return;

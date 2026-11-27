@@ -12,7 +12,7 @@ function clockTxt(hr){
   const H24 = Math.floor(hr) % 24, m = Math.floor((hr % 1) * 6) * 10, h12 = H24 % 12 || 12;
   return `${w} ${h12}:${String(m).padStart(2, '0')}`;
 }
-const MSPOT = { endorse:[250, 266], variety:[250, 266], meet:[250, 266], arena:[205, 266], trial:[338, 266] };
+const MSPOT = { endorse:[250, 266], variety:[250, 266], meet:[250, 266], arena:[205, 266], trial:[338, 266], smith:[250, 266], coach:[205, 266], charity:[250, 266], banquet:[250, 266], patrol:[250, 266] };
 const heroHidden = h => ['gone', 'private', 'visit'].includes(h.act) || (h.act === 'mission' && h.mission && (h.mission.ag === 'spy' || (h.mission.ug && hourOf() >= 20 && hourOf() < 24)));
 const NIGHT_ACTS = ['idle', 'rest', 'home', 'strike', 'drink', 'train', 'side'];
 // v6.4：特定時段才會發生的事件。每天早上排定（約四成機率），時間到了才觸發
@@ -133,6 +133,7 @@ const WNAME = { warrior:'劍', archer:'弓', mage:'杖', thief:'匕首' };
 const MALE = ['阿哲','阿傑','大熊','阿光','鐵牛','小虎','阿翔','老王','阿星','阿龍','阿寶','阿凱','阿德','石頭','阿豪','阿峰'];
 const FEMALE = ['小美','小雪','阿月','小蓮','小楓','小葵','小滿','小薇','小晴','小芸','小柔','小花'];
 const POT_PRICE = 30, POT_MAX = 5;
+const potP = () => Math.round(POT_PRICE * (S && S.herbDisc > S.day ? .7 : 1));   // v17.90：採集藥草之後半年打七折
 // v2：寶物（只有危險的地方比較容易撿到），最多帶 3 個，死後傳一個給下一代
 const TREASURES = {
   clover:  { n:'四葉幸運草',   z:0, d:'好事更常發生，瀕死時更容易有人救', luck:.15 },
@@ -240,6 +241,14 @@ const AGT = {
   border: { n:'王國徵召：駐守邊境', days:4, fame:60, gold:1500, z:2, dk:[.8, 1.15], d:'名聲很大，但連續好幾天不能回家，非常累' },
   hunt:   { n:'限期討伐：荒地魔獸群', days:2, fame:45, gold:2000, z:2, dk:[1.1, 1.6], d:'很可能九死一生，但事務所會一戰成名' },
   exam:   { n:'升格考核', days:2, fame:30, gold:800, z:2, d:'公會指定的考核。通過才能升格；失敗要等半年才能再考' },
+  // v17.90 新任務（開發者 11/27 選 2、3、4、6、7、8、9、10；req＝畫面上當委託顯示）
+  smith:  { n:'鐵匠鋪代言試刀', days:1, fame:8,  gold:250, z:-1, d:'在鐵匠鋪門口試新刀。做完下次買裝備打八五折' },
+  coach:  { n:'公會新人教練',   days:1, fame:8,  gold:300, z:-1, d:'在鬥技場教新人。勇者經驗增加，之後比較容易招到新人' },
+  charity:{ n:'慈善義賣',       days:1, fame:10, gold:60,  z:-1, d:'在廣場義賣做公益。錢很少，但口碑變好、惡名淡化' },
+  banquet:{ n:'王都晚宴',       days:1, fame:40, gold:400, z:-1, d:'王國貴族的晚宴，晚上 20～24 點。名聲很大，想出名的人很開心' },
+  herb:   { n:'採集藥草',       days:1, fame:3,  gold:150, z:0, req:1, d:'在草原或森林採草藥，不太需要打。之後半年診所的小藥水打七折' },
+  harvest:{ n:'秋收幫忙',       days:1, fame:3,  gold:120, z:0, req:1, d:'9～10 月才有。幫村子割稻，全村的人交情 +1' },
+  patrol: { n:'夜間巡邏',       days:1, fame:5,  gold:200, z:-1, req:1, d:'晚上 20～24 點提燈巡村子，有機會抓到小偷' },
 };
 const Q_MAX = 4;
 function etaList(){ const h = H(); let off = 1 + (h.act === 'mission' ? Math.max(0, h.actDays) : (h.bedDays || 0) + (h.visit || 0) + (h.goneDays || 0)); return S.queue.map(it => { const st = S.day + off; off += estDays(h, it); return st; }); }

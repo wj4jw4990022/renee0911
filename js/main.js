@@ -133,7 +133,7 @@ function simulate(dt){
   const hr = hourOf();
   if (!offline && h.act === 'mission' && h.mission && h.actDays <= 1 && mKind(h.mission) && hr >= mEnd(h.mission)) { resolveMission(); if (H() === h && h.act === 'idle' && h.bedDays <= 0 && S.queue.length && hr < 20) runQueue(); save(); renderAll(); if (['dead', 'retired', 'left', 'dying'].includes(H().act)) return; }   // v17.7；v17.20：提早做完又不累，當天接著出發做下一件
   if (S.tourShow) tourTick(hr);
-  lzTick(h, hr);   // v17.87：收工後的休閒
+  lzTick(h, hr); chaseTick(h, hr, performance.now());   // v17.87：收工後的休閒；v17.90：抓小偷
   if (S.evening) { if (S.evening.day !== S.day || offline) S.evening = null; else if (hr >= S.evening.at && S.evening.lines.length) { say(S.evening.lines.shift()); S.evening.at = hr + .4; } }
   if (!offline && mPhase(h) === 'camp' && hr >= 19.5 && hr < 21 && h.campMsg !== S.day) { h.campMsg = S.day; if (chance(.6)) say(campLine(h)); }
   if (S.tev && hr >= S.tev.at) { const e = TEV.find(x => x.k === S.tev.k); S.tev = null; if (e && !offline && e.cond(h)) { try { e.fire(h); } catch (err) { console.error(err); } renderAll(); } }

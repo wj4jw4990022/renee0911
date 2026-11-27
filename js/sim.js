@@ -846,10 +846,12 @@ function queueComment(){
 }
 function refreshAg(){
   const h = H(), rk = rkx(); S.agDay = S.day; S.agTasks = S.agTasks.filter(it => S.day <= it.until);
-  const pool = ['endorse', 'variety', 'meet', 'arena', 'trial']; if (rk >= 1) pool.push('spy', 'border'); if (rk >= 2) pool.push('hunt', 'border');
+  const pool = ['endorse', 'variety', 'meet', 'arena', 'trial', 'smith', 'coach', 'charity', 'herb', 'patrol']; if (rk >= 1) pool.push('spy', 'border'); if (rk >= 2) pool.push('hunt', 'border');
+  if ([9, 10].includes(S.day % 12 + 1)) pool.push('harvest', 'harvest'); if (stageOf() >= 2) pool.push('banquet');   // v17.90
   const n = 3 + ((S.office.intel || 0) >= 1 ? 1 : 0), m = 1 + rk * .3, P = power(h);
   for (let i = 0; i < n && S.agTasks.length < 6; i++) { const k = pick(pool), A = AGT[k];
-    S.agTasks.push({ id:S.day * 100 + i + 50, ag:k, n:A.n, days:A.days, D:A.dk ? Math.round(P * rand(A.dk[0], A.dk[1])) : 0, z:A.z, fame:Math.round(A.fame * .6 * m), gold:Math.round(A.gold * .6 * m * (1 + h.lv / 20)), share:.1, until:S.day + ri(6, 12) }); }
+    const zz = k === 'herb' && zoneOpen(1) && chance(.5) ? 1 : A.z;
+    S.agTasks.push({ id:S.day * 100 + i + 50, ag:k, req:A.req || 0, n:k === 'herb' ? `採集藥草（${ZONES[zz].n}）` : A.n, days:A.days, D:A.dk ? Math.round(P * rand(A.dk[0], A.dk[1])) : 0, z:zz, fame:Math.round(A.fame * .6 * m), gold:Math.round(A.gold * .6 * m * (1 + h.lv / 20)), share:.1, until:S.day + ri(6, 12) }); }
   $('dQuest').classList.add('on');
 }
 // 他對排程第一項的反應：照做、談判、拒絕、睡過頭
@@ -937,6 +939,19 @@ function runQueue(){
   }
   return false;
 }
+// v17.90 新任務的結算
+const NEW_AG = ['smith', 'coach', 'charity', 'banquet', 'herb', 'harvest', 'patrol'];
+function newAgEnd(h, o){ const g = t => ev('good', o.req ? '委託完成' : '事務所任務', t);
+  if (o.ag === 'smith') { S.smithDisc = 1; affAdd('chen', 4); g(`「${o.n}」完成，下次在鐵匠鋪買裝備打八五折`); if (!offline) say(pickS(['這把刀真好砍！', '老陳說我砍得很漂亮'])); }
+  if (o.ag === 'coach') { gainExp(expNeed(h.lv) * .2); S.coachUp = S.day + 12; S.aPoolDay = -99; affAdd('guild', 2); adj('mood', hx(h, 'A') > .5 ? 6 : 0); g(`「${o.n}」完成，有新人說想來你的事務所`); }
+  if (o.ag === 'charity') { repAdd(3, '慈善義賣', true); if ((S.infamy || 0) > 0) S.infamy = Math.max(0, S.infamy - 5); adj('mood', hx(h, 'A') > .5 ? 8 : 2); g(`「${o.n}」完成，村民都說你的事務所很有心`); }
+  if (o.ag === 'banquet') { const st = dw(h, 'status'); adj('mood', st ? 12 : hx(h, 'X') < .4 ? -4 : 4); adj('stress', hx(h, 'X') < .4 ? 6 : 0); g(`「${o.n}」結束，貴族們記住了${h.name}的名字`); if (!offline) say(st ? '跟貴族一起吃飯耶！' : pickS(['好多規矩……累死了', '菜很好吃'])); }
+  if (o.ag === 'herb') { S.herbDisc = S.day + 6; g(`「${o.n}」完成，之後半年診所的小藥水打七折`); }
+  if (o.ag === 'harvest') { S.npcs.forEach(n => { if (n.alive && !n.dark) n.aff = Math.min(100, n.aff + 1); }); adj('mood', 4); g(`「${o.n}」完成，全村的人都很感謝${h.name}`); }
+  if (o.ag === 'patrol') { if (offline && chance(.35)) thiefCaught(h, true); g(`「${o.n}」結束，村子平安無事`); }
+}
+// 抓到小偷（夜間巡邏或白天突發）
+function thiefCaught(h, quiet){ addFame(6); repAdd(1, '抓到小偷', true); adj('mood', 6); ev('good', '抓小偷', `${h.name}抓到了偷錢的小偷，村民都在稱讚`); if (!quiet && !offline) say(pickS(['抓到了！錢還給你', '別想從我眼前溜走！'])); }
 function resolveAg(){
   const h = H(), o = h.mission; h.mission = null; h.alpha = 1;
   h.x = o.z >= 0 ? ZONES[o.z].rect[0] + 10 : GX; h.y = o.z >= 0 ? ZONES[o.z].rect[1] + 10 : GY; h.tx = GX; h.ty = GY;
@@ -954,6 +969,7 @@ function resolveAg(){
   } else if (o.ag === 'spy') {
     if (chance(.25 + hx(h, 'H') * .2)) { ev('bad', '醜聞', `${h.name}臥底被抓包，報紙大篇幅報導你的事務所搞小動作`); addFame(-40); infamyAdd(8, '臥底被抓包', true); adj('trust', -10); adj('mood', -15); logLife('臥底對手事務所被抓包'); remember('used', { n:o.n }); h.act = 'idle'; injure('light', '臥底被抓時挨了一頓打'); return; }
     pay(); S.rivals[1].fame = Math.max(0, S.rivals[1].fame - 60); adj('stress', hx(h, 'H') * 25); ev('good', '事務所任務', '臥底成功，銀月經紀社的名聲大跌'); say(hx(h, 'H') > .6 ? '我完成了……可是我晚上睡不著' : '輕鬆搞定');
+  } else if (NEW_AG.includes(o.ag)) { pay(); newAgEnd(h, o);
   } else {   // 表演賽、駐守邊境、限期討伐：要打
     const r = ratio(h, o.D) * compMul(o.comp), d = danger(r), p = winP(r);
     if (o.ag === 'border') { h.burn = clamp((h.burn || 0) + 25, 0, 100); adj('stress', 15); }
@@ -1818,6 +1834,7 @@ function quote(base, who){
   const disc = n.aff >= 50 ? (n.aff - 50) / 250 : 0;
   const m = (1 + greed * naive * .6) * (1 - disc) * (n.grumpy ? 1.1 : 1);
   const why = [n.grumpy ? '老陳今天心情很差' : '', greed * naive > .25 ? `看${who === 'hero' ? H().name : '你'}好坑，抬了價` : '', disc > .03 ? '交情好打了折' : ''].filter(Boolean).join('、');
+  if (S.smithDisc && who === 'agent') return { p:Math.round(base * m * .85), why:'試刀代言的八五折' + (why ? '・' + why : ''), m:m * .85 };   // v17.90
   return { p:Math.round(base * m), why:why || (m > 1.01 ? '老陳習慣多算一點' : '照定價'), m };
 }
 function heroShop(){
@@ -1836,7 +1853,7 @@ function heroShop(){
   const talk = t => { if (!offline) say(t); };
   // 必需品（可以動用存款）：藥水、看醫生
   const potWant = h.goal === 'cert' ? 4 : h.goal === 'health' ? 3 : h.goal === 'seiko' ? 1 : 2;
-  while (h.pots < potWant && h.wallet >= POT_PRICE * (h.goal === 'etf' ? 3 : 1.5)) { h.wallet -= POT_PRICE; h.pots++; }
+  while (h.pots < potWant && h.wallet >= potP() * (h.goal === 'etf' ? 3 : 1.5)) { h.wallet -= potP(); h.pots++; }
   const docC = 80 + h.lv * 20;
   if (h.health < (h.goal === 'health' ? 75 : 45) && h.wallet >= docC * (h.goal === 'etf' ? 2 : 1)) { h.wallet -= docC; h.health = clamp(h.health + 35, 0, 100); if (h.bedDays > 0) h.bedDays--; ev('warn', '自己看病', `${h.name}自己掏錢去看了醫生`); if (h.goal === 'health') clue('身體一點小狀況就去看醫生'); }
   // 裝備：先補比較落後的那一件
