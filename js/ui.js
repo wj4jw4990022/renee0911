@@ -201,6 +201,21 @@ function qCard(h, o, ag){
     ${d ? `<div class="seg"><i class="${d.i === 0 ? 'on' : ''}" style="background:#6fcf97"></i><i class="${d.i === 1 ? 'on' : ''}" style="background:#ffb347"></i><i class="${d.i === 2 ? 'on' : ''}" style="background:#ff7b7b"></i></div><div class="dg ${d.k}" style="font-size:12.5px">${d.n} · 勝率約 ${win}%</div>` : '<div class="dg g" style="font-size:12.5px">不用打</div>'}
     ${o.until ? `<div style="font-size:12px" class="${o.until - S.day <= 1 ? 'dg r' : 'k'}">${dueTxt(o.until)}</div>` : ''}</div></div>`;
 }
+// v17.68 事務所：升格條件（圖示、達到沒、進度、名稱）、預設 100 家事務所（線上排名開放前的暫時名單）
+function rankReqL(i){
+  const it = [['名聲', S.fame >= RANKS[i][0], `${fmt(Math.round(S.fame))}/${fmt(RANKS[i][0])}`, '名聲'], ['代表作', (S.agDone || 0) >= AG_GATE[i], `${S.agDone || 0}/${AG_GATE[i]}`, '代表作（完成的事務所任務）']];
+  if (i >= 6) it.push(['危險', !!S.bossDone, '魔王', '打倒骸骨魔王']);
+  if (examLv(i)) it.push(['任務', (S.exam || 0) >= i, (S.exam || 0) >= i ? '通過' : rankOk(i) ? '可考' : '未考', '升格考核']);
+  return it;
+}
+let AGF = null;
+function agencyField(){   // 97 家，名聲照名次遞減（固定種子，每次一樣）
+  if (AGF) return AGF; const A = ['金', '銀', '北', '南', '東', '西', '鐵', '星', '風', '火', '雪', '藍', '紅', '白', '黑', '翠', '月', '日', '雷', '霜', '青', '紫', '橡', '鷹', '狼', '獅', '龍', '鹿', '熊', '燕'];
+  const B = ['旗', '盾', '劍', '冠', '峰', '谷', '港', '橋', '塔', '城', '泉', '林', '火', '羽', '角', '牙', '光', '影', '石', '葉'], C = ['事務所', '經紀社', '傭兵團', '工作室', '公會', '商會', '經紀', '冒險社'];
+  let r = 7; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647, used = new Set();
+  AGF = []; for (let i = 0; i < 97; i++) { let n; do n = A[Math.floor(rnd() * A.length)] + B[Math.floor(rnd() * B.length)] + C[Math.floor(rnd() * C.length)]; while (used.has(n)); used.add(n); AGF.push({ n, fame:Math.round(900 * Math.exp(-i / 18) + 4 * (97 - i) / 97) }); }
+  return AGF;
+}
 // v17.67 人際：關係種類、愛心圖示、頭像底色、點頭像的小框
 const relKind = n => { const h = H(); return n.dark ? 'dark' : n.role === 'rival' ? 'rival' : n.id === h.partner ? 'love' : n.aff >= 80 ? 'f3' : n.aff >= 50 ? 'f2' : n.aff >= 25 ? 'f1' : 'f0'; };
 function relIcons(n){ const k = relKind(n);
@@ -887,7 +902,7 @@ const SUBS = {
   set:[['set', '設定']],
 };
 // v17.59：新版分頁（大圖示＋一行小字）；第二格回傳 true＝整顆變灰不能按
-const PTAB = { gear:{ gear:['戰力'], care:['照顧'], caravan:['商隊', () => !(S.mt && S.mt.caravan)] }, people:{ ppl:['人際'], team:['事務所'], wall:['歷代'], news:['近況'], ledger:['人情帳'] } };
+const PTAB = { gear:{ gear:['戰力'], care:['照顧'], caravan:['商隊', () => !(S.mt && S.mt.caravan)] }, people:{ ppl:['人際'], team:['事務所'], wall:['歷代'], news:['近況'], ledger:['人情帳'] }, office:{ main:['事務所'], art:['人際'], comp:['對手'], fac:['設定'] } };
 const sub = {};
 const SS = k => (sub[sheetT] || SUBS[sheetT][0][0]) === k;
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { const t = b.dataset.t; if (sheetT === t) closeSheet(); else openSheet(t); });
@@ -1029,7 +1044,7 @@ function teamView(){
 }
 function renderSheet(){
   const h = H(), B = $('shB'), st = B.scrollTop;
-  const title = { hero:H().name, quest:'任務', gear:'花錢', life:'生平', people:'人際', office:'經紀人事務所', set:'設定' }[sheetT];
+  const title = { hero:H().name, quest:'任務', gear:'花錢', life:'生平', people:'人際', office:'事務所', set:'設定' }[sheetT];
   const TIC = { gear:'金幣', people:'人際', quest:'排程', office:'事務所', set:'設定' }[sheetT];
   setH($('shT'), (TIC ? IC(TIC, 2) : '') + `<span>${esc(title)}</span>`);
   const subDot = { take:S.agTasks.some(o => o.until - S.day <= 2) || $('dQuest').classList.contains('on'), queue:!S.queue.length };
@@ -1200,27 +1215,37 @@ function renderSheet(){
         <div class="k" style="font-size:12px">第 ${w.gen} 代 · ${esc(w.cls)} · Lv${w.lv} · ${w.age} 歲</div>${w.happy != null ? `<div class="row" style="font-size:12px;margin-top:4px"><span>幸福感</span><span>${w.happy}</span></div><div class="xbar"><i style="width:${w.happy}%;background:${w.happy >= 80 ? '#6fcf97' : w.happy >= 60 ? '#ffb347' : '#ff7b7b'}"></i></div>` : ''}
         <div style="font-size:12.5px;margin-top:4px;color:#6b4e33">${esc(w.why)}</div></div></div>`; }).join('') + `<div class="wrel">${esc(h.rel || '')}</div><div class="wc now"><span class="wa" style="background:var(--gold);color:#12161f">${esc(h.name.slice(0, 1))}</span><div><b class="px" style="font-weight:400;font-size:16px">${esc(h.name)}</b><div class="k" style="font-size:12px">第 ${h.gen} 代 · 現在 · Lv${h.lv} · ${Math.floor(h.age)} 歲</div></div></div></div>`;
   }
-  if (sheetT === 'office') {
+  if (sheetT === 'office') {   // v17.68：事務所新版（design/ui/草圖_事務所.png）
     const rk = rankOf(), nx = RANKS[rk + 1];
     if (SS('main')) {
-    html += `<div class="rankc"><div class="rb3"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#12161f" stroke-width="2" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/></svg></div><div style="flex:1;min-width:0">
-      <div style="font-size:12px;color:#e0c89a">等級 ${rk + 1} / ${RANKS.length}<span class="stg">${STAGES[stageOf(rk)]}階段</span></div><div class="px" style="font-size:21px">${rankName(rk)}</div>
-      <div class="lad" aria-label="15 級階梯">${RANKS.map((_, i) => `<i class="${i <= rk ? 'on' : ''}${i === rk ? ' cur' : ''}${i && i % 3 === 0 ? ' gap' : ''}" style="--c:${STAGE_C[stageOf(i)]}" title="${RANKS[i][1]}"></i>`).join('')}</div>
-      ${nx ? `<div style="font-size:12px;color:#6b4e33;margin-top:6px">升格「${nx[1]}」還需要：</div><div class="rq">${rankReq(rk + 1)}</div><div style="font-size:12px;color:#2f7a3a;margin-top:5px">下一級：${(UNLOCK_TXT[rk + 1] || '委託報酬變高').replace(/^[，。]/, '')}</div>` : '<div style="font-size:12px;color:#6b4e33;margin-top:6px">已經是最高等級</div>'}</div></div>`;
-    html += `<div class="tiles"><div class="tile"><b style="color:var(--gold);font-size:16px">${fmt(S.gold)}</b><span>金庫</span></div><div class="tile"><b style="color:var(--blue);font-size:16px">${fmt(Math.round(S.fame))}</b><span>名聲</span></div><div class="tile"><b style="color:${S.rep >= 60 ? '#2f7a3a' : S.rep >= 35 ? '#a8681a' : '#b03a30'};font-size:16px">${Math.round(S.rep)}</b><span>口碑</span></div><div class="tile"><b style="color:#b03a30;font-size:16px">-${fmt(upkeep() + (S.loan ? Math.min(60, S.loan) : 0))}</b><span>每月開銷</span></div></div>`;
-    html += `<div class="k" style="font-size:12px;margin:-2px 2px 4px">名聲來自事務所任務、委託、魔王、寶物、心願和守村；醜聞會扣。每升一級，報酬約 +12%。年度配額每個階段多 1 件，旗下藝人完成的委託也算。</div>`;
-    if (S.infamySeen) html += infamyView();
-    html += finView();
-    html += repView();
-    html += `<div class="sec">抽成比例：<b style="color:var(--gold)">${S.cut}%</b></div><div class="card"><input type="range" min="10" max="50" step="5" value="${S.cut}" id="cutR" aria-label="抽成比例"><div style="font-size:12.5px;margin-top:4px">${h.name}覺得：「${S.cut <= 15 ? '老闆你是佛心來的吧' : S.cut <= 25 ? '很公道' : S.cut <= 35 ? '還算合理' : S.cut <= 40 ? '有點多……' : '這根本是剝削'}」</div><div class="k" style="font-size:12px;margin-top:2px">抽越多你賺越多，但${pron(h)}會不滿，信任低時可能罷工或接私活</div></div>`;
+      const req = nx ? rankReqL(rk + 1) : [];
+      html += `<div class="pb ofc"><b class="f22">${esc(rankName(rk))}</b><div class="ofl"><span class="f14 mu">${rk + 1} / ${RANKS.length}</span><span class="pbar"><i style="width:${(rk + 1) / RANKS.length * 100}%;background:var(--gold)"></i></span></div>
+        ${nx ? `<div class="ofr"><b class="f14">升格</b>${req.map(([ic, ok, d, nm]) => `<span class="num s"${TIPA(ic, nm, ok ? '已經達到' : '還沒達到')}>${IC(ic, 2)}<b class="f14">${esc(d)}</b>${IC(ok ? '打勾' : '打叉', 1)}</span>`).join('')}</div>
+        <div class="ofr cg">${IC('上升', 1)}<b class="f14">${esc((UNLOCK_TXT[rk + 1] || '委託報酬變高').replace(/^[，。]/, ''))}</b></div>` : '<div class="f14 mu">已經是最高等級</div>'}</div>`;
+      html += `<div class="g2n"><span class="pb num"${TIPA('金幣')}>${IC('金幣', 2)}<b>${fmt(S.gold)}</b></span><span class="pb num"${TIPA('名聲', '名聲', '事務所任務、委託、魔王、寶物、心願都會加；醜聞會扣')}>${IC('名聲', 2)}<b>${fmt(Math.round(S.fame))}</b></span><span class="pb num"${TIPA('口碑', '口碑', '你怎麼對待勇者；越低，下一代願意簽約的人越少')}>${IC('口碑', 2)}<b>${Math.round(S.rep)}</b></span><span class="pb num cr"${TIPA('下降', '每月開銷', '每個月固定花掉的錢（含還債）')}>${IC('下降', 2)}<b>${fmt(upkeep() + (S.loan ? Math.min(60, S.loan) : 0))}/月</b></span></div>`;
+      { const rp = clamp(S.rep, 0, 100), RC = ['#e84537', '#ec6a3a', '#f08a3c', '#f5a640', '#f7c94a', '#c8d25a', '#9fd06a', '#7cc87a', '#5cbf7c', '#43b878'];
+        html += `<div class="pb ofc"${TIPA('口碑', '口碑', (S.repLog || []).slice(-1).map(x => `最近：${x.why} ${x.v > 0 ? '+' : ''}${x.v}`)[0] || '最近沒有大事影響口碑')}><div class="ofr">${IC('口碑', 2)}<b class="f16">${Math.round(rp)} / 100</b></div>
+          <div class="ofr">${IC('危險', 2)}<span class="lv10">${RC.map(c => `<i style="background:${c}"></i>`).join('')}<b class="tri" style="left:${rp}%"></b></span>${IC('心情', 2)}</div></div>`; }
+      { const hs = (S.finH || []).slice(-6);
+        if (hs.length < 2) html += `<div class="pb ofc"><div class="ofr">${IC('金幣', 2)}<b class="f16">每月淨賺</b></div><div class="f14 mu">再過幾個月，這裡會畫出每月賺賠</div></div>`;
+        else { const nets = hs.map(x => Math.round(Object.values(x.c || {}).reduce((a, v) => a + v, 0))), mx = Math.max(1, ...nets.map(Math.abs));
+          html += `<div class="pb ofc"><div class="ofr">${IC('金幣', 2)}<b class="f16">每月淨賺</b><span class="rsp"></span><i class="lgd g"></i><span class="f14">賺</span><i class="lgd r"></i><span class="f14">賠</span></div>
+            <div class="nchart">${nets.map((v, i) => `<div class="nc"><div class="nu">${v >= 0 ? `<small class="cg">+${fmt(v)}</small><i class="g" style="height:${Math.max(2, v / mx * 40)}px"></i>` : ''}</div><div class="nd">${v < 0 ? `<i class="r" style="height:${Math.max(2, -v / mx * 40)}px"></i><small class="cr">${fmt(v)}</small>` : ''}</div><small class="nm">${(hs[i].d - 1 + 12) % 12 + 1}月</small></div>`).join('')}</div></div>`; } }
+      if (S.infamySeen) html += infamyView();
+      html += `<div class="pb ofc"><div class="ofr">${IC('金幣', 2)}<b class="f16">抽成 ${S.cut}%</b><span class="rsp"></span><span class="f14 mu">${h.name}：「${S.cut <= 15 ? '佛心來的' : S.cut <= 25 ? '很公道' : S.cut <= 35 ? '還算合理' : S.cut <= 40 ? '有點多……' : '這是剝削'}」</span></div><input type="range" min="10" max="50" step="5" value="${S.cut}" id="cutR" aria-label="抽成比例"></div>`;
     }
     if (SS('art')) html += artistView();
-    if (SS('comp')) html += rivalView() + eventView(h);
+    if (SS('comp')) {   // 線上排名開放前：預設 100 家事務所（名字和名聲是暫時的，之後再討論）；不顯示敵意、先隱藏攻擊手段
+      const all = [...agencyField(), ...S.rivals.map(r => ({ n:r.n, fame:r.fame })), { n:'你的事務所', fame:S.fame, me:1 }].sort((a, b) => b.fame - a.fame), mi = all.findIndex(x => x.me);
+      const show = [...new Set([0, 1, 2, mi - 1, mi, mi + 1].filter(i => i >= 0 && i < all.length))].sort((a, b) => a - b);
+      html += `<div class="pb ofc g2c"><div class="f14">你的事務所</div><div class="ofr"><b class="f22 cg">第 ${mi + 1} 名</b><span class="f14 mu">/ ${all.length}</span><span class="rsp"></span><span class="num">${IC('名聲', 2)}<b>${fmt(Math.round(S.fame))}</b></span></div></div>`;
+      html += `<div class="pb ofc">${show.map((i, k) => `${k && i - show[k - 1] > 1 ? '<div class="rkdot">…</div>' : ''}<div class="rkr${all[i].me ? ' me' : ''}"><b class="f14">第 ${i + 1} 名</b><span class="f16">${esc(all[i].n)}</span><span class="rsp"></span><span class="num s">${IC('名聲', 1)}<b>${fmt(Math.round(all[i].fame))}</b></span></div>`).join('')}</div>`;
+      html += eventView(h);
+    }
     if (SS('fac')) {
-    html += `<div class="sec">事務所設施（金庫 ${fmt(S.gold)}）</div><div class="fgrid">`;
-    Object.keys(OFFICE).forEach(k => { const l = S.office[k] || 0, O = OFFICE[k], c = officeCost(k, l);
-      html += `<div class="fac"><div class="row"><b style="font-size:14px">${O.n}</b><span class="pips">${[0, 1, 2, 3, 4].map(i => `<i class="${i < l ? 'on' : i >= officeMax() ? 'lk' : ''}"></i>`).join('')}</span></div><div class="k" style="font-size:12px">${l ? O.d(l) : '還沒蓋'}</div>${l < officeMax() ? `<div style="font-size:11.5px;color:#2f7a3a">下一級：${O.d(l + 1)}</div><button class="btn" data-up="${k}" ${S.gold < c ? 'disabled' : ''}>${l ? '升級' : '蓋'} ${fmt(c)}</button>` : `<button class="btn" disabled>${l >= 5 ? '已滿級' : officeMax() < 4 ? '升上「王室御用經紀」才能再升' : '升上「英雄之家」才能再升'}</button>`}</div>`; });
-    html += '</div>';
+      const FIC = { clinic:['醫務室', '休息', l => `-${l}月`], gym:['訓練室', '上升', l => `+${l * 12}%`], lounge:['休息', '壓力', l => `-${l * 4}`], intel:['情報站', '任務', l => `+${l}`], cellar:['酒窖', '心情', l => `+${l * 40}%`] };
+      Object.keys(OFFICE).forEach(k => { const l = S.office[k] || 0, O = OFFICE[k], c = officeCost(k, l), F = FIC[k], mx = officeMax(), full = l >= mx;
+        html += `<div class="pb care"><span class="cbi"${TIPA(F[0], O.n, l ? '現在：' + O.d(l) : '還沒蓋')}>${IC(F[0], 3)}</span><div class="cbm"><div class="ofr"><b class="f16">${O.n}</b>${lvSq(mx, l - 1)}</div><div class="cbe">${full ? `<b class="f14 mu">${l >= 5 ? '已滿級' : officeMax() < 4 ? '升上「王室御用經紀」才能再升' : '升上「英雄之家」才能再升'}</b>` : `<span class="num s"${TIPA(F[1], '下一級', O.d(l + 1))}>${IC(F[1], 2)}<b class="cg">${F[2](l + 1)}</b></span>`}</div></div>${full ? '' : priceBtn(`data-up="${k}"`, c, S.gold < c)}</div>`; });
     }
   }
   if (sheetT === 'set') {

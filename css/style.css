@@ -807,3 +807,24 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 /* 還沒換新版的舊卡片也套用粗框（照同一套規則） */
 #app .sb .card, #app .sb .grp, #app .sb .wc, #app .sb .rgc, #app .sb .memc, #app .sb .upc, #app .sb .svc, #app .sb .vsc { border-radius:0; border:3px solid transparent; border-image:var(--pb-dk) 3; background-color:var(--paper); background-clip:padding-box; filter:drop-shadow(4px 4px 0 var(--shd)); box-shadow:none; }
 #app .sb .sec { font-size:15px; color:var(--text); }
+
+/* ================= v17.68 事務所頁 ================= */
+.ofc { padding:10px 12px; margin-bottom:14px; display:flex; flex-direction:column; gap:8px; }
+.ofl { display:flex; align-items:center; gap:10px; } .ofl .pbar { flex:1; }
+.ofr { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.ofr .num { gap:4px; }
+.g2n { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-bottom:14px; }
+.g2n .num { padding:6px 10px; } .g2n .num b { font-size:20px; } .g2n .num.cr b { color:#b03a30; }
+.ofc .lv10 { flex:1; } .lv10 .tri { position:absolute; top:-12px; width:0; height:0; margin-left:-6px; border:6px solid transparent; border-top:8px solid var(--ol); border-bottom:0; }
+.lgd { width:14px; height:14px; border:2px solid var(--ol); display:inline-block; } .lgd.g { background:var(--ok); } .lgd.r { background:var(--bad); }
+.nchart { display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:6px; border-bottom:0; }
+.nc { display:flex; flex-direction:column; align-items:center; }
+.nc .nu { height:60px; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:2px; width:100%; border-bottom:2px solid var(--ol); }
+.nc .nd { height:34px; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; gap:2px; width:100%; }
+.nc i { display:block; width:70%; border:2px solid var(--ol); } .nc i.g { background:var(--ok); } .nc i.r { background:var(--bad); }
+.nc small { font-size:12px; } .nc .nm { font-size:13px; color:var(--muted); }
+.g2c { background-color:#d6f0d6; }
+.rkr { display:flex; align-items:center; gap:12px; padding:5px 6px; }
+.rkr.me { background:#d6f0d6; } .rkr.me b, .rkr.me span { color:#2f7a3a; }
+.rkdot { text-align:center; font-size:18px; color:var(--muted); line-height:1; }
+#app .sb input[type=range] { accent-color:#7a5a3a; }
