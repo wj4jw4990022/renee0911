@@ -955,7 +955,7 @@ function thiefCaught(h, quiet){ addFame(6); repAdd(1, '抓到小偷', true); adj
 function resolveAg(){
   const h = H(), o = h.mission; h.mission = null; h.alpha = 1;
   h.x = o.z >= 0 ? ZONES[o.z].rect[0] + 10 : GX; h.y = o.z >= 0 ? ZONES[o.z].rect[1] + 10 : GY; h.tx = GX; h.ty = GY;
-  if (o.ug) { resolveUg(h, o); if (o.last) { S.underworld = 0; S.quitAfter = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('good', '抽身', '最後一件事辦完了，地下商會放你走了'); } if (h.act !== 'dying' && h.bedDays <= 0) setAct('rest'); return; }
+  if (o.ug) { resolveUg(h, o); if (o.last) { S.underworld = 0; S.quitAfter = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('good', '抽身', '最後一件事辦完了，地下商會放你走了'); } if (h.act !== 'dying' && h.bedDays <= 0 && !h.jailed) setAct('rest'); return; }
   const pay = () => { const his = Math.round(o.gold * o.share); S.gold += o.gold - his; finAdd('ag', o.gold - his); h.wallet += his; addFame(o.fame); S.agDone = (S.agDone || 0) + 1; yr().ag++; };
   if (o.ag === 'endorse' || o.ag === 'variety' || o.ag === 'meet') {
     pay(); yr().show++; if (S.contract) S.contract.done++; const like = o.ag === 'endorse' ? .6 - dw(h, 'independence') * .5 + dw(h, 'status') * .3 : hx(h, 'X') - .3 + dw(h, 'status') * .3 + dw(h, 'acceptance') * .2;

@@ -408,7 +408,7 @@ function viceTick(){
   // 地下世界：有把柄在別人手上之後，地下委託會一直來
   if (S.underworld) {
     const ug = S.agTasks.filter(t => t.ug);
-    if (ug.length < 2 && chance(.35)) pushUg();
+    if (ug.length < 1 && chance(.15)) pushUg();   // v17.95：原本少於 2 件、每天 35%
   }
   // 王國稽查
   if ((S.infamy || 0) >= 70 && !S.q && !offline && S.day >= (S.auditCd || 0) && chance(.05)) { S.auditCd = S.day + 24; ask('vAudit', '（王國的稽查官來到事務所，要調閱這幾年的帳本）', ['配合調查', '銷毀帳本', '讓勇者頂罪'], {}, 2); }
@@ -484,24 +484,25 @@ function relapse(h, why, byYou){
 }
 // 地下委託
 const UG = [
-  { k:'ugSmuggle', n:'地下委託：走私護送', gold:1800, inf:6, d:'幫地下商會運一批不能見光的貨，被抓到就是醜聞' },
-  { k:'ugDebt', n:'地下委託：替貴族討債', gold:1400, inf:5, d:'去欠債的人家裡「好好談」，誠實、和善的人會很痛苦' },
-  { k:'ugFix', n:'地下委託：打假賽', gold:2200, inf:7, d:'在鬥技場故意輸，賭盤的人會付錢' },
-  { k:'ugSabo', n:'地下委託：破壞對手的任務', gold:1600, inf:6, d:'讓對手事務所的委託出包，對手名聲會跌' },
-  { k:'ugGuard', n:'地下委託：替幫派圍事', gold:2600, inf:9, d:'站在幫派那邊撐場面，可能要動手', violent:1, dk:[.8, 1.1], z:2 },
-  { k:'ugHit', n:'地下委託：除掉某個人', gold:5000, inf:18, d:'沒有人會說出口的委託。要勇者本人同意', violent:1, dk:[1, 1.4], z:3, minInf:50 },
+  { k:'ugSmuggle', n:'地下委託：走私護送', gold:600, inf:6, fail:.32, d:'幫地下商會運一批不能見光的貨，被抓到就是醜聞' },
+  { k:'ugDebt', n:'地下委託：替貴族討債', gold:450, inf:5, fail:.28, d:'去欠債的人家裡「好好談」，誠實、和善的人會很痛苦' },
+  { k:'ugFix', n:'地下委託：打假賽', gold:700, inf:7, fail:.3, d:'在鬥技場故意輸，賭盤的人會付錢' },
+  { k:'ugSabo', n:'地下委託：破壞對手的任務', gold:500, inf:6, fail:.3, d:'讓對手事務所的委託出包，對手名聲會跌' },
+  { k:'ugGuard', n:'地下委託：替幫派圍事', gold:900, inf:9, d:'站在幫派那邊撐場面，可能要動手', violent:1, dk:[.8, 1.1], z:2 },
+  { k:'ugHit', n:'地下委託：除掉某個人', gold:1800, inf:18, d:'沒有人會說出口的委託。要勇者本人同意', violent:1, dk:[1, 1.4], z:3, minInf:50 },
 ];
 UG.forEach(u => { AGT[u.k] = { n:u.n, days:1, fame:0, gold:u.gold, z:u.z ?? -1, d:u.d }; });
 function pushUg(){
   const h = H(), pool = UG.filter(u => (S.infamy || 0) >= (u.minInf || 0)), u = pick(pool); if (!u) return;
-  S.agTasks.push({ id:S.day * 100 + ri(80, 99), ag:u.k, ug:1, inf:u.inf, violent:u.violent || 0, n:u.n, days:1, D:u.dk ? Math.round(power(h) * rand(u.dk[0], u.dk[1])) : 0, z:u.z ?? -1, fame:0, gold:Math.round(u.gold * (1 + rkx() * .3)), share:.2, until:S.day + ri(3, 6) });
+  S.agTasks.push({ id:S.day * 100 + ri(80, 99), ag:u.k, ug:1, inf:u.inf, fail:u.fail || 0, violent:u.violent || 0, n:u.n, days:1, D:u.dk ? Math.round(power(h) * rand(u.dk[0], u.dk[1])) : 0, z:u.z ?? -1, fame:0, gold:Math.round(u.gold * (1 + rkx() * .3)), share:.2, until:S.day + ri(3, 6) });
   if (!offline) ev('warn', '地下', `有人悄悄塞了一張紙條：「${u.n.replace('地下委託：', '')}」`);
 }
 function resolveUg(h, o){
   const pay = () => { const his = Math.round(o.gold * o.share); S.gold += o.gold - his; finAdd('ag', o.gold - his); h.wallet += his; };
   let ok = true;
   if (o.D) { const r = ratio(h, o.D) * compMul(o.comp); ok = winOf(o, winP(r)); }
-  if (o.ag === 'ugSmuggle' && chance(.15)) ok = false;
+  // v17.95：沒打鬥的也會出包（25～35%，細心、等級高的比較不會）
+  else { const f = o.fail ?? ((UG.find(u => u.k === o.ag) || {}).fail || .3); if (chance(clamp(f - hx(h, 'C') * .1 - (h.lv >= 10 ? .05 : 0), .15, .4))) ok = false; }
   if (ok) {
     pay(); infamyAdd(o.inf, `完成「${o.n.replace('地下委託：', '')}」`, true);
     adj('stress', hx(h, 'H') * 15 + (o.violent ? hx(h, 'A') * 15 : 0)); adj('trust', -hx(h, 'H') * 6);
@@ -513,6 +514,8 @@ function resolveUg(h, o){
     addFame(-60); infamyAdd(o.inf + 5, `「${o.n.replace('地下委託：', '')}」出包被發現`, true); adj('trust', -6);
     ev('bad', '醜聞', `「${o.n}」出包了，消息傳了出去`);
     if (o.violent && chance(.3)) injure('heavy', `「${o.n}」出事`);
+    S.gold -= o.gold; finAdd('ag', -o.gold); ev('bad', '罰款', `「${o.n.replace('地下委託：', '')}」出包，事務所被罰 ${fmt(o.gold)} 金`);   // v17.95
+    if (o.ag === 'ugSmuggle' && chance(.3)) jailHero(h, ri(1, 2), '走私被查獲');
   }
 }
 // 黑心路線的入口：被找上門
