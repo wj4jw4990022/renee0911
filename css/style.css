@@ -1041,3 +1041,26 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 #app .sb .cutr { display:flex; align-items:center; gap:12px; } #app .sb .cutr b { color:var(--text); min-width:64px; text-align:center; } #app .sb .acut { width:40px; height:40px; padding:0; font-size:22px; color:var(--text); }
 #app .sb .acts2 { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; } #app .sb .acts2 button { display:flex; align-items:center; gap:6px; padding:6px 8px; text-align:left; color:var(--text); } #app .sb .acts2 span { display:flex; flex-direction:column; } #app .sb .acts2 small { font-size:12px; color:var(--muted); font-weight:700; }
 #app .sb .aas { display:flex; flex-direction:column; gap:8px; } #app .sb .aas button { display:flex; align-items:center; gap:10px; padding:8px 10px; text-align:left; color:var(--text); } #app .sb .aas span { flex:1; display:flex; flex-direction:column; gap:2px; } #app .sb .aas small { font-size:13px; color:var(--muted); font-weight:700; display:flex; align-items:center; gap:3px; }
+
+/* v17.84 小框（openPop）新版：離線摘要、村民、商隊、武鬥大會、年度大賞（design-wip design/ui/草圖_離線摘要.png） */
+#mission .mgo.pl { background-color:var(--paper); }
+.ppop { --text:#3b2616; color:var(--text); }
+.ppop .ptls { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:7px; }
+.ppop .ptl { display:flex; align-items:center; gap:8px; height:42px; padding:0 9px; min-width:0; white-space:nowrap; overflow:hidden; }
+.ppop .ptl b { font-size:22px; line-height:1; } .ppop .ptl b.f16 { font-size:16px; overflow:hidden; text-overflow:ellipsis; }
+.ppop .ptl.w2 { grid-column:span 2; }
+.ppop .pwl { position:relative; width:30px; height:28px; flex:none; }
+.ppop .pwl .pimg { width:24px; height:24px; image-rendering:pixelated; }
+.ppop .pwl .ic { position:absolute; right:0; bottom:0; }
+.ppop .psec { display:flex; align-items:center; gap:6px; margin:4px 2px -4px; }
+.ppop .plst { display:flex; flex-direction:column; padding:2px 12px; background-color:var(--paper); }
+.ppop .prw { display:flex; align-items:center; gap:10px; padding:8px 0; font-size:16px; font-weight:700; line-height:1.45; }
+.ppop .prw + .prw { border-top:2px solid #d6be96; }
+.ppop .prw > div { flex:1; min-width:0; }
+.ppop .prw.tp { align-items:flex-start; } .ppop .prw.tp > .ic { margin-top:4px; }
+.ppop .pres { display:flex; align-items:center; gap:12px; padding:10px 14px; background-color:#fffaf0; }
+.ppop .pst { display:flex; align-items:center; gap:8px; }
+.ppop .pit { display:flex; align-items:center; gap:10px; padding:8px 12px; }
+.ppop .pitn { display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
+.ppop .npw, .ppop .npb { padding:0 2px; }
+.ppop .prw > .ic:first-child { min-width:28px; object-fit:contain; object-position:center; }   /* 不同寬的圖示，字對齊同一條左邊界 */

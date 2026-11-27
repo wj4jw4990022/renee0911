@@ -1373,6 +1373,16 @@ function seasonTick(){
   }
   if (mo === 11) yearAwards();
 }
+// v17.84 武鬥大會結果（新版小框）；map.js 的 tourApply 也用
+let TOUR_G = 0;
+function tourPop(y, log, place, champ, fame){
+  const h = H(), cn = (champ.ag ? champ.ag + '的' : '') + champ.n;
+  const rows = log.map(l => { const w = /勝<\/b>/.test(l); return `<div class="prw">${IC(w ? '打勾' : '打叉', 2)}<div>${l.replace(/——.*$/, '')}</div><b class="${w ? 'cg' : 'cr'}">${w ? '勝' : '敗'}</b></div>`; });
+  openPop(`<div class="pb pres">${IC(['打叉', '銅牌', '銀牌', '金牌'][place], 3)}<b class="f22">${esc(h.name)}${['首輪淘汰', '止步四強', '拿下亞軍', '奪冠了！'][place]}</b></div>
+    ${pList(rows)}
+    <div class="ptls">${pTile(IC('名聲', 2), `<b class="cg">+${fame}</b>`, TIPA('名聲'))}${place === 3 ? pTile(IC('金幣', 2), `<b class="cg">+${fmt(TOUR_G)}</b>`, TIPA('金幣', '獎金', '冠軍獎金進了金庫')) : pTile(IC('歷代', 2), `<b class="f16">${esc(cn)}</b>`, TIPA('歷代', '冠軍', cn), ' w2')}</div>`,
+    `第 ${y} 年武鬥大會`, '戰力');
+}
 function runTour(st){
   const h = H(), P = power(h), y = curY(); S.tour = null;
   const ppl = [{ n:h.name, me:1, P }];
@@ -1398,7 +1408,7 @@ function runTour(st){
   if (hurt) { injure(hurt[0], hurt[1]); if (hurt[0] === 'light') setAct('rest'); }
   const rk = 1 + rkx() * .3, fame = Math.round([5, 15, 35, 80][place] * rk);
   addFame(fame); yr().tour = place;
-  if (place === 3) { const g = 600 + rkx() * 400; S.gold += g; h.wallet += Math.round(g * .2); adj('mood', 30); adj('trust', 8); remember('champ'); logLife(`第 ${y} 年武鬥大會冠軍`); wishHook('hero');
+  if (place === 3) { const g = 600 + rkx() * 400; TOUR_G = g; S.gold += g; h.wallet += Math.round(g * .2); adj('mood', 30); adj('trust', 8); remember('champ'); logLife(`第 ${y} 年武鬥大會冠軍`); wishHook('hero');
     if (S.tourBet) { S.gold += S.tourBet * 4; ev('good', '賭注', `你押的 ${fmt(S.tourBet)} 金變成 ${fmt(S.tourBet * 4)} 金`); }
     ev('good', '武鬥大會', `${h.name}拿下第 ${y} 年武鬥大會冠軍！獎金 ${fmt(g)} 金，名聲 +${fame}`); if (!offline) say(L('tChamp')); }
   else { if (place === 2) { S.gold += 200 + rkx() * 120; logLife(`第 ${y} 年武鬥大會亞軍`); } adj('mood', place >= 2 ? 5 : -8);
@@ -1407,10 +1417,7 @@ function runTour(st){
   S.tourBet = 0;
   S.tHist = S.tHist || []; S.tHist.push({ y, place, champ:(champ.ag ? champ.ag + '的' : '') + champ.n, me:place === 3, hero:h.name });
   news('good', `第 ${y} 年武鬥大會由${champ.me ? h.name : (champ.ag ? champ.ag + '的' : '') + champ.n}奪冠`);
-  if (!offline) openPop(`<div class="k" style="font-size:12px">第 ${y} 年 · 秋季</div><div class="px" style="font-size:24px">武鬥大會</div>
-    <div class="card" style="margin:0">${log.map(l => `<div class="kv"><span>${l}</span></div>`).join('')}</div>
-    <div style="font-size:15px">${place === 3 ? `<b style="color:var(--gold)">${h.name}奪冠了！</b>` : `${h.name}${['首輪淘汰', '止步四強', '拿下亞軍'][place]}。冠軍：${champ.ag ? champ.ag + '的' : ''}${champ.n}`}</div>
-    <div class="k" style="font-size:12.5px">名聲 +${fame}${place === 3 ? '，獎金入帳' : ''}</div>`);
+  if (!offline) tourPop(y, log, place, champ, fame);
 }
 // ================= v9：年度勇者大賞 =================
 function yearAwards(){
@@ -1449,10 +1456,10 @@ function yearAwards(){
   ev(won ? 'good' : harsh ? 'bad' : 'warn', '年度大賞', nom ? `第 ${Y} 年勇者大賞：你的事務所拿下 ${won} 座${harsh ? '，還被選為「年度最操事務所」' : ''}` : `第 ${Y} 年勇者大賞：事務所還沒打進地方圈，沒有入圍${harsh ? '，卻被選為「年度最操事務所」' : ''}`);
   news('', `第 ${Y} 年勇者大賞揭曉`);
   if (!offline && (nom || harsh)) { say(harsh ? pickS(['「最操事務所」……老闆，大家都知道了喔', '被頒這種獎，我出門都不好意思']) : won >= 2 ? pickS(['今年真的是我們的一年！', '拿了好多獎，好不真實']) : won ? '有拿到獎，真好' : pickS(['今年什麼都沒拿到……', '明年再來吧']));
-    openPop(`<div class="k" style="font-size:12px">第 ${Y} 年 · 年底</div><div class="px" style="font-size:24px">年度勇者大賞</div>
-      ${nom ? '' : '<div class="k" style="font-size:12.5px">事務所升到「地方」階段才會入圍</div>'}
-      <div class="card" style="margin:0">${aw.map(a => `<div class="kv" style="padding:5px 0"><span>${a[0]}</span><b class="dg ${a[1] ? (a[3] ? 'r' : 'g') : ''}" style="font-weight:500">${a[2]}</b></div>`).join('')}</div>
-      <div class="k" style="font-size:12.5px">這一年：委託 ${y.mis} 件、事務所任務 ${y.ag} 件、通告 ${y.show} 次、重傷 ${y.hurt} 次、平均心情 ${Math.round(am)}、平均倦怠 ${Math.round(ab)}</div>`); }
+    openPop(`${nom ? '' : '<div class="f14 mu">事務所升到「地方」階段才會入圍</div>'}
+      ${pList(aw.map(a => `<div class="prw">${a[1] && a[3] ? IC('驚嘆', 2) : IC('代表作', 2, !a[1])}<div>${esc(a[0])}</div><b class="${a[1] ? (a[3] ? 'cr' : 'cg') : 'mu'}">${esc(a[2])}</b></div>`))}
+      ${pSec('排程', '這一年')}<div class="ptls">${[['任務', y.mis, '委託'], ['事務所', y.ag, '事務所任務'], ['跟拍', y.show, '通告'], ['生病', y.hurt, '重傷'], ['心情', Math.round(am), '平均心情'], ['壓力', Math.round(ab), '平均倦怠']].map(([ic, v, n]) => pTile(IC(ic, 2), `<b>${v}</b>`, TIPA(ic, n, `這一年${n}：${v}`))).join('')}</div>`,
+      `第 ${Y} 年勇者大賞`, '代表作'); }
   S.yr = null;
 }
 // ================= v9：對手事務所 =================
@@ -1492,27 +1499,34 @@ function rvCounter(i, k){
   renderAll();
 }
 // ================= v9：回來時的摘要 =================
-function openPop(html){
-  $('mBox').innerHTML = `<div style="width:40px;height:4px;border-radius:2px;background:#8a6a46;align-self:center"></div>${html}<button class="btn" id="popOk" style="min-height:46px">知道了</button>`;
+// v17.84 新版（design-wip design/ui/草圖_離線摘要.png）：標題列（圖示＋標題＋叉叉）＋內容＋「知道了」；plain＝知道了不是金色（框裡另有要按的）
+function openPop(html, t = '', ic = '時間', plain){
+  $('mBox').innerHTML = `<div class="mh">${ic.startsWith('<') ? ic : IC(ic, 2)}<b>${t}</b><span class="rsp"></span><button class="pb mx" id="popX" aria-label="關閉">✕</button></div>
+    <div class="mbd ppop">${html}<button class="pb ${plain ? 'pl ' : 'au '}mgo" id="popOk">${IC('打勾', 2)}<b>知道了</b></button></div>`;
   $('mission').classList.add('on'); S.paused = true;
-  $('popOk').onclick = closeMission; $('mission').onclick = e => { if (e.target.id === 'mission') closeMission(); };
+  $('popOk').onclick = $('popX').onclick = closeMission; $('mission').onclick = e => { if (e.target.id === 'mission') closeMission(); };
 }
+const pDl = (v, u = '') => { v = Math.round(v); return `<b class="${v > 0 ? 'cg' : v < 0 ? 'cr' : 'mu'}">${v > 0 ? '+' : ''}${fmt(v)}${u}</b>`; };
+const pTile = (ich, val, tip = '', cls = '') => `<span class="pb ptl${cls}"${tip}>${ich}${val}</span>`;
+const pSec = (ic, t) => `<div class="psec f16 mu">${IC(ic, 2)}<b>${t}</b></div>`;
+const pList = rows => `<div class="pb plst">${rows.join('')}</div>`;
+const pSay = (n, t) => `<div class="msay">${n ? `<span class="mfc s">${pimg(n)}</span>` : ''}<div class="pb ns mbub f16">${esc(t)}</div></div>`;
 function snapOf(){ const h = H(); return { day:S.day, gold:S.gold, fame:S.fame, lv:h.lv, wallet:h.wallet, mood:h.mood, trust:h.trust, health:h.health, n:S.msgs.length, nw:(S.news || []).length, name:h.name, gen:S.gen }; }
 function showSummary(a){
   const h = H(), b = snapOf(); if (b.gen !== a.gen || ['dead', 'retired', 'left'].includes(h.act)) return;
   const months = b.day - a.day; if (months < 1) return;
   const evs = S.msgs.filter(m => m.d >= a.day && m.k.startsWith('ev') && m.g !== '村子' && m.g !== '日記').slice(-7);
   const nws = (S.news || []).slice(a.nw).slice(-3);
-  const dlt = (v, u = '') => `<b class="dg ${v > 0 ? 'g' : v < 0 ? 'r' : ''}">${v > 0 ? '+' : ''}${fmt(Math.round(v))}${u}</b>`;
   const greet = h.trust > 70 ? (h.mood > 60 ? `老闆你回來啦！${pickS(['我有乖乖工作喔', '有好多事想跟你說', '等你好久了'])}` : '你回來了……最近有點累') : h.trust < 35 ? pickS(['喔，你還記得我啊', '……回來了喔']) : h.mood > 60 ? pickS(['回來啦，一切都好', '你不在的時候也還行啦']) : '你回來了。最近不太順';
-  openPop(`<div class="k" style="font-size:12px">你不在的這段時間</div><div class="px" style="font-size:22px">過了 ${months} 個月</div>
-    <div class="say"><div class="av" style="width:40px;height:40px"><canvas id="sface" width="20" height="20" style="width:28px;height:28px;image-rendering:pixelated"></canvas></div><div class="m">${esc(greet)}</div></div>
-    <div class="card" style="margin:0"><div class="kv"><span>金庫</span>${dlt(b.gold - a.gold, ' 金')}</div><div class="kv"><span>名聲</span>${dlt(b.fame - a.fame)}</div>
-      ${b.lv > a.lv ? `<div class="kv"><span>等級</span><b class="dg g">Lv${a.lv} → Lv${b.lv}</b></div>` : ''}<div class="kv"><span>${h.name}的錢包</span>${dlt(b.wallet - a.wallet, ' 金')}</div>
-      <div class="kv"><span>心情</span>${dlt(b.mood - a.mood)}</div><div class="kv"><span>信任</span>${dlt(b.trust - a.trust)}</div></div>
-    ${evs.length ? `<div class="sec" style="margin:0">發生的事</div><div class="card" style="margin:0">${evs.map(m => `<div class="kv"><span><b style="font-weight:500">${esc(m.g)}</b>　${esc(m.t)}</span></div>`).join('')}</div>` : ''}
-    ${nws.length ? `<div class="sec" style="margin:0">村子裡</div><div class="card" style="margin:0">${nws.map(x => `<div class="kv"><span>${esc(x.t)}</span></div>`).join('')}</div>` : ''}`);
-  drawFace($('sface'));
+  const gd = m => /good/.test(m.k), tiles = [
+    pTile(IC('金幣', 2), pDl(b.gold - a.gold), TIPA('金幣', '金庫', '事務所的錢')), pTile(IC('名聲', 2), pDl(b.fame - a.fame), TIPA('名聲')),
+    pTile(`<span class="pwl">${pimg(h)}${IC('金幣', 1)}</span>`, pDl(b.wallet - a.wallet), TIPA('金幣', `${h.name}的錢包`, `${h.name}自己的錢`)),
+    pTile(IC('心情', 2), pDl(b.mood - a.mood), TIPA('心情')), pTile(IC('信任', 2), pDl(b.trust - a.trust), TIPA('信任'))];
+  if (b.lv > a.lv) tiles.push(pTile(IC('經驗', 2), `<b class="cg f16">Lv${a.lv}→Lv${b.lv}</b>`, TIPA('經驗', '升級', `從 Lv${a.lv} 升到 Lv${b.lv}`)));
+  openPop(`${pSay(h, greet)}<div class="ptls">${tiles.join('')}</div>
+    ${evs.length ? pSec('驚嘆', '發生的事') + pList(evs.map(m => `<div class="prw tp">${IC(gd(m) ? '打勾' : '驚嘆', 2)}<div><b class="${gd(m) ? 'cg' : 'co'}">${esc(m.g)}</b><div>${esc(m.t)}</div></div></div>`)) : ''}
+    ${nws.length ? pSec('近況', '村子裡') + pList(nws.map(x => `<div class="prw">${esc(x.t)}</div>`)) : ''}`,
+    `過了 ${months} 個月`, `<span${TIPA('時間', '你不在的這段時間', `過了 ${months} 個月`)}>${IC('時間', 2)}</span>`);
 }
 // ================= v14：必做的事（年度配額、代言合約、升格考核、王國徵召） =================
 const quotaNeed = () => 3 + stageOf();   // v16：2＋階段（階段從 1 算起）
@@ -1603,19 +1617,6 @@ function friendVisit(){
   const gift = n => ({ tavern:'一鍋燉肉', smith:'修好的護具', priest:'祝福', guild:'公會的慰問金', mayor:'村裡的慰問品', reporter:'一疊報紙', fan:'自己畫的畫', merc:'一瓶烈酒', elder:'當年的故事', rival2:'一籃水果' })[n.role] || pick(['自己做的點心', '一束花', '一籃水果']);
   ev('good', '探病', fr.map(n => `${n.name}帶了${gift(n)}`).join('、') + `來看${h.name}${pr ? '（修女的祝福讓傷好得快一點）' : ''}`);
   say(fr.length >= 3 ? '大家都來了……原來我不是一個人' : `${fr[0].name}來看我了，好開心`);
-}
-function npcCard(n){
-  const h = H(), tags = [`${Math.floor(n.age || 30)} 歲`];
-  if ((n.sick || 0) > S.day) tags.push('<span class="dg r">生病中</span>');
-  const m = n.mate && npc(n.mate); if (m && m.alive) tags.push(n.wed ? `和${m.name}結婚了` : `和${m.name}交往中`);
-  if (n.kids) tags.push('有小孩');
-  if (n.owe) tags.push(`欠${h.name} ${n.owe.g} 金`);
-  if (canComp(n)) tags.push(`<span class="dg g">可同行 +${Math.round(n.pw * 100)}%</span>`);
-  const tr = (n.treat ?? -9) + 3 <= S.day, can = !n.dark && n.role !== 'rival';
-  return `<div class="card" style="padding:8px 12px"><div class="row"><span style="min-width:0"><b>${n.name}</b> <span class="k" style="font-size:12px">${n.title}</span></span><span class="dg ${n.role === 'rival' ? 'o' : n.aff >= 50 ? 'g' : ''}" style="font-size:12.5px;flex:none">${relWord(n)}</span></div>
-    ${n.role === 'rival' ? '' : `<div style="height:4px;background:#c9a466;border-radius:2px;margin:5px 0 4px;overflow:hidden"><i style="display:block;height:4px;background:${n.aff >= 50 ? 'var(--green)' : '#8b93a7'};width:${Math.round(n.aff)}%"></i></div>`}
-    <div class="k" style="font-size:12px">${tags.join(' · ')}</div>
-    <div class="row" style="margin-top:4px;gap:8px;align-items:center"><span class="k" style="font-size:12px;min-width:0">${ROLE_FX[n.role] || ''}</span>${can ? `<button class="btn" data-treat="${n.id}" ${tr && S.gold >= 30 ? '' : 'disabled'} style="flex:none;min-height:34px;padding:4px 10px">${tr ? '請客 30' : '剛請過'}</button>` : ''}</div></div>`;
 }
 function memLine(){
   const h = H(); const old = h.mem.filter(m => S.day - m.d >= 3); if (!old.length) return null;

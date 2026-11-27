@@ -464,7 +464,7 @@ function mapClick(x, y){
 function openNpcPop(id){
   const n = npc(id); if (!n || !n.alive) return;
   const h = H(), line = n.aff >= 50 ? pickS([`「${h.name}最近好嗎？」`, '「有空來坐坐啊」', '「別太勉強自己喔」']) : n.aff >= 25 ? pickS(['「喔，是你啊」', '「今天天氣不錯」']) : pickS(['「……你哪位？」', '「有事嗎？」']);
-  openPop(`${npcCard(n)}<div class="k" style="font-size:13px">${n.name}：${line}</div>`);
+  openPop(`${npcBody(n)}${pSay(null, line.replace(/[「」]/g, ''))}`, '路上遇到', '人際', 1);
   $('mBox').querySelectorAll('[data-treat]').forEach(b => b.onclick = () => { if (S.gold < 30) return; S.gold -= 30; n.treat = S.day; affAdd(n.id, 4); toast(`${h.name}和${n.name}吃了頓飯`); closeMission(); renderAll(); });
 }
 // 每天：地圖上的事
@@ -527,12 +527,12 @@ function openCaravan(){
   const mt = S.mt, c = mt && mt.caravan; if (!c) return; const h = H();
   const items = [['pots', '遠方的藥水 ×3', 120], ['boost', '力量藥劑（戰力永久 +5%）', 900 + rkx() * 300]];
   if (c.t && TREASURES[c.t] && !h.charms.includes(c.t)) items.push(['charm', `${TREASURES[c.t].n}（${TREASURES[c.t].d}）`, 2500 + rkx() * 600]);
-  openPop(`<div class="k" style="font-size:12px">遠方來的商隊（再 ${Math.max(0, c.until - S.day)} 個月就走）</div><div class="px" style="font-size:22px">商隊</div>
-    ${items.map(([k, n, p]) => `<div class="card" style="margin:0"><div class="row"><span style="min-width:0">${n}</span><button class="btn" data-buy="${k}" data-p="${p}" ${S.gold < p || (k === 'charm' && h.charms.length >= CHARM_MAX) ? 'disabled' : ''} style="flex:none">${fmt(p)}</button></div>${k === 'charm' && h.charms.length >= CHARM_MAX ? `<div class="k" style="font-size:11.5px">${h.name}身上帶不下了</div>` : ''}</div>`).join('')}
-    <div class="k" style="font-size:12px">用事務所的錢買給${h.name}</div>`);
+  openPop(`<div class="pst f16">${IC('時間', 2)}<b>再 ${Math.max(0, c.until - S.day)} 月就走</b></div>
+    ${items.map(([k, n, p]) => { const full = k === 'charm' && h.charms.length >= CHARM_MAX; return `<div class="pb pit"><span class="pitn">${IC(k === 'charm' ? '寶物' : k === 'boost' ? '戰力' : '照顧', 2)}<b class="f16">${esc(n)}</b></span>${priceBtn(`data-buy="${k}" data-p="${p}"`, p, S.gold < p || full, full ? '帶不下了' : '')}</div>`; }).join('')}
+    <div class="f14 mu">用事務所的錢買給${esc(h.name)}</div>`, '商隊', '商隊', 1);
   $('mBox').querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const k = b.dataset.buy, p = +b.dataset.p; if (S.gold < p) return; S.gold -= p;
     if (k === 'pots') h.pots += 3; if (k === 'boost') { h.boost = (h.boost || 0) + .05; } if (k === 'charm') { h.charms.push(c.t); c.t = null; }
-    ev('good', '商隊', `你在商隊買了${b.parentElement.querySelector('span').textContent.split('（')[0]}給${h.name}`); closeMission(); openCaravan(); renderAll(); });
+    ev('good', '商隊', `你在商隊買了${b.closest('.pit').querySelector('.pitn b').textContent.split('（')[0]}給${h.name}`); closeMission(); openCaravan(); renderAll(); });
 }
 
 // ================= v17：角色造型（粗描邊平塗 Q 版，24×32；大頭貼＝上半身特寫） =================
@@ -1542,7 +1542,7 @@ function tourApply(pl){
   if (hurt) { injure(hurt[0], hurt[1]); if (hurt[0] === 'light') setAct('rest'); }
   const rk = 1 + rkx() * .3, fame = Math.round([5, 15, 35, 80][place] * rk);
   addFame(fame); yr().tour = place;
-  if (place === 3) { const g = 600 + rkx() * 400; S.gold += g; h.wallet += Math.round(g * .2); adj('mood', 30); adj('trust', 8); remember('champ'); logLife(`第 ${y} 年武鬥大會冠軍`); wishHook('hero');
+  if (place === 3) { const g = 600 + rkx() * 400; TOUR_G = g; S.gold += g; h.wallet += Math.round(g * .2); adj('mood', 30); adj('trust', 8); remember('champ'); logLife(`第 ${y} 年武鬥大會冠軍`); wishHook('hero');
     if (S.tourBet) { S.gold += S.tourBet * 4; ev('good', '賭注', `你押的 ${fmt(S.tourBet)} 金變成 ${fmt(S.tourBet * 4)} 金`); }
     ev('good', '武鬥大會', `${h.name}拿下第 ${y} 年武鬥大會冠軍！獎金 ${fmt(g)} 金，名聲 +${fame}`); if (!offline) say(L('tChamp')); }
   else { if (place === 2) { S.gold += 200 + rkx() * 120; logLife(`第 ${y} 年武鬥大會亞軍`); } adj('mood', place >= 2 ? 5 : -8);
@@ -1551,10 +1551,7 @@ function tourApply(pl){
   S.tourBet = 0;
   S.tHist = S.tHist || []; S.tHist.push({ y, place, champ:(champ.ag ? champ.ag + '的' : '') + champ.n, me:place === 3, hero:h.name });
   news('good', `第 ${y} 年武鬥大會由${champ.me ? h.name : (champ.ag ? champ.ag + '的' : '') + champ.n}奪冠`);
-  if (!offline) openPop(`<div class="k" style="font-size:12px">第 ${y} 年 · 秋季</div><div class="px" style="font-size:24px">武鬥大會</div>
-    <div class="card" style="margin:0">${log.map(l => `<div class="kv"><span>${l}</span></div>`).join('')}</div>
-    <div style="font-size:15px">${place === 3 ? `<b style="color:var(--gold)">${h.name}奪冠了！</b>` : `${h.name}${['首輪淘汰', '止步四強', '拿下亞軍'][place]}。冠軍：${champ.ag ? champ.ag + '的' : ''}${champ.n}`}</div>
-    <div class="k" style="font-size:12.5px">名聲 +${fame}${place === 3 ? '，獎金入帳' : ''}</div>`);
+  if (!offline) tourPop(y, log, place, champ, fame);
 }
 
 // ---- v17.11：長路的畫法 ----
