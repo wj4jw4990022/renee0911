@@ -1990,7 +1990,7 @@ const TALK = [
       if (h.trait === 'hot' || h.trait === 'brave' || hasP(h, 'glass') || hx(h, 'A') < .4) { adj('trust', -8); say(L('scoldAngry')); } else { adj('trust', -2); say(L('scoldSorry')); } } },
   { k:'drink', n:'請喝一杯', cost:80, f(){ const h = H(), m = (1 + (S.office.cellar || 0) * .4) * (S.day - (h.lastDrink ?? -99) < 6 ? .4 : 1); h.lastDrink = S.day; S.gold -= 80; adj('mood', 15 * m * (1 + dw(h, 'eating') * .5)); adj('stress', -15 * m); adj('trust', 6 * m); affAdd('tao', 5); wishHook('drink');
       const tao = npc('tao'); if (tao && tao.alive && tao.grumpy) { adj('mood', -4); ev('warn', '臭臉', '阿桃今天擺臭臉，好像剛被前一桌客人罵過'); } if (h.wish && h.wish.k === 'drink') h.wish.p = 1; say(L('drinkCheers')); } },
-  { k:'meal', n:'一起吃飯', cost:50, more:1, f(){ const h = H(); S.gold -= 50; adj('mood', 6 + dw(h, 'social') * 3 + dw(h, 'eating') * 3); adj('stress', -6); adj('trust', 2);
+  { k:'meal', n:'一起吃飯', cost:50, more:1, f(){ const h = H(); h.lastMeal = S.day; S.gold -= 50; adj('mood', 6 + dw(h, 'social') * 3 + dw(h, 'eating') * 3); adj('stress', -6); adj('trust', 2);
       say(pickS(['這家的滷肉飯好好吃', '跟老闆一起吃飯，好像家人一樣', '你請客喔？那我要加點', '吃飽了，心情也好了'])); } },
   { k:'heart', n:'聊心事', more:1, f(){ const h = H();
       if (h.trust < 30) { adj('trust', 1); say(pickS(['……沒什麼好說的', '我們沒那麼熟吧', '……改天吧'])); return; }

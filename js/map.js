@@ -57,6 +57,7 @@ function isoPlace(b, name){ const B = ART.bld[name], cx = b.x + (b.k === 'statio
   b.path = ['gate', 'stage', 'telepad'].includes(b.k) || B.door === B.ax ? 0 : Math.max(0, V_BASE - b.dy);   // 門前小路往右下延伸到人行道
   b.door = Math.round(b.dx + b.path * 2); if (b.k !== 'house') VD[b.k] = b.door; }
 VSLOTS.forEach(b => { if (b.k !== 'house') VD[b.k] = b.door; });
+{ const b = VSLOTS.find(b => b.k === 'house' && b.i === 0); if (b) VD.shop = b.door; }   // v17.87：逛街＝第一間民宅（有村民開店時是店面）
 // ================= v17.11：一條長路（村子在最左邊，村口在右端直接接著野外） =================
 // 村子和野外共用同一條橫軸。勇者「在村子裡」時，模擬座標就停在村口（GX, GY）；x 超過村口就是在野外。
 const GX = VD.gate, GY = V_WALK;
@@ -90,6 +91,7 @@ function vilGoal(h){
   if (tourRound() >= 0) return ['arena', 0];   // 武鬥大會
   if (sleeping()) return h.act === 'drink' ? ['tavern', 1] : ['home', 1];
   if (h.act === 'bed') return ['clinic', 1];
+  { const z = lzNow(h); if (z) return z; }   // v17.87：收工後的休閒
   if (h.act === 'slack') return ['home', 1];
   if (h.act === 'home') return ['home', hr >= 20 ? 1 : 0];
   if (h.act === 'drink') return ['tavern', hr >= 19 ? 1 : 0];
@@ -155,6 +157,82 @@ function vilTick(dt, now){
 // 狀態字：要進屋的事（睡覺、喝酒、看病）在勇者還沒進門前寫「回家中」「走去酒館」
 function vWalkTxt(h){ if (offline || heroMap(h) !== 'vil' || V.x == null || V.exiting) return ''; const g = vilGoal(h); if (!g || !g[1] || V.inside === g[0]) return '';
   return { home:'回家中', tavern:'走去酒館', clinic:'走去診所' }[g[0]] || '走去' + ((VSLOTS.find(b => b.k === g[0]) || {}).n || ''); }
+
+// ================= v17.87：收工後的休閒（開發者 11/27：勇者自己決定；你「請喝一杯」「一起吃飯」那晚就跟你去） =================
+// 收工後到 22:30，一晚選一件；花他自己的錢包；22:00 結算（早點睡隔天早上才加體力）。離線補跑時不演也不算。
+const LZ = {
+  chat:  { n:'找朋友聊天',   g:['stage', 0], txt:z => `和${z.nm}聊天` },
+  date:  { n:'約會',         g:['stage', 0], txt:z => `和${z.nm}約會` },
+  drink: { n:'自己去喝一杯', g:['tavern', 1], txt:() => '在酒館喝一杯' },
+  tchat: { n:'在酒館聊天',   g:['tavern', 1], txt:z => `在酒館和${z.nm}聊天` },
+  walk:  { n:'散步',         g:['stage', 0], txt:() => '在廣場散步' },
+  fish:  { n:'釣魚',         g:null,         txt:() => '釣魚' },   // 池塘草圖確定後才開（LZ_OFF）
+  shop:  { n:'逛街',         g:['shop', 0],  txt:() => '逛街買東西' },
+  train: { n:'自主練習',     g:['arena', 0], txt:() => '在鬥技場自主練習' },
+  read:  { n:'看書',         g:['home', 1],  txt:() => '在家看書' },
+  sleep: { n:'早點睡',       g:['home', 1],  txt:() => '累了，早點睡' },
+  boss:  { n:'和老闆出去',   g:['tavern', 1], txt:z => z.meal ? '和老闆一起吃飯' : '和老闆喝一杯' },
+};
+const LZ_OFF = { fish:1 };
+const LZ_SAY = { chat:['今天跟朋友聊了好多', '工作完聊個天真放鬆'], date:['今晚約會！', '嘿嘿，今天約好了'], drink:['今天想自己喝一杯', '來一杯就回家'], tchat:['酒館今天好熱鬧'],
+  walk:['去廣場走走', '晚上的噴水池很漂亮'], shop:['去逛逛有什麼新東西', '想買點東西犒賞自己'], train:['再練一下！', '今天的動作還不夠好'], read:['今天在家看書', '這本書好好看'], sleep:['好累……先睡了', '今天早點睡'] };
+// 現在是不是收工後的空檔（人在村子裡、22:30 前）
+function lzFree(h){ const hr = hourOf();
+  if (offline || hr >= 22.5 || hr < 12 || heroMapRaw(h) !== 'vil' || h.jailed || (h.bedDays || 0) > 0) return false;
+  if (h.act === 'mission' && h.mission) { const o = h.mission, k = mKind(o); if (!k || o.ug) return false;
+    return k === 'slot' ? mPhase(h) === 'free' && hr >= mWin(o)[1] : mPhase(h) === 'home'; }
+  return ['idle', 'home', 'rest'].includes(h.act) && hr >= 17.5; }
+const lzBoss = h => h.lastDrink === S.day ? { meal:0 } : h.lastMeal === S.day ? { meal:1 } : null;
+// 照個性、心情、錢包挑一件
+function lzPick(h){
+  const X = hx(h, 'X'), O = hx(h, 'O'), C = hx(h, 'C'), w = h.wallet || 0, ok = n => n && n.alive && !n.dark && !['rival', 'rival2'].includes(n.role) && !((n.sick || 0) > S.day);
+  if (h.sta < 25) return { k:'sleep' };
+  const pt = h.partner && npc(h.partner), fr = S.npcs.filter(n => ok(n) && n.aff >= 50 && n.id !== h.partner), any = S.npcs.filter(ok);
+  const W = { chat:fr.length ? .5 + X * 1.5 + (hasP(h, 'social') ? .5 : 0) + dw(h, 'social') : 0,
+    date:ok(pt) && w >= 20 ? 1.2 + dw(h, 'romance') : 0,
+    drink:w >= 30 ? .3 + (hasP(h, 'drinker') ? 1.5 : 0) + (h.mood < 35 ? .8 : 0) + (h.stress > 60 ? .6 : 0) : 0,
+    tchat:w >= 15 && any.length ? .3 + X : 0, walk:.5 + (1 - X) * .6 + (h.trait === 'calm' ? .4 : 0),
+    fish:.3 + (1 - X) * .5 + (h.trait === 'lazy' ? .4 : 0), shop:w >= 60 && h.trait !== 'greedy' ? .3 + (h.goal === 'seiko' ? 1 : 0) : 0,
+    train:h.sta >= 40 ? .2 + C * .8 + (h.trait === 'hot' ? .4 : 0) + dw(h, 'status') * .5 : 0, read:.3 + (1 - X) * .5 + O * .5, sleep:h.sta < 45 ? .8 : .15 };
+  Object.keys(LZ_OFF).forEach(k => W[k] = 0);
+  let r = Math.random() * Object.values(W).reduce((a, b) => a + b, 0), k = 'walk';
+  for (const [kk, v] of Object.entries(W)) { r -= v; if (v > 0 && r <= 0) { k = kk; break; } }
+  const who = k === 'chat' ? pick(fr) : k === 'date' ? pt : k === 'tchat' ? pick(any) : null;
+  return { k, id:who ? who.id : null, nm:who ? who.name : '' };
+}
+// 每一格：挑活動、22:00 結算、隔天早上加減體力
+function lzTick(h, hr){
+  if (h.lzNext && h.lzNext.day < S.day && hr >= 6.5) { adj('sta', h.lzNext.v); h.lzNext = null; }
+  if (S.lz && S.lz.day !== S.day) S.lz = null;
+  if (!S.lz) { if (!lzFree(h)) return; const b = lzBoss(h);
+    S.lz = b ? { day:S.day, k:'boss', meal:b.meal } : { day:S.day, ...lzPick(h) };
+    if (S.lz.k === 'sleep') { h.lzNext = { day:S.day, v:10 }; S.lz.done = 1; }
+    if (LZ_SAY[S.lz.k] && chance(.35)) say(pick(LZ_SAY[S.lz.k]));
+    return; }
+  const z = S.lz; if (z.done) return;
+  if (z.k !== 'boss') { const b = lzBoss(h); if (b) { z.k = 'boss'; z.meal = b.meal; return; } }   // 玩家晚上才約：那晚改跟你去
+  if (hr < 22 || z.k === 'boss') { if (z.k === 'boss' && hr >= 22) z.done = 1; return; }
+  z.done = 1; if (offline) return; const pay = v => { const c = Math.min(h.wallet || 0, v); h.wallet -= c; };
+  switch (z.k) {
+    case 'chat': adj('mood', 4); adj('stress', -4); affAdd(z.id, 3); break;
+    case 'date': adj('mood', 8); adj('stress', -6); affAdd(z.id, 4); pay(20); break;
+    case 'drink': adj('mood', 6); adj('stress', -8); pay(30); if (hasP(h, 'drinker') && chance(.5)) { h.lzNext = { day:S.day, v:-10 }; if (chance(.5)) say('……好像喝太多了'); } break;
+    case 'tchat': adj('mood', 3); affAdd(z.id, 2); pay(15); break;
+    case 'walk': adj('stress', -5); break;
+    case 'fish': adj('stress', -6); if (chance(.2)) { const g = ri(10, 40); h.wallet += g; say(`釣到大魚！賣了 ${g} 金`); } break;
+    case 'shop': adj('mood', 5); pay(ri(20, 60)); break;
+    case 'train': gainExp(2); adj('sta', -5); adj('stress', 2); break;
+    case 'read': adj('stress', -4); if (hx(h, 'O') >= .6) adj('mood', 3); break;
+  }
+}
+const lzOn = h => S.lz && S.lz.day === S.day && !S.lz.gone && lzFree(h) ? S.lz : null;
+function lzNow(h){ const z = lzOn(h); if (!z) return null; return z.k === 'boss' ? ['tavern', 1] : LZ[z.k].g; }
+function lzTxt(h){ const z = lzOn(h); return z ? LZ[z.k].txt(z) : ''; }
+const lzAt = (h, k) => { const z = lzOn(h); return z && z.k === k && heroMap(h) === 'vil' && V.x != null && !V.mv && !V.inside && Math.abs(V.x - VD[LZ[k].g[0]]) < 4; };
+// 聊天、約會：朋友站在勇者右邊，兩人頭上輪流冒泡泡
+function lzGuest(now){ const h = H(); for (const k of ['chat', 'date']) { if (!lzAt(h, k)) continue; const n = npc(S.lz.id); if (!n || !n.alive) return;
+  const x = V.x + 16; V.left = false; drawSprite(ctx, n, x, V_WALK, false, now, { moving:false, left:true });
+  const t = Math.floor(now / 1600) % 2; emoAt(k === 'date' ? '戀愛' : t ? '開心' : '想到了', t ? x : V.x, V_WALK - 22, now); } }
 // 鏡頭：村子永遠讓整條街的高度剛好塞滿畫面，左右跟著勇者（或玩家滑到的地方）
 function vilCam(h, hm, now){
   const z = SH / VH, panning = V.drag || (V.pan != null && now - V.panT < 3500);
@@ -189,7 +267,7 @@ function drawVillage(now){
     const label = b.k === 'telepad' && !teleOpen() ? '傳送陣預定地' : b.k === 'home' ? `${h.name}${h.married ? '家' : '的家'}` : sh ? sh.shop.slice(0, 4) : b.k === 'house' ? '' : b.n;
     if (label) nameTag(ctx, label, x + w / 2, y - 3, b.k === 'office' || b.k === 'home' ? 'hero' : 'npc');
     if (sh) vilHits.push({ r:b.r, k:'npc', id:sh.id }); else if (b.k !== 'house') vilHits.push({ r:b.r, k:b.k }); });
-  drawVilShow(now); drawTourShow(now); if (H().act === 'train') arenaShow(now, 'train'); if (H().act === 'strike' || H().act === 'side') plazaShow(now, H().act); drawVilGuests(now); drawEpisode(now);
+  drawVilShow(now); drawTourShow(now); if (H().act === 'train' || lzAt(H(), 'train')) arenaShow(now, 'train'); if (H().act === 'strike' || H().act === 'side') plazaShow(now, H().act); drawVilGuests(now); drawEpisode(now);
   drawVilEnd(now);   // v17.17：左端的河、橋、小山
   // 村民：各自在工作的地方附近，偶爾去別棟；晚上去酒館
   const WORK = { tavern:'tavern', smith:'smith', guild:'guild', priest:'temple', mayor:'mayor', reporter:'stage', fan:'office', merc:'guild', elder:'temple' };
@@ -1450,7 +1528,7 @@ function rPerson(n, x, y, flip, tint, hop){ if (!ART.room || !ART.room[n]) retur
 // 現在勇者是不是在鬥技場打（走到了才算）
 function arenaMode(h){ if (heroMap(h) !== 'vil' || V.inside || V.mv || V.x == null) return null;
   const k = tourRound(); if (k >= 0) { const hr = hourOf(), mm = S.tourShow.pl.my[k]; return { kind:'tour', fight:!!mm && hr >= tR(k) && hr < tR(k) + 2 }; }
-  if (h.act === 'train') return { kind:'train', fight:true };
+  if (h.act === 'train' || lzAt(h, 'train')) return { kind:'train', fight:true };
   if (h.act === 'mission' && h.mission && h.mission.ag === 'arena' && mPhase(h) === 'slot') return { kind:'arena', fight:true };
   return null; }
 // 一回合：對打 1.2 秒、特訓 1 秒；r＝第幾回合（單數回合對手回擊）
@@ -1531,9 +1609,10 @@ function drawVilGuests(now){
     if (w && w.alive) { const x = VD.gate + 20; drawSprite(ctx, w, x, 146, false, now, { moving:false, left:true }); if (heroMap(h) === 'vil' && V.x != null && Math.abs(V.x - x) < 50) pxSay(x, 112, '歡迎回來！'); }
     const t = S.thank && S.thank.day === S.day && hr >= 18.5 && hr < 22 ? npc(S.thank.id) : null;
     if (t && t.alive) { const x = VD.home + 18; drawSprite(ctx, t, x, 140, false, now, { moving:false, left:true }); pxSay(x, 106, '謝謝你！'); }
+    lzGuest(now);
   } catch (e) { if (!scnErr++) console.error(e); }
 }
-const guestIds = () => { const hr = hourOf(), a = EPC ? [EPC.npc] : []; if (S.welcome && S.welcome.day === S.day && hr < 20) a.push(S.welcome.id); if (S.thank && S.thank.day === S.day && hr >= 18.5 && hr < 22) a.push(S.thank.id); return a; };
+const guestIds = () => { const hr = hourOf(), a = EPC ? [EPC.npc] : []; if (S.welcome && S.welcome.day === S.day && hr < 20) a.push(S.welcome.id); if (S.thank && S.thank.day === S.day && hr >= 18.5 && hr < 22) a.push(S.thank.id); { const z = lzOn(H()); if (z && (z.k === 'chat' || z.k === 'date') && z.id) a.push(z.id); } return a; };
 
 // 武鬥大會打完才公布（內容和原本的 runTour 後半段一樣）
 function tourApply(pl){

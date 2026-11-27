@@ -109,7 +109,7 @@ function renderTop(){
   setH($('bSpeed'), IC('快轉', 2) + (sp ? `<small>${sp}</small>` : '')); setH($('bPause'), IC(S.paused ? '播放' : '暫停', 2)); $('bPause').classList.toggle('on', !!S.paused);
   $('hname').textContent = h.name;
   $('hsub').textContent = `Lv${h.lv}`;
-  let at0 = (tourRound() >= 0 ? tourTxt() : vCarry() ? '受傷了，被擡回村子' : legTxt(h) ? legTxt(h) : vWalkTxt(h) ? vWalkTxt(h) : mPhase(h) && mPhase(h) !== 'work' && mPhase(h) !== 'slot' ? mTxt(h) : sleeping() ? (h.act === 'drink' ? '喝醉了，在酒館趴著睡' : '在家睡覺') : hourOf() >= 18.5 && ['idle', 'home'].includes(h.act) ? '晚上在村子裡放鬆' : hourOf() < 7 && h.act === 'hunt' ? '準備出門' : ACT_TXT(h));
+  let at0 = (tourRound() >= 0 ? tourTxt() : vCarry() ? '受傷了，被擡回村子' : legTxt(h) ? legTxt(h) : vWalkTxt(h) ? vWalkTxt(h) : lzTxt(h) ? lzTxt(h) : mPhase(h) && mPhase(h) !== 'work' && mPhase(h) !== 'slot' ? mTxt(h) : sleeping() ? (h.act === 'drink' ? '喝醉了，在酒館趴著睡' : '在家睡覺') : hourOf() >= 18.5 && ['idle', 'home'].includes(h.act) ? '晚上在村子裡放鬆' : hourOf() < 7 && h.act === 'hunt' ? '準備出門' : ACT_TXT(h));
   if (mPhase(h) === 'work' && SCN && !SCN.off) at0 += ' · ' + scnCnt();   // v17.9：進度數字
   { const z = h.act === 'hunt' && h.zone >= 0 ? h.zone : -1, m = h.act === 'mission' && h.mission ? h.mission : null, at = at0; let extra = '';
     if (z >= 0) { const d = danger(ratio(h, zD(z))); extra = ` · <span class="dg ${d.k}">${d.n}</span>`; }
@@ -228,7 +228,7 @@ function relIcons(n){ const k = relKind(n);
   if (k === 'love') return IC('戀人', 2); if (k === 'rival') return IC('對手', 2); if (k === 'dark') return IC('空心', 2);
   const f = +k[1]; return [0, 1, 2].map(i => IC(i < f ? '心情' : '空心', 1)).join(''); }
 const roleBg = n => ({ tavern:'#d0607a', smith:'#5a5a5a', guild:'#3f6ea0', priest:'#8a8a8a', mayor:'#7a4a2a', reporter:'#4a8a8a', fan:'#c08a30', merc:'#6a3a3a', elder:'#6a5ab0', rival:'#8a3a3a', rival2:'#5a5aa0', merchant:'#4a4a3a' }[n.role] || (n.sex === 'f' ? '#9a5a80' : '#4a7a5a'));
-function npcBody(n){   // 點頭像的小框、村子裡點村民（v17.86）共用
+function npcBody(n){   // 點頭像的小框、村子裡點村民（v17.87）共用
   const h = H(), tr = (n.treat ?? -9) + 3 <= S.day, can = !n.dark && n.role !== 'rival', tags = [`${Math.floor(n.age || 30)} 歲`];
   const m = n.mate && npc(n.mate); if (m && m.alive) tags.push(n.wed ? `和${m.name}結婚了` : `和${m.name}交往中`);
   if (n.kids) tags.push('有小孩'); if (n.owe) tags.push(`欠${h.name} ${n.owe.g} 金`); if ((n.sick || 0) > S.day) tags.push('生病中');
@@ -1284,7 +1284,7 @@ function renderSheet(){
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.86</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.87</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
