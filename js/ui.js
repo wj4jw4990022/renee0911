@@ -163,10 +163,14 @@ $('bell').onclick = e => { e.stopPropagation(); const on = $('alerts').classList
 $('chH').onclick = () => $('chX').onclick();
 $('chX').onclick = () => { const on = $('app').classList.toggle('chatx'); $('chX').textContent = on ? '收合' : '展開 ›'; $('chT').textContent = on ? H().name : '最新動態'; if (!on) { S.feedF = 'all'; } renderFeed(); $('feed').scrollTop = $('feed').scrollHeight; };
 // v17.62 響應式：介面照螢幕寬度等比例縮放（以 390 寬為 1 倍，0.8～1.25）；地圖畫布本來就會自己撐滿，不縮放
-let UIZ = 1;
-function fitZoom(){ UIZ = clamp(($('app').clientWidth || 390) / 390, .8, 1.25); document.documentElement.style.setProperty('--z', UIZ); }
+let UIZ = 1, UIK = .82;   // UIK：整體再縮小（手機上照草圖原尺寸太大）
+function fitZoom(){ UIZ = clamp(($('app').clientWidth || 390) / 390, .8, 1.25) * UIK; document.documentElement.style.setProperty('--z', UIZ); }
+// v17.71 iPhone 主畫面 App：畫面高度有時少了狀態列那一截（底下露出深色條），改用螢幕高度撐滿
+function fitH(){ try { if (!navigator.standalone) return; const port = innerHeight >= innerWidth, full = port ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+  const h = Math.max(innerHeight, full) + 'px', a = $('app'); a.style.bottom = 'auto'; a.style.height = h; document.documentElement.style.height = h; document.body.style.height = h; } catch (e) {} }
+fitH();
 function setNavH(){ fitZoom(); document.documentElement.style.setProperty('--navh', $('nav').offsetHeight + 'px'); }
-fitZoom(); window.addEventListener('resize', () => { setNavH(); if (sheetT) sheetMax(); }); setTimeout(setNavH, 50);
+fitZoom(); window.addEventListener('resize', () => { fitH(); setNavH(); if (sheetT) sheetMax(); }); setTimeout(setNavH, 50);
 // ================= v12：分頁的小元件 =================
 function drawPortrait(c){ drawFace(c); }
 function heroCard(h){   // v17.69：勇者檔案上方共用（design/ui/草圖_勇者檔案.png）
@@ -1260,7 +1264,7 @@ function renderSheet(){
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.70</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.71</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });

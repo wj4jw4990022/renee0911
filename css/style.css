@@ -431,6 +431,7 @@ input[type=range] { width:100%; accent-color:#f2c14e; }
   --notch:polygon(3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px),0 3px,3px 3px);
   --notch2:polygon(2px 0,calc(100% - 2px) 0,calc(100% - 2px) 2px,100% 2px,100% calc(100% - 2px),calc(100% - 2px) calc(100% - 2px),calc(100% - 2px) 100%,2px 100%,2px calc(100% - 2px),0 calc(100% - 2px),0 2px,2px 2px); }
 html, body, #app { background:#2a1c12; }
+@media (max-width:480px) { html, body { background:#7d5130; } }   /* v17.71：萬一底下還露出一截，顏色和底部木條一樣 */
 body { -webkit-font-smoothing:none; }
 #app { background:var(--pap2); }
 #cv { filter:saturate(1.22) contrast(1.05) brightness(1.04); }
@@ -703,8 +704,8 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 .qask { font-size:14px; }
 /* v17.61：畫面填滿整個螢幕（iOS 加到主畫面時 height:100% 會比螢幕短，底下留一條黑）；安全區域改由上方木條、底部選單自己墊 */
 #app { position:fixed; top:0; bottom:0; left:0; right:0; height:auto; margin:0 auto; padding:0; }
-#app .rbar { padding-top:calc(6px + env(safe-area-inset-top)); }
-#app nav { padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
+#app .rbar { padding-top:calc(6px + env(safe-area-inset-top) / var(--z, 1)); }   /* 木條自己有 zoom，安全區域要除回去 */
+#app nav { padding-bottom:calc(8px + env(safe-area-inset-bottom) / var(--z, 1)); }
 #app .rbar { gap:6px; padding-left:10px; padding-right:8px; }
 #app .rbar #date { font-size:15px; white-space:nowrap; flex:none; }
 #app .rbar .mpill { gap:10px; padding:2px 8px; }
