@@ -632,7 +632,8 @@ const QH = {
       if (chance(att === 'unfair' ? .5 : .4)) die('醜聞後被事務所公開切割，傷心地離開', 'left'); }
     else if (i === 3) { addFame(-Math.round(d.hit * .3)); adj('trust', att === 'unfair' ? 20 : att === 'shrug' ? 8 : 15); adj('mood', att === 'unfair' ? 15 : 10); repAdd(6, '醜聞時力挺勇者'); remember('backed'); logLife('醜聞時經紀人力挺到底'); say(att === 'shrug' ? '我就說沒事吧！不過……謝啦' : L('backed')); }
     else { addFame(-Math.round(d.hit * .2)); adj('trust', -3); }
-    if (d.fake && h.act !== 'left') h.scTruth = { d:S.day + ri(3, 6), hit:d.hit, i, ag:pick(RIVAL_AG) }; },
+    if (d.fake && h.act !== 'left') h.scTruth = { d:S.day + ri(3, 6), hit:d.hit, i, ag:pick(RIVAL_AG) };
+    if (!d.fake && att === 'unfair' && i === 3 && chance(.3)) h.scLie = { d:S.day + ri(3, 8), hit:d.hit, k:d.k }; },   // v17.78：真的有做卻喊冤，你又力挺 → 三成機率之後證據曝光
   crisis(i, d){ const h = H();
     if (i < 0 && !d.warned) { ask('crisis', '（最後通知：銀行說再不處理，就要拍賣事務所的設備。你再不決定，會自動幫你借高利貸。）', ['賣掉一項設施', '借高利貸 1,500 金', '接受銀月經紀社的收購', '接受地下商會的幫忙'], { warned:1 }, 3); return; }
     if (i < 0) i = 1;
@@ -1045,6 +1046,8 @@ function crisisTick(){
 // 醜聞
 function scandalTick(){
   const h = H(); if (offline || ['dead', 'retired', 'left', 'dying'].includes(h.act)) return;
+  if (h.scLie && S.day >= h.scLie.d) { const t = h.scLie; h.scLie = null; const loss = Math.round(t.hit * .6); addFame(-loss); repAdd(-5, '力挺的勇者被拆穿說謊');
+    ev('bad', '證據曝光', `${h.name}當初喊冤的那件事，被人拿出了證據，事務所名聲 -${loss}`); logLife('喊冤被拆穿'); adj('mood', -8); say(pickS(['……對不起，我那時候不敢承認', '老闆……你還願意相信我嗎', '我以為不會被發現的……'])); return; }
   if (h.scTruth && S.day >= h.scTruth.d) { const t = h.scTruth; h.scTruth = null; const back = Math.round(t.hit * (t.i === 3 ? 1.2 : t.i === 1 ? .3 : .6)); addFame(back);
     ev('good', '真相大白', `原來${h.name}的醜聞是${t.ag}放的假消息，事務所名聲 +${back}`); logLife('醜聞真相大白：是被誣陷的');
     if (t.i === 3) { adj('trust', 5); repAdd(4, '力挺被誣陷的勇者'); say('看吧！我就說不是我！老闆，謝謝你當時相信我'); }
