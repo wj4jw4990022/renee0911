@@ -1,12 +1,14 @@
 /* 字型：俐方體11號（Cubic 11，SIL OFL，見 fonts/Cubic_11-OFL.txt） */
-@font-face { font-family:'Cubic11'; src:url('../fonts/Cubic_11.woff2') format('woff2'); font-display:swap; }
+@font-face { font-family:'Cubic11'; src:url('../fonts/Cubic_11.woff2') format('woff2'); font-display:swap; }   /* 地圖上的小字（canvas）還用這個 */
+/* v17.74 介面字型：jf open 粉圓 2.0（SIL OFL，見 fonts/jf-openhuninn-OFL.txt；子集由 tools/font_subset.py 產生） */
+@font-face { font-family:'Huninn'; src:url('../fonts/jf-openhuninn-2.0-sub.woff2') format('woff2'); font-display:swap; }
 /* 孤勇者 樣式 */
 :root { --bg:#f3e0b2; --panel:#fbf0d2; --panel2:#fbf0d2; --line:#b08a55; --text:#3b2616; --muted:#7a5a3a; --gold:#f2c14e; --green:#6fcf97; --red:#ff7b7b; --orange:#ffb347; --blue:#59a8ff; }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }   /* v17.21：雙點擊不縮放 */
-html, body { margin:0; height:100%; background:#2a1c12; color:var(--text); font-family:'Cubic11',-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; overflow:hidden; touch-action:manipulation; }
+html, body { margin:0; height:100%; background:#2a1c12; color:var(--text); font-family:'Huninn',-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; overflow:hidden; touch-action:manipulation; }
 button { font-family:inherit; color:var(--text); cursor:pointer; }
 button:disabled { opacity:.4; cursor:default; }
-.px { font-family:'Cubic11',sans-serif; }
+.px { font-family:'Huninn',sans-serif; }
 #app { position:relative; height:100%; max-width:480px; margin:0 auto; background:var(--bg); display:flex; flex-direction:column; overflow:hidden;
   padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
 .top { display:flex; align-items:center; justify-content:space-between; padding:10px 12px 8px; gap:8px; flex:none; }
