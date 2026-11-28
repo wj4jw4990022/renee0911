@@ -1064,3 +1064,22 @@ button.pb:active:not(:disabled) { transform:translate(2px, 2px); filter:drop-sha
 .ppop .pitn { display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
 .ppop .npw, .ppop .npb { padding:0 2px; }
 .ppop .prw > .ic:first-child { min-width:28px; object-fit:contain; object-position:center; }   /* 不同寬的圖示，字對齊同一條左邊界 */
+
+/* ===== v17.102：點勇者給指示、相簿、成就、圖鑑 ===== */
+.cmdg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.cmdb{display:flex;align-items:center;gap:6px;padding:8px 10px;min-height:44px;justify-content:flex-start}
+.cmdg .pbtn,.cmdg button{width:100%}
+.albg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.albc{display:flex;flex-direction:column;gap:2px;padding:6px}
+.albc img{width:100%;aspect-ratio:120/68;image-rendering:pixelated;border:2px solid #4a2f1b;background:#222}
+.albc small{line-height:1.35}
+.albs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:4px 0 8px}
+.albs img{width:100%;aspect-ratio:120/68;image-rendering:pixelated;border:2px solid #4a2f1b}
+.achr{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;padding:6px 4px;font:inherit;color:inherit}
+.achr span{display:flex;flex-direction:column}
+.achr.lk{opacity:.55}
+.dexr{display:flex;flex-wrap:wrap;gap:4px;margin-left:auto}
+.dexc{padding:2px 6px}
+.dexc.lk{opacity:.5}
+.dexc.g{background:#d7f0c8}
+.npb{flex-wrap:wrap}

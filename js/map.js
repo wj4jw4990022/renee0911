@@ -209,15 +209,17 @@ function lzPick(h){
 function lzTick(h, hr){
   if (h.lzNext && h.lzNext.day < S.day && hr >= 6.5) { adj('sta', h.lzNext.v); h.lzNext = null; }
   if (S.lz && S.lz.day !== S.day) S.lz = null;
-  if (!S.lz) { if (!lzFree(h)) return; const b = lzBoss(h);
-    S.lz = b ? { day:S.day, k:'boss', meal:b.meal } : { day:S.day, ...lzPick(h) };
+  if (!S.lz) { if (!lzFree(h)) return; if (typeof lifeLzHook === 'function' && lifeLzHook(h)) return; const b = lzBoss(h);   // v17.102：收工時問一件小事
+    S.lz = b ? { day:S.day, k:'boss', meal:b.meal } : { day:S.day, ...((typeof lzForce === 'function' && lzForce(h)) || lzPick(h)) };
+    if (typeof lzJoinAsk === 'function') lzJoinAsk(h);   // v17.102：陪他
     if (S.lz.k === 'sleep') S.lz.done = 1;   // v17.94：早點睡不再另外加，躺下就照時數回體力
     if (LZ_SAY[S.lz.k] && chance(.35)) say(pick(LZ_SAY[S.lz.k]));
     return; }
   const z = S.lz; if (z.done) return;
   if (z.k !== 'boss') { const b = lzBoss(h); if (b) { z.k = 'boss'; z.meal = b.meal; return; } }   // 玩家晚上才約：那晚改跟你去
   if (hr < 22 || z.k === 'boss') { if (z.k === 'boss' && hr >= 22) z.done = 1; return; }
-  z.done = 1; if (offline) return; const pay = v => { const c = Math.min(h.wallet || 0, v); h.wallet -= c; };
+  z.done = 1; if (offline) return; const pay = v => { if (z.with) { S.gold -= v; finAdd('other', -v); return; } const c = Math.min(h.wallet || 0, v); h.wallet -= c; };   // v17.102：陪他去的話你出錢
+  const b0 = z.with ? { mood:h.mood, stress:h.stress } : null;
   switch (z.k) {
     case 'chat': adj('mood', 4); adj('stress', -4); affAdd(z.id, 3); break;
     case 'date': adj('mood', 8); adj('stress', -6); affAdd(z.id, 4); pay(20); break;
@@ -229,6 +231,7 @@ function lzTick(h, hr){
     case 'train': gainExp(2); adj('sta', -5); adj('stress', 2); break;
     case 'read': adj('stress', -4); if (hx(h, 'O') >= .6) adj('mood', 3); break;
   }
+  if (b0 && typeof lzWithEnd === 'function') lzWithEnd(h, z, b0);
 }
 const lzOn = h => S.lz && S.lz.day === S.day && !S.lz.gone && lzFree(h) ? S.lz : null;
 function lzNow(h){ const z = lzOn(h); if (!z) return null; return z.k === 'boss' ? ['tavern', 1] : LZ[z.k].g; }
@@ -562,6 +565,7 @@ function drawMap(now){
 // 點地圖
 function mapClick(x, y){
   const h = H(), view = 'wild', hit = r => x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
+  if (typeof heroTapHit === 'function' && heroTapHit(x, y)) return openCmd();   // v17.102：點勇者給指示
   if (x < VW) {   // v17.11：點在村子那一段
     const o = [...vilHits].reverse().find(t => hit(t.r)); if (!o) return;
     if (o.k === 'npc') { V.tagId = o.id; V.tagT = performance.now(); return openNpcPop(o.id); }   // v17.38：點到的村民顯示名牌
@@ -590,6 +594,7 @@ function openNpcPop(id){
   const h = H(), line = n.aff >= 50 ? pickS([`「${h.name}最近好嗎？」`, '「有空來坐坐啊」', '「別太勉強自己喔」']) : n.aff >= 25 ? pickS(['「喔，是你啊」', '「今天天氣不錯」']) : pickS(['「……你哪位？」', '「有事嗎？」']);
   openPop(`${npcBody(n)}${pSay(null, line.replace(/[「」]/g, ''))}`, '路上遇到', '人際', 1);
   $('mBox').querySelectorAll('[data-treat]').forEach(b => b.onclick = () => { if (S.gold < 30) return; S.gold -= 30; n.treat = S.day; affAdd(n.id, 4); toast(`${h.name}和${n.name}吃了頓飯`); closeMission(); renderAll(); });
+  npcActBind($('mBox'), n, closeMission);
 }
 // 每天：地圖上的事
 function mapTick(){
@@ -625,7 +630,7 @@ function huntThings(h){
     ev('good', '救人', `${h.name}在${Z.n}找到迷路的旅人，對方塞了 ${g} 金當謝禮`); if (!offline) say(pickS(['找到迷路的人了，還好沒事', '他說他已經在裡面繞三天了'])); }
   if (mt.elite && mt.elite.z === z && chance(.25)) { const e0 = mt.elite; mt.elite = null;
     const r = ratio(h, zD(z) * 2.5), win = chance(clamp(.2 + .5 * r, .05, .95));
-    const res = () => { if (win) { const g = Math.round(Z.gold * 30); earn(g); gainExp(Z.exp * 12); addFame(8); remember('elite', { n:Z.mon }); ev('good', '精英怪', `${h.name}在${Z.n}打倒了精英${Z.mon}王！拿到 ${fmt(g)} 金`); logLife(`打倒${Z.n}的精英${Z.mon}王`); if (!offline) say(pickS(['精英怪被我打倒了！', '剛剛那隻好大……但我贏了'])); }
+    const res = () => { if (win) { const g = Math.round(Z.gold * 30); earn(g); gainExp(Z.exp * 12); addFame(8); remember('elite', { n:Z.mon }); if (typeof dexAdd === 'function') dexAdd(ZONES.indexOf(Z), 'e'); ev('good', '精英怪', `${h.name}在${Z.n}打倒了精英${Z.mon}王！拿到 ${fmt(g)} 金`); logLife(`打倒${Z.n}的精英${Z.mon}王`); if (!offline) say(pickS(['精英怪被我打倒了！', '剛剛那隻好大……但我贏了'])); }
     else injure(!offline && chance(.5) ? 'heavy' : 'light', `在${Z.n}被精英${Z.mon}王打傷`); };
     if (!offline) { eliteDuel(h, e0, win, res); return true; }   // v17.45：當場演完再出結果
     res(); if (!win) return true; }
@@ -1467,7 +1472,7 @@ const dayLen = o => { const w = mWin(o); return w[1] - w[0]; };
 function durInfo(h, o){
   const k = mKind(o); if (!k || k === 'slot' || k === 'night' || !o.D || o.ag === 'exam') return null;   // 事務所時段任務、升格考核不縮短
   const base = o.baseDays || o.days || 1, dl = dayLen(o), w = DUR_W[scnType(o)] ?? 1;
-  const r = ratio(h, o.D) * compMul(o.comp), sp = clamp(r / 1.3, 1 / 1.3, 6);
+  const r = ratio(h, o.D) * compMul(o.comp) * teamMul(o), sp = clamp(r / 1.3, 1 / 1.3, 6);
   const cap = o.z <= 1 ? 3 * dl : Infinity;   // v17.88 開發者：草原、森林的任務最多 3 個月
   const hours = Math.min(cap, Math.max(2, base * dl * (w / sp + 1 - w))), extra = 0, days = Math.max(1, Math.ceil(hours / dl - 1e-6));   // v17.13：路上的時間不算進任務
   return { base, hours, days, extra, endH:mWin(o)[0] + (hours + extra - (days - 1) * dl) };
@@ -1493,7 +1498,9 @@ function pxSay(x, y, t){ ctx.font = fz(8) + 'px Cubic11, sans-serif'; const w = 
 function resolveMission(){
   const h = H(), o = h.mission || {}, g0 = S.gold, f0 = S.fame, lv0 = h.lv, live = !offline, k = mKind(o);
   if (live) SAYQ = [];
+  const w0 = h.wallet;
   try { resolveMission0(); } finally { const q = SAYQ; SAYQ = null; if (live && q && q.length) S.evening = { day:S.day, lines:q.slice(0, 3), at:19 }; }
+  if (o.team && typeof teamAfter === 'function') try { teamAfter(o, h, h.wallet - w0, o.win != null ? !!o.win : S.fame >= f0); } catch (e) { console.error(e); }   // v17.102：組隊
   if (!live || H() !== h) return;
   const ok = o.win != null ? !!o.win : S.fame >= f0, hurt = h.bedDays > 0 || h.act === 'bed';
   RES = { t:performance.now(), ok, n:o.n || '', gold:S.gold - g0, fame:S.fame - f0, lv:h.lv > lv0, hurt };
@@ -1864,7 +1871,7 @@ function pickMode(h, fromX, toX){
   const far = Math.max(fromX, toX) > CAP.x1 + 20;
   if (teleOpen() && far && dist > 900 && S.gold >= TELE_FEE * 4) return 'tele';
   const thrift = h.goal === 'etf' || h.trait === 'greedy', fancy = h.goal === 'seiko', health = h.goal === 'health';
-  if (h.horse && !(health && dist < 500)) return 'horse';
+  if (h.horse && !((h.horse.hurt || 0) > S.day) && !(health && dist < 500)) return 'horse';
   const lo = Math.min(fromX, toX), hi = Math.max(fromX, toX), coachOk = lo <= COACH_A() + 4 && hi >= COACH_B() - 10 && h.wallet >= COACH_FARE;
   if (coachOk && (fancy || dist > 700 || (!thrift && dist > 450))) return 'coach';
   return 'walk';
@@ -1874,8 +1881,8 @@ function legHours(h, mode, fromX, toX){
   const dist = Math.abs(toX - fromX);
   if (mode === 'tele') return .3;
   if (mode === 'coach') { const lo = Math.min(fromX, toX), hi = Math.max(fromX, toX), seg = Math.max(0, Math.min(hi, COACH_B()) - Math.max(lo, COACH_A()));
-    return .25 + seg / UPH.coach + (dist - seg) / (h.horse ? UPH.horse : UPH.walk); }   // 平均等車 15 分鐘
-  return dist / UPH[mode];
+    return .25 + seg / UPH.coach + (dist - seg) / (h.horse ? UPH.horse * horseSpd(h) : UPH.walk); }   // 平均等車 15 分鐘
+  return dist / (UPH[mode] * (mode === 'horse' ? horseSpd(h) : 1));   // v17.102：馬的感情越好跑越快
 }
 // 任務的單程時間（接任務時算好，存在任務上）
 function missionTGo(h, o){ if (!o || o.z == null || o.z < 0 || !ZONES[o.z]) return 0; const R = ZONES[o.z].rect, cx = (R[0] + R[2]) / 2, m = pickMode(h, GX, cx); return legHours(h, m, GX, cx); }
@@ -1943,6 +1950,7 @@ function drawRideSpr(c, name, x, y, left, ax, src){ src = src || (ART.ride && AR
 function travelMonthly(h){
   if (!h || ['dead', 'retired', 'left'].includes(h.act)) return;
   h.trM = 0;
+  if (h.horse && h.horse.by === 'you') return;   // v17.102：你送的馬，飼料由事務所付（life.js horseMonthly）
   if (h.horse) { if (h.wallet >= HORSE_FEED) { h.wallet -= HORSE_FEED; trPay(h, HORSE_FEED); } else { h.horse = null; ev('warn', '賣馬', `${h.name}養不起馬，只好把馬賣了`); if (!offline) say('……馬賣掉了，以後又要走路了'); } return; }
   const want = h.goal === 'etf' ? h.wallet >= 2600 : h.goal === 'health' ? h.wallet >= 1800 : h.wallet >= 900 + (h.trait === 'greedy' ? 600 : 0);
   if (want && chance(.25)) { h.wallet -= HORSE_PRICE; trPay(h, HORSE_PRICE); h.horse = { since:S.day }; ev('good', '買馬', `${h.name}用自己的錢買了一匹馬（${HORSE_PRICE} 金），以後出門快多了`); if (!offline) say(pickS(['我買馬了！以後通勤快好多', '存了好久，終於有自己的馬了'])); }
@@ -2271,7 +2279,7 @@ function huntBanner(h){ if (offline || !S.huntDay || S.huntDay.day !== S.day) re
 // 會成功的一路打到完；會失敗的越打越吃力，最後一段倒下。
 // 演出只影響畫面（勇者要走去哪、哪隻怪被打倒），不改變任何數值。
 function preRoll(h){ mDur(h); const o = h.mission; if (!o || !o.D || o.win != null) return;
-  const r = ratio(h, o.D) * compMul(o.comp); o.win = chance(winP(r)) ? 1 : 0; }
+  const r = ratio(h, o.D) * compMul(o.comp) * teamMul(o); o.win = chance(winP(r)) ? 1 : 0; }
 const winOf = (o, p) => o && o.win != null ? !!o.win : chance(p);
 // 依委託名稱決定演法
 function scnType(o){
@@ -2351,7 +2359,7 @@ function scnTick(dt, now){
     s.tg = tg;
     // 每回合（約 1 秒）：勇者揮一次；進度到了這一下就打倒；越危險越常被反擊
     const reach = tg && Math.abs(Math.abs(hx - tg.x) - gap) < 6 && Math.abs(hy - (tg.y + 4)) < 6 && !(tg.born && now - tg.born < 500);
-    const di = danger(ratio(h, o.D || 1) * compMul(o.comp)).i, rate = Math.min(.85, [.15, .45, .9][di] + (lose ? .4 : 0));
+    const di = danger(ratio(h, o.D || 1) * compMul(o.comp) * teamMul(o)).i, rate = Math.min(.85, [.15, .45, .9][di] + (lose ? .4 : 0));
     if (reach && run && !s.down && now - s.rt > (s.kills < want - 1 ? 900 : 1150)) { s.rt = now;
       const kill = s.t === 'boss' ? !lose && f >= .965 : s.kills < want, hurt = !kill && Math.random() < rate;
       s.rn = (s.rn || 0) + 1;

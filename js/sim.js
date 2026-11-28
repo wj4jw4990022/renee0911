@@ -43,7 +43,7 @@ const jobMul = h => [1, 1.35, 1.8][h.job] || 1;
 function power(h){
   let p = (8 + h.lv * 3.2) * WPN.mul[h.wpn] * CLS[h.cls].pw * jobMul(h) * (1 + (h.wf || 0) * .06) * ageMul(h);   // v17.97：強化、年紀
   if (hasP(h, 'lame')) p *= [.85, .9, .95][h.aid || 0];
-  p *= 1 + ch(h, 'pw') + (h.boost || 0);
+  p *= 1 + ch(h, 'pw') + (h.boost || 0) + ((h.sharp || 0) > S.day ? .03 : 0);   // v17.102：磨刀
   if (h.sta < 20) p *= .7; else if (h.sta < 40) p *= .88;
   if (h.health < 50) p *= .85;
   if (S && h === S.hero && S.artists && S.artists.length) p *= followBonus();
@@ -61,7 +61,7 @@ const UNLOCK_TXT = { 1:'，可以簽公會合約了', 2:'，事務所任務的�
   6:'，旗下藝人名額變成 2 位', 7:'，拿到年度大賞的評審席（可以提名旗下新人角逐「年度新人獎」）', 8:'，設施可以升到 Lv4，也會接到王室委託', 9:'，每年可以拒絕一次王國徵召不扣名聲', 10:'，旗下藝人名額變成 3 位',
   11:'，退休勇者可以留下來當教練，設施可以升到 Lv5', 12:'，開始接到跨國委託，也出現新的對手', 13:'，外國勇者也會來投靠', 14:'。這是一個經紀人能走到的最高處' };
 const unlockMsg = r => UNLOCK_TXT[r] || '，委託報酬變高了';
-function addFame(v){ const r0 = rankOf(); S.fame = Math.max(0, S.fame + v); const r1 = rankOf(); if (r1 > r0) { ev('good', '晉升', `你的事務所升格為「${RANKS[r1][1]}」${unlockMsg(r1)}`); if (r1 >= UNLOCK.legend) S.legend = 1; $('dOffice').classList.add('on'); } }
+function addFame(v){ if (typeof pfAdd === 'function') pfAdd(PF_WHO || H(), v); const r0 = rankOf(); S.fame = Math.max(0, S.fame + v); const r1 = rankOf(); if (r1 > r0) { ev('good', '晉升', `你的事務所升格為「${RANKS[r1][1]}」${unlockMsg(r1)}`); if (r1 >= UNLOCK.legend) S.legend = 1; $('dOffice').classList.add('on'); } }
 function affAdd(id, v){ const n = npc(id); if (!n || !n.alive) return; const b = n.aff; if (n.role === 'victim' && v > 0) return;
   if (v > 0 && n.role !== 'rival') v *= (.7 + .6 * hx(H(), 'X')) * compat(H(), n);   // 外向的人交朋友快，合得來的人好得快
   n.aff = clamp(n.aff + v, 0, H().record && v > 0 ? Math.max(b, 60) : 100);
@@ -85,7 +85,7 @@ function addMsg(kind, text, tag){
 let SAYQ = null;   // v17.9：結算時先收起來，晚上才說
 const say = text => { if (SAYQ) { SAYQ.push(text); return; } if (S) { S.recentL = S.recentL || []; S.recentL.push(text); if (S.recentL.length > 90) S.recentL.shift(); } addMsg('hero', text); bubble(text.length > 12 ? text.slice(0, 11) + '…' : text); };
 const sys = text => addMsg('sys', text);
-const ev = (kind, tag, text) => { addMsg('ev ' + kind, text, tag); epFromEv(tag, text); if (kind === 'good' && S && H()) H().goodDay = S.day; };   // v17.101：goodDay＝最近一次好事（互動看時機用）
+const ev = (kind, tag, text) => { addMsg('ev ' + kind, text, tag); epFromEv(tag, text); if (kind === 'good' && S && H()) H().goodDay = S.day; if (typeof lifeEv === 'function') try { lifeEv(kind, tag, text); } catch (e) {} };   // v17.101：goodDay＝最近一次好事（互動看時機用）
 function logLife(text){ H().log.push({ d:S.day, age:H().age, t:text }); }
 // v17.27：泡泡不放進存檔。舊版把「顯示到什麼時候」存進存檔，那個時間是用這次開頁面後的計時，重新打開頁面計時歸零，舊的那句就會一直卡在頭上
 const BUB = { q:[], cur:null, h:null };
@@ -155,6 +155,7 @@ function dayStart(){
   if (S.cutNext != null) { const old = S.cut, v = S.cutNext; S.cutNext = null; if (v !== old) { S.cut = v; adj('trust', v > old ? -(v - old) * .4 : (old - v) * .3); if (!offline) sys(`抽成從 ${old}% 改成 ${v}%`); } }   // v17.96：抽成下個月才生效
   h.target = null; h.flash = 0; travelMonthly(h);   // v17.12
   try { lateTick(h); } catch (e) { console.error(e); }   // v17.97：後期（魔王復活、新秀挑戰、年紀）
+  try { if (typeof lifeTick === 'function') lifeTick(h); } catch (e) { console.error(e); }   // v17.102：新玩法（life.js）
   if (h.act === 'dead' || h.act === 'retired' || h.act === 'left') return;
   if (h.act === 'mission') { if (--h.actDays > 0) { setAct('mission'); return; } resolveMission(); if (h.act !== 'idle' || H() !== h) return; }   // v17.20：做完不累的話，這個月接著做別的
   if (h.goneDays > 0) { if (--h.goneDays <= 0) (h.jailed ? jailRelease() : goneReturn()); else setAct('gone'); return; }
@@ -238,9 +239,10 @@ function step(){
   const fx = { t:performance.now(), tg:h.target, kill:0, hurt:0, hp0:h.hp }; if (!offline) HFX = fx;
   // 打
   if (chance(clamp(.3 + .4 * r - (h.burn || 0) / 400, .1, .95))) {
-    h.kills++; h.huntKills++;
+    h.kills++; h.huntKills++; if (typeof dexAdd === 'function') dexAdd(h.zone, h.target);
     const rm = RISK_MUL[danger(r).i];
-    const g = Z.gold * rand(.7, 1.3) * rm, e = Z.exp * (r > 2 ? .5 : 1) * rm;
+    const mst = h.target && ((S.dex || {})[h.zone + '_' + ((h.target.s || 0) % 4)] || 0) >= 100 ? 1.1 : 1;   // v17.102：圖鑑熟練（同種打滿 100 隻）
+    const g = Z.gold * rand(.7, 1.3) * rm * mst, e = Z.exp * (r > 2 ? .5 : 1) * rm * mst;
     if (chance([.001, .008, .025][danger(r).i])) findTreasure(h.zone);
     earn(g); gainExp(e);
     if (h.target) { fx.kill = 1; fx.ghost = { x:h.target.x, y:h.target.y, z:h.target.z, ph:h.target.ph }; respawn(h.target, !offline); h.target = null; }   // 畫面上原地倒下，過一下才在別處冒出來
@@ -787,8 +789,8 @@ function refreshOffers(){
 }
 let mHold = 0, mTimer = null, mOffer = null, mComp = null;
 function openMission(o, keep){
-  const h = H(); if (!keep || !mOffer || mOffer.id !== o.id) mComp = null; mOffer = o;
-  const showComp = canFightComp(o), cm = showComp ? compMul(mComp) : 1, De = o.D / cm;
+  const h = H(); if (!keep || !mOffer || mOffer.id !== o.id) { mComp = null; mTeam = []; } mOffer = o;
+  const showComp = canFightComp(o), cm = (showComp ? compMul(mComp) : 1) * teamMul({ team:mTeam }), De = o.D / cm;   // v17.102：組隊
   const r = ratio(h, De), d = danger(r), fd = feelDanger(h, De), win = o.D ? Math.round(winP(r) * 100) : 100;
   const etaEnd = (() => { const e = etaList(); return e.length ? e[e.length - 1] + (S.queue[S.queue.length - 1].days || 1) : S.day + 1 + (h.act === 'mission' ? h.actDays : 0); })();
   const cn = mComp && npc(mComp);
@@ -822,6 +824,7 @@ function openMission(o, keep){
     </div>
     ${showComp ? (comps.length ? `<div class="mpicks">${comps.map(n => `<button class="pb mpick${mComp === n.id ? ' g' : ''}" data-cmp="${mComp === n.id ? '' : n.id}">${who(n, 's')}<span><b class="f16">${esc(n.name)}</b><b class="f16 cg">+${Math.round(n.pw * 100)}%</b>${compCost(n) ? `<span class="num s">${IC('金幣', 1)}<b class="f14">${fmt(compCost(n))}</b></span>` : ''}</span></button>`).join('')}</div>`
       : `<div class="f14 mu">交情到「朋友」以上的人，才願意陪著出任務</div>`) : ''}
+    ${teamPicker(o)}
     <div class="mst">${st.map(([c, t]) => `<span class="pb ns mchip"${TIPA(stIc(t), stTx(t), '他現在的狀況')}>${IC(stIc(t), 2)}<b class="${c === 'r' ? 'cr' : c === 'o' ? 'co' : c === 'g' ? 'cg' : ''}">${esc(stTx(t))}</b></span>`).join('')}</div>
     <div class="msay">${who(h, 's')}<div class="pb ns mbub f16">${esc(fear)}</div></div>
     <button class="pb au mgo" id="mGo" ${S.queue.length >= Q_MAX ? 'disabled' : ''}>${IC('排程', 2)}<b>${S.queue.length >= Q_MAX ? '排程滿了' : '排進排程'}</b></button>
@@ -829,12 +832,13 @@ function openMission(o, keep){
   $('mission').classList.add('on'); S.paused = true;
   $('mNo').onclick = closeMission; $('mGo').onclick = () => enqueue(o);
   $('mBox').querySelectorAll('[data-cmp]').forEach(b => b.onclick = () => { mComp = b.dataset.cmp || null; openMission(o, true); });
+  teamBind(o);
   $('mission').onclick = e => { if (e.target.id === 'mission') closeMission(); };
 }
 function enqueue(o){
   closeMission();
   if (S.queue.length >= Q_MAX) { toast('排程滿了'); return; }
-  S.queue.push({ ...o, kind:o.ag ? 'ag' : 'offer', share:o.share || .1, comp:canFightComp(o) ? mComp : null });
+  S.queue.push({ ...o, kind:o.ag ? 'ag' : 'offer', share:o.share || .1, comp:canFightComp(o) ? mComp : null, team:mTeam.length ? mTeam.slice() : null }); mTeam = [];
   if (o.ag) S.agTasks = S.agTasks.filter(x => x.id !== o.id); else S.offers = S.offers.filter(x => x.id !== o.id);
   queueComment(); renderAll();
 }
@@ -912,6 +916,7 @@ function startTask(it){
   const h = H(), z = it.z >= 0 ? it.z : -1;
   it = prepComp(h, it);
   h.act = 'mission'; h.mission = { ...it }; h.actDays = it.days; preRoll(h); h.zone = -1; h.target = null; h.fighting = false;
+  if (typeof teamStart === 'function') { teamStart(it); endorseAsk(h, h.mission); }   // v17.102：組隊、代言喊價
   if (z >= 0) { h.tx = ZONES[z].rect[0] + 10; h.ty = ZONES[z].rect[1] + 10; } else { h.tx = GX; h.ty = GY; }
   sys(`${h.name}${it.comp && npc(it.comp) ? '和' + npc(it.comp).name : ''}出發去「${it.n}」了（約 ${durNum(h, h.mission)} 個月）`);
   const d = it.D ? danger(ratio(h, it.D) * compMul(it.comp)) : { i:0 };
@@ -973,7 +978,7 @@ function resolveAg(){
     pay(); S.rivals[1].fame = Math.max(0, S.rivals[1].fame - 60); adj('stress', hx(h, 'H') * 25); ev('good', '事務所任務', '臥底成功，銀月經紀社的名聲大跌'); say(hx(h, 'H') > .6 ? '我完成了……可是我晚上睡不著' : '輕鬆搞定');
   } else if (NEW_AG.includes(o.ag)) { pay(); newAgEnd(h, o);
   } else {   // 表演賽、駐守邊境、限期討伐：要打
-    const r = ratio(h, o.D) * compMul(o.comp), d = danger(r), p = winP(r);
+    const r = ratio(h, o.D) * compMul(o.comp) * teamMul(o), d = danger(r), p = winP(r);
     if (o.ag === 'border') { h.burn = clamp((h.burn || 0) + 25, 0, 100); adj('stress', 15); }
     if (o.ag === 'exam' && winOf(o, p)) { compAfter(o, true, d.i); pay(); { const r0 = rankOf(); S.exam = o.exam; const r1 = rankOf(); if (r1 > r0) { ev('good', '晉升', `通過考核！你的事務所升格為「${RANKS[r1][1]}」${unlockMsg(r1)}`); $('dOffice').classList.add('on'); } else ev('good', '考核通過', `通過升格考核，名聲和代表作夠了就會升格`); } gainExp(ZONES[o.z].exp * 6); adj('mood', 15); logLife(`通過升格考核「${o.n.replace('升格考核：', '')}」`); say(pickS(['考核過了！事務所要升格了！', '通過了……手還在抖'])); setAct('rest'); return; }
     if (o.ag === 'exam') { S.examCd = S.day + 6; ev('bad', '考核失敗', `「${o.n}」沒有通過，半年後才能再考`); }
@@ -1088,7 +1093,7 @@ function scLine(h, k, att, fake){
   if (att === 'shrug') return pickS(['上新聞而已，過幾天大家就忘了', '反正有人罵就有人愛', '老闆，你看起來比我還緊張', '欸，我上報紙了耶'].concat(k === 'noshow' ? ['那個活動本來就很無聊嘛'] : []));
   return pickS(['又不是我的錯！', '報紙只寫了一半……', '那些記者根本沒問過我'].concat(SC_UNFAIR[k] || [], fake ? ['我根本沒做這種事！', '這是誰編的？那天我人根本不在那裡'] : [])); }
 function revealScandal(k, leak, fake){
-  const h = H(), sc = SCANDALS.find(x => x.k === k); if (!sc) return; if (!fake) h.misDay = S.day;
+  const h = H(), sc = SCANDALS.find(x => x.k === k); if (!sc) return; if (!fake) h.misDay = S.day; S.scN = (S.scN || 0) + 1;
   const rp = npc('reporter'), rpm = rp && rp.alive ? (rp.aff >= 50 ? .7 : rp.aff < 15 ? 1.25 : 1) : 1;
   const hit = Math.round(sc.fame * (1 + rkx() * .3) * (leak ? 1.8 : 1) * rpm);
   addFame(-hit); h.scandals = (h.scandals || 0) + 1; yr().sc++;
@@ -1118,7 +1123,7 @@ function startMission(o){
 function resolveMission0(){
   if (H().mission && H().mission.ag) { resolveAg(); return; }
   const h = H(), o = h.mission; h.mission = null; h.alpha = 1; h.x = ZONES[o.z].rect[0] + 10; h.y = ZONES[o.z].rect[1] + 10; h.tx = GX; h.ty = GY;
-  const r = ratio(h, o.D) * compMul(o.comp), d = danger(r);
+  const r = ratio(h, o.D) * compMul(o.comp) * teamMul(o), d = danger(r);
   const p = winP(r);
   if (winOf(o, p)) { compAfter(o, true, d.i); yr().mis++; if (!o.ag && !o.favor) affAdd('guild', 1);
     const mine = o.reward ? earn(o.reward) : 0; gainExp(ZONES[o.z].exp * 8 * (o.D / zD(o.z)));
@@ -2180,6 +2185,7 @@ function endView(h, tag, rg, happy, cands){
       <div class="ebd">
         <div class="pb eme">${pimg(h)}<div><div class="enm"><b class="f22">${esc(h.name)}</b><span class="pb ns etag ${col}">${tag}</span></div><span class="num s mu">${IC('戰力', 2)}<b>${jobName(h)}・Lv${h.lv}・${Math.floor(h.age)} 歲</b></span></div></div>
         <div class="pb ns ewhy f16">${esc(h.endWhy || '')}</div>
+        ${typeof albumStrip === 'function' ? albumStrip(h) : ''}
         <div class="e3">${[['危險', fmt(h.kills), '打倒的魔物'], ['人際', friendsN(), '交到的朋友'], ['心情', happy, '幸福分數']].map(([ic, v, n], i) => `<span class="pb num"${TIPA(ic, n, '')}>${IC(ic, 2)}<b class="${i === 2 ? hc : ''}">${v}</b></span>`).join('')}</div>
         <div class="pb erows">${[['個性', hexW], ['心願', '最在乎：' + h.des.map(k => DESIRES[k].n).join('・')], ['生平', '人生目標：' + goal]].map(([ic, t]) => `<div>${IC(ic, 2)}<span class="f14">${esc(t)}</span></div>`).join('')}</div>
         <div class="esec"><span>臨終的遺憾</span><span class="num s"${TIPA('心情', '幸福分數', '看他臨終時有幾個遺憾')}>${IC('心情', 2)}<b class="${hc}">幸福 ${happy}</b></span></div>
@@ -2232,6 +2238,7 @@ function makeCands(){
 }
 function nextGen(i){
   const n = S.cands[i], old = H(); n.rel = (n.tag || '').replace(/（.*）/g, ''); delete n.tag;
+  if ((n.master || n.kid) && old.horse && !n.horse) n.horse = old.horse;   // v17.102：馬傳給徒弟、孩子
   S.hero = n; S.gen = n.gen; S.cands = null; S.q = null; S.qq = []; S.queue = [];   /* v17.82：換新勇者時，排程上的任務全部取消 */ S.plan = 0; S.cut = 30; S.paused = false;
   if (n.joined != null) {   // v16：從旗下藝人接班，保留年紀；當藝人的時間算一半的相處
     S.artists = AR().filter(x => x !== n); const born = S.day - Math.floor((S.day - n.joined) / 2); n.age0 = n.age - (S.day - born) / 12; n.born = born; n.act = 'idle'; n.alpha = 1; n.talked = {}; n.mission = null; n.task = null;
@@ -2278,7 +2285,7 @@ function lateTick(h){
   }
   // 新秀挑戰：名聲夠高，大約一年一次有年輕勇者來下戰帖
   if (!offline && !S.q && h.lv >= 15 && S.fame >= 300 && S.day >= (S.rookNext || 0) && ['idle', 'rest', 'home', 'hunt'].includes(h.act) && chance(.12)) {
-    S.rookNext = S.day + ri(8, 14); const nm = pick(ROOKIES), rp = Math.round((h.peakP || power(h)) * rand(.85, 1.12));
+    S.rookNext = S.day + ri(8, 14); const nm = (S.rvRookies || []).length && chance(.6) ? pick(S.rvRookies) : pick(ROOKIES), rp = Math.round((h.peakP || power(h)) * rand(.85, 1.12));
     ask('rookie', `新人「${nm}」在廣場公開向${h.name}下戰帖：「聽說你是這裡最強的？跟我打一場！」`, ['接受挑戰', '不理他'], { nm, rp }); }
 }
 Object.assign(QH, {

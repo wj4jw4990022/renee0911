@@ -182,7 +182,7 @@ function drawPortrait(c){ drawFace(c); }
 function heroCard(h){   // v17.69：勇者檔案上方共用（design/ui/草圖_勇者檔案.png）
   const showG = h.revealed ? h.goal : h.said, need = expNeed(h.lv);
   return `<div class="hcd"><canvas id="pcv" width="32" height="32" aria-label="${esc(h.name)}的模樣"></canvas><div class="hci">
-    <div class="ofr"><b class="f22">${esc(h.name)}</b><span class="rsp"></span><span class="num s"${TIPA('金幣', '錢包', `${h.name}自己的錢`)}>${IC('金幣', 2)}<b>${fmt(h.wallet)}</b></span></div>
+    <div class="ofr">${h.title ? `<b class="f14 cp">「${esc(h.title)}」</b>` : ''}<b class="f22">${esc(h.name)}</b><span class="num s"${TIPA('名聲', '個人名聲', `${h.name}自己累積的名聲`)}>${IC('名聲', 1)}<b class="f14">${fmt(Math.round(h.pf || 0))}</b></span><span class="rsp"></span><span class="num s"${TIPA('金幣', '錢包', `${h.name}自己的錢`)}>${IC('金幣', 2)}<b>${fmt(h.wallet)}</b></span></div>
     <div class="ofr f14"><span class="num s">${IC('戰力', 1)}<b class="f14">${esc(jobName(h))}</b></span><b>Lv${h.lv}</b><b>${Math.floor(h.age)} 歲</b>${h.master ? `<span class="mu">${esc(h.master)}的徒弟</span>` : ''}</div>
     <div class="ofr"><span class="htg"${TIPA('個性', TRAITS[h.trait].n, TRAITS[h.trait].d)}>${TRAITS[h.trait].n}</span><span class="htg"${TIPA('個性', TRAITS[h.trait2].n, TRAITS[h.trait2].d)}>${TRAITS[h.trait2].n}</span><span class="htg g"${TIPA('心願', '人生目標', (h.revealed ? '' : `${pron(h)}自己說的：`) + GOALS[showG].d)}>${h.revealed ? '' : '自稱'}${GOALS[showG].n}</span></div>
     <div class="ofl"${TIPA('經驗')}>${IC('經驗', 1)}<span class="pbar"><i style="width:${clamp(h.exp / need * 100, 0, 100)}%;background:var(--ok)"></i></span><span class="f14">${fmt(Math.floor(h.exp))}/${fmt(need)}</span></div></div></div>
@@ -194,6 +194,7 @@ function gearSlots(h){   // v17.69 寶物頁：身上（武器、防具、寶物
   const ch = Array.from({ length:CHARM_MAX }, (_, i) => { const k = h.charms[i]; return k ? slot(IC('寶物', 2), TREASURES[k].n, TIPA('寶物', TREASURES[k].n, TREASURES[k].d)) : `<div class="cslot"><span class="cbx em">${IC('寶物', 2, 1)}</span></div>`; }).join('');
   const zs = ZONES.slice(0, topZ() + 1).map((Z, i) => [Z.n, danger(ratio(h, zD(i))), i]);
   return `<div class="pb ofc"><b class="f16">身上</b><div class="cslots">${slot(eqImg((EQ_WP[h.cls] || 'sword') + h.wpn, 32), wn, TIPA('戰力', wn, '現在用的武器'))}${slot(AIC[h.arm] ? IC(AIC[h.arm], 2) : eqImg('armor' + h.arm, 32), an, TIPA('防具', an, '現在穿的防具'))}<span class="csep"></span>${ch}</div><div class="f14 mu" style="text-align:right">寶物 ${h.charms.length} / ${CHARM_MAX}</div></div>
+    ${typeof horseLine === 'function' ? horseLine(h) : ''}
     <div class="pb ofc"><div class="ofr"${TIPA('戰力')}>${IC('戰力', 2)}<b class="f16">戰力</b><b class="f22">${Math.round(power(h))}</b></div></div>
     <div class="pb ofc"><b class="f16">各區危險（照現在的戰力）</b>${zs.map(([n, d, i]) => { const on = [0, 2, 3][d.i];
       return `<div class="ofr zr">${IC(['草原', '森林', '荒地'][i] || '危險', 1)}<b class="f16">${n}</b><span class="sk3">${[0, 1, 2].map(j => IC('危險', 1, j >= on)).join('')}</span><b class="f16 dg ${d.k}">${d.n}</b></div>`; }).join('')}</div>
@@ -239,18 +240,24 @@ function npcBody(n){   // 點頭像的小框、村子裡點村民（v17.92）共
   const m = n.mate && npc(n.mate); if (m && m.alive) tags.push(n.wed ? `和${m.name}結婚了` : `和${m.name}交往中`);
   if (n.kids) tags.push('有小孩'); if (n.owe) tags.push(`欠${h.name} ${n.owe.g} 金`); if ((n.sick || 0) > S.day) tags.push('生病中');
   return `<div class="npw"><span class="pa2 big" style="background:${roleBg(n)}">${pimg(n)}</span><div class="npm"><div class="npn"><b class="f22">${esc(n.name)}</b>${relIcons(n)}</div><div class="f14 mu">${esc(n.title || '')}</div></div></div>
-    ${can ? `<div class="npb"><button class="pb npa" data-treat="${n.id}" ${tr && S.gold >= 30 ? '' : 'disabled'}>${IC('金幣', 2, !(tr && S.gold >= 30))}<span>${tr ? '請客 30' : '剛請過'}</span></button>${canComp(n) ? `<span class="num s">${IC('一起出任務', 2)}<b class="cg">+${Math.round(n.pw * 100)}%</b></span>` : ''}</div>` : ''}
+    ${can ? `<div class="npb"><button class="pb npa" data-treat="${n.id}" ${tr && S.gold >= 30 ? '' : 'disabled'}>${IC('金幣', 2, !(tr && S.gold >= 30))}<span>${tr ? '請客 30' : '剛請過'}</span></button><button class="pb npa" data-nhi="${n.id}" ${n.hiD === S.day ? 'disabled' : ''}>${IC('說話', 2, n.hiD === S.day)}<span>${n.hiD === S.day ? '打過招呼' : '打招呼'}</span></button><button class="pb npa" data-ngift="${n.id}" ${S.gold >= 150 && (n.giftD ?? -9) + 6 <= S.day ? '' : 'disabled'}>${IC('寶物', 2, !(S.gold >= 150 && (n.giftD ?? -9) + 6 <= S.day))}<span>${(n.giftD ?? -9) + 6 <= S.day ? '送禮 150' : '剛送過'}</span></button>${canComp(n) ? `<span class="num s">${IC('一起出任務', 2)}<b class="cg">+${Math.round(n.pw * 100)}%</b></span>` : ''}</div>` : ''}
     <div class="f14 mu">${n.role === 'rival' ? '' : `交情 ${Math.round(n.aff)}・`}${relWord(n)}・${tags.join('・')}</div>${ROLE_FX[n.role] ? `<div class="f14 mu">${esc(ROLE_FX[n.role])}</div>` : ''}`;
+}
+// v17.102：對村民打招呼（免費，一個月一次）、送禮（150，半年一次）
+function npcActBind(root, n, close){
+  root.querySelectorAll('[data-nhi]').forEach(b => b.onclick = e => { e.stopPropagation(); if (n.hiD === S.day) return; n.hiD = S.day; affAdd(n.id, 2); toast(`你跟${n.name}打了招呼`); close(); renderAll(); });
+  root.querySelectorAll('[data-ngift]').forEach(b => b.onclick = e => { e.stopPropagation(); if (S.gold < 150 || (n.giftD ?? -9) + 6 > S.day) return; S.gold -= 150; finAdd('other', -150); n.giftD = S.day; affAdd(n.id, 8); toast(`你送了${n.name}一份禮物`); close(); renderAll(); });
 }
 function npcPop(el, id){
   const n = npc(id); if (!n || !n.alive) return; const h = H();
   popAt(el, npcBody(n));
   $('popbox').querySelectorAll('[data-treat]').forEach(b => b.onclick = e => { e.stopPropagation(); if (S.gold < 30) return; S.gold -= 30; n.treat = S.day; affAdd(n.id, 4); toast(`${h.name}和${n.name}吃了頓飯`); $('popbox').classList.remove('on'); renderAll(); });
+  npcActBind($('popbox'), n, () => $('popbox').classList.remove('on'));
 }
 // v17.66 任務卡（新版）：標頭（事務所紫、委託棕）＋名稱＋名聲／報酬＋危險＋期限；右下加號＝排進去，排了變打勾
 let qSel = null;
 function qCard2(h, o, ag, inQ){
-  const Z = o.z >= 0 ? ZONES[o.z] : null, d = o.D ? danger(ratio(h, o.D) * compMul(o.comp)) : null, win = o.D ? Math.round(winP(ratio(h, o.D) * compMul(o.comp)) * 100) : null;
+  const Z = o.z >= 0 ? ZONES[o.z] : null, d = o.D ? danger(ratio(h, o.D) * compMul(o.comp) * teamMul(o)) : null, win = o.D ? Math.round(winP(ratio(h, o.D) * compMul(o.comp) * teamMul(o)) * 100) : null;
   const left = o.until ? o.until - S.day : null, dur = durTxt(h, o).replace(/ ?個月/, '月').replace('約 ', '約');
   const tip = `${typeTag(o)}${Z ? Z.n : '村子'}${o.comp && npc(o.comp) ? ` · 和${npc(o.comp).name}同行` : ''}${o.ug ? ` · 惡名 +${o.inf}` : ''}`;
   return `<div class="pb qc2${o.ug ? ' ug' : ag && !o.req ? ' ag' : ''}${o.boss || o.boss2 ? ' boss' : ''}"${inQ ? '' : ` role="button" tabindex="0" ${ag ? `data-ag="${o.id}"` : `data-o="${o.id}"`}`}>
@@ -509,7 +516,7 @@ function resolveUg(h, o){
   S.ugSkip = 0;   // v17.99：有接就重新算
   const pay = () => { const his = Math.round(o.gold * o.share); S.gold += o.gold - his; finAdd('ag', o.gold - his); h.wallet += his; };
   let ok = true;
-  if (o.D) { const r = ratio(h, o.D) * compMul(o.comp); ok = winOf(o, winP(r)); }
+  if (o.D) { const r = ratio(h, o.D) * compMul(o.comp) * teamMul(o); ok = winOf(o, winP(r)); }
   // v17.95：沒打鬥的也會出包（25～35%，細心、等級高的比較不會）
   else { const f = o.fail ?? ((UG.find(u => u.k === o.ag) || {}).fail || .3); if (chance(clamp(f - hx(h, 'C') * .1 - (h.lv >= 10 ? .05 : 0), .15, .4))) ok = false; }
   if (ok) {
@@ -595,7 +602,7 @@ const arById = id => AR().find(a => a.uid === id);
 const allHeroes = () => [H(), ...AR()].filter(Boolean);
 const heroBy = id => allHeroes().find(x => uidOf(x) === id);
 const A_POLICY = { safe:'穩定賺錢', fame:'衝名聲', rest:'休養', follow:'跟著主力' };
-const A_TALK = { cheer:'cheer', meal:'meal', talk:'heart' };   // 藝人的三種互動，和主力共用冷卻（經紀人的時間有限）
+const A_TALK = { cheer:'cheer', meal:'meal', talk:'heart', praise:'praise', scold:'scold', drink:'drink', gift:'gift' };   // v17.102：藝人也能稱讚、責備、喝酒、送禮   // 藝人的三種互動，和主力共用冷卻（經紀人的時間有限）
 const aKnown = (a, k) => (S.day - (a.joined ?? S.day)) >= HEX_REVEAL[k] * 2;   // 藝人相處少，個性看出來要兩倍時間
 function aAdj(a, k, v){
   if (a === H()) return adj(k, v);
@@ -637,8 +644,9 @@ function artistPool(force){
   if (hasU('foreign')) out.push({ tag:'從遙遠國度來的勇者', trust:50, lv:ri(10, 20) });
   if (S.fame >= 800) out.push({ tag:'慕名而來的新人', trust:60 });
   if ((S.coachUp || 0) > S.day) out.unshift({ tag:'上過你家勇者課的新人', trust:65 });   // v17.92：公會新人教練
-  const keep = S.rep < 15 ? 1 : S.rep < 30 ? 2 : out.length;
-  S.aPool = fameRecruit(out.slice(0, Math.max(1, keep)).map(o => { const a = newHero({ ...o, gen:S.gen }); a.tag = o.tag; if (o.lv) { a.lv = o.lv; } if (o.shady) { a.hex.H = Math.min(a.hex.H, ri(10, 35)); a.honest = a.hex.H; a.record = 1; } if (o.fanId) a.fanId = o.fanId;
+  let keep = S.rep < 15 ? 1 : S.rep < 30 ? 2 : out.length;
+  if (S.day >= 2) { out.sort((x, y) => (y.name || y.kid || y.fanId ? 1 : 0) - (x.name || x.kid || x.fanId ? 1 : 0)); keep = chance(.5) || out[0].name ? 1 : 0; }   // v17.102：選秀大會是主要來源，平常偶爾 1 個
+  S.aPool = fameRecruit(out.slice(0, keep).map(o => { const a = newHero({ ...o, gen:S.gen }); a.tag = o.tag; if (o.lv) { a.lv = o.lv; } if (o.shady) { a.hex.H = Math.min(a.hex.H, ri(10, 35)); a.honest = a.hex.H; a.record = 1; } if (o.fanId) a.fanId = o.fanId;
     a.age = o.kid ? 16 + rand(0, 2) : rand(18, 27); a.trust = clamp(a.trust + (S.rep - 60) / 2, 5, 95); return a; }));
   S.aPoolDay = S.day; return S.aPool;
 }
@@ -675,6 +683,8 @@ function artistTick(){
     a.mz = -1;
     if (a.away > 0) { a.away--; a.mz = -9; a.mlog = a.jailed ? '服刑中' : '不在事務所'; if (!a.away && a.jailed) { a.jailed = 0; a.record = 1; } return; }
     if (a.bed > 0) { a.bed--; aAdj(a, 'stress', -6); a.mlog = '養傷中'; lines.push(`${a.name}：養傷中`); return; }
+    if ((a.onTeam ?? -1) >= S.day) { lines.push(`${a.name}：${a.mlog || '跟主力一起出任務'}`); return; }   // v17.102：組隊、守城
+    if (typeof leadTick === 'function') try { leadTick(a, h); } catch (e) { console.error(e); }   // v17.102：爭主角
     // 這個月做什麼：方針＋個性
     let act = a.policy;
     if (a.task) act = 'task';
@@ -716,14 +726,14 @@ function runArtistJob(a, act){
     aExp(a, ag ? ZONES[2].exp * 4 * (it.baseDays || it.days || 1) * .7 : aMonExp(it ? it.z : z, rt));
     if (ag) {
       if (it.ug) infamyAdd(it.inf || 5, `${a.name}完成「${it.n.replace('地下委託：', '')}」`, true);
-      const g = it.gold || 0; S.gold += g; finAdd('ag', g); a.wallet += Math.round(g * (it.share || .1)); addFame(it.fame || 0); S.agDone = (S.agDone || 0) + 1; yr().ag++;
+      const g = it.gold || 0; S.gold += g; finAdd('ag', g); a.wallet += Math.round(g * (it.share || .1)); PF_WHO = a; try { addFame(it.fame || 0); } finally { PF_WHO = null; } S.agDone = (S.agDone || 0) + 1; yr().ag++;
       if (it.exam && it.exam > (S.exam || 0)) { const r0 = rankOf(); S.exam = it.exam; const r1 = rankOf(); if (r1 > r0 && !offline) ev('good', '晉升', `${a.name}通過了升格考核！你的事務所升格為「${RANKS[r1][1]}」${unlockMsg(r1)}`); }
       aAdj(a, 'mood', (it.ag === 'variety' || it.ag === 'meet') ? (hx(a, 'X') > .6 ? 6 : -6) : 2);
       return { txt:`完成「${it.n}」，事務所名聲 +${it.fame || 0}` };
     }
     const Z = ZONES[it ? it.z : z], g = it ? it.reward : Math.round(Z.gold * 12 * rand(.9, 1.4) * (1 + rkx() * .25) * (rt < 1.3 ? 1.6 : 1));
     const cut = Math.round(g * a.cut / 100); S.gold += cut; finAdd('cut', cut); a.wallet += g - cut; yr().mis++;   // 藝人完成的委託也算年度配額
-    aAdj(a, 'mood', 3);
+    aAdj(a, 'mood', 3); pfAdd(a, 1 + (it ? it.z : z));
     return { txt:`完成${Z.n}的委託，賺 ${fmt(g)} 金（事務所抽 ${fmt(cut)}）` };
   }
   // 失敗
@@ -803,9 +813,14 @@ function talkArtist(id, k, otherId){
   const a = arById(id), h = H(), key = A_TALK[k]; if (!a || !key) return { ok:false };
   if (talkLeft(h, key)) return { ok:false, why:`這個月的時間已經用掉了（還要 ${talkLeft(h, key)} 個月）` };
   if (k === 'meal' && S.gold < 30) return { ok:false, why:'錢不夠' };
+  if ((k === 'drink' && S.gold < 80) || (k === 'gift' && S.gold < 150)) return { ok:false, why:'錢不夠' };
   h.talked[key] = S.day;
   if (k === 'cheer') { aAdj(a, 'mood', 8); aAdj(a, 'trust', 2); }
   if (k === 'meal') { S.gold -= 30; aAdj(a, 'mood', 10); aAdj(a, 'stress', -8); aAdj(a, 'trust', 4); }
+  if (k === 'praise') { aAdj(a, 'mood', 8); aAdj(a, 'trust', 2); if (a.sulk > S.day) { a.sulk = 0; aAdj(a, 'trust', 3); } }
+  if (k === 'scold') { aAdj(a, 'mood', -10); aAdj(a, 'stress', 6); aAdj(a, 'trust', hx(a, 'A') < .4 || a.trait === 'hot' ? -8 : -2); a.burn = clamp((a.burn || 0) - 5, 0, 100); if (a.policy === 'rest' && a.trait === 'lazy') a.policy = 'safe'; }
+  if (k === 'drink') { S.gold -= 80; aAdj(a, 'mood', 14); aAdj(a, 'stress', -14); aAdj(a, 'trust', 5); }
+  if (k === 'gift') { S.gold -= 150; aAdj(a, 'mood', 10); aAdj(a, 'trust', 3); if (a.sulk > S.day) a.sulk = 0; }
   if (k === 'talk') {
     if (otherId) {   // 調解兩個人：效果看你和兩人各自的信任
       const b = heroBy(otherId); if (b) { const g = 10 * ((a.trust + b.trust) / 200); relAdd(a.uid, otherId, g); ev('', '調解', `你找${a.name}和${b.name}好好談了一次`); }
@@ -1044,7 +1059,7 @@ function artistCard(a){
   let o = `<div class="pb ac2${op ? ' open' : ''}" id="ac_${a.uid}"><button class="arw2" data-aexp="${a.uid}" aria-expanded="${op}">
       <span class="acav">${pimg(a)}<i class="acdot" style="background:${SC[1]}"></i></span>
       <span class="acm"><span class="acn"><b class="f22">${esc(a.name)}</b><span class="pb ns etag ${SC[0]}">${st[2]}</span></span>
-        <span class="acr"><span class="num s mu">${IC('戰力', 1)}<b class="f14">${jobName(a)} Lv${a.lv}</b></span><span class="pb ns etag p">${A_POLICY[a.policy]}</span></span>
+        <span class="acr"><span class="num s mu">${IC('戰力', 1)}<b class="f14">${jobName(a)} Lv${a.lv}</b></span><span class="num s mu">${IC('名聲', 1)}<b class="f14">${fmt(Math.round(a.pf || 0))}</b></span><span class="pb ns etag p">${A_POLICY[a.policy]}</span></span>
         <span class="acb">${[['心情', a.mood, '#43c878'], ['壓力', a.stress, '#e84537'], ['信任', a.trust, '#59a8ff']].map(([ic, v, c]) => `<span>${IC(ic, 1)}<i class="pbar"><i style="width:${clamp(v, 2, 100)}%;background:${c}"></i></i></span>`).join('')}</span></span></button>
     <div class="ml1 f14 mu">${a.mlog ? esc(a.mlog) : '還沒有這個月的消息'}</div>`;
   if (!op) return o + '</div>';
@@ -1063,7 +1078,7 @@ function artistCard(a){
     const PIC = { safe:'金幣', fame:'名聲', rest:'休息', follow:'一起出任務' };
     o += `<div class="lbl">方針</div><div class="apol">${Object.entries(A_POLICY).map(([k, n]) => `<button data-apol="${a.uid}:${k}" class="pb ns${a.policy === k ? ' g' : ''}">${IC(PIC[k], 2)}<b class="f14">${n}</b></button>`).join('')}</div>
       <div class="lbl">抽成</div><div class="cutr"><button class="pb ns acut" data-acut="${a.uid}:-5" ${a.cut <= 0 ? 'disabled' : ''} aria-label="降低抽成">−</button><b class="f22">${a.cut}%</b><button class="pb ns acut" data-acut="${a.uid}:5" ${a.cut >= 60 ? 'disabled' : ''} aria-label="提高抽成">＋</button><span class="f14 mu" style="flex:1">${a.cut > 35 ? '太高，他會不滿、容易被挖角' : a.cut < 20 ? '他很感激' : '還算合理'}</span></div>
-      <div class="lbl">互動（和${esc(h.name)}共用時間）</div><div class="acts2">${[['cheer', '打氣', '上升', ''], ['meal', '請吃飯', '金幣', '30 金'], ['talk', '談談', '說話', '']].map(([k, n, ic, sub]) => `<button class="pb ns" data-atalk="${a.uid}:${k}" ${tl(k) || a.away ? 'disabled' : ''}>${IC(ic, 2, tl(k) || a.away)}<span><b class="f16">${n}</b>${tl(k) ? `<small>還要 ${tl(k)} 月</small>` : sub ? `<small>${sub}</small>` : ''}</span></button>`).join('')}</div>
+      <div class="lbl">互動（和${esc(h.name)}共用時間）</div><div class="acts2">${[['praise', '稱讚', '口碑', ''], ['cheer', '打氣', '上升', ''], ['scold', '責備', '打叉', ''], ['meal', '請吃飯', '金幣', '30 金'], ['drink', '喝一杯', '酒窖', '80 金'], ['gift', '送禮', '寶物', '150 金'], ['talk', '談談', '說話', '']].map(([k, n, ic, sub]) => `<button class="pb ns" data-atalk="${a.uid}:${k}" ${tl(k) || a.away ? 'disabled' : ''}>${IC(ic, 2, tl(k) || a.away)}<span><b class="f16">${n}</b>${tl(k) ? `<small>還要 ${tl(k)} 月</small>` : sub ? `<small>${sub}</small>` : ''}</span></button>`).join('')}</div>
       <div class="lbl">指派事務所任務</div>${S.agTasks.length && !a.task && !a.away ? `<div class="aas">${S.agTasks.map(t => `<button class="pb ns" data-aas="${a.uid}:${t.id}">${IC('事務所', 2)}<span><b class="f16">${esc(t.n)}</b><small>${IC('名聲', 1)}+${t.fame}${t.D ? ` · 危險度 ${t.D}（他的戰力 ${Math.round(power(a))}）` : ''}${t.exam ? ' · 升格考核' : ''}</small></span>${IC('加號', 2)}</button>`).join('')}</div>` : `<div class="k" style="font-size:12.5px">${a.task ? `已指派「${esc(a.task.n)}」，下個月出發` : '現在沒有可以指派的任務'}</div>`}`;
   }
   if (artSub === 'hr') {
@@ -1139,12 +1154,12 @@ function renderSheet(){
   }
   if (sheetT === 'hero' && SS('charm')) html += gearSlots(h);
   if (sheetT === 'hero' && SS('mind')) {   // v17.69 個性：六角形＋天賦六格＋最在乎的事；看不出來的＝鎖＋還要幾個月，點看得出來的跳說明
-    const km = S.day - h.born, ok = k => km >= HEX_REVEAL[k] || (k === 'H' && h.revealed);
+    const km = S.day - h.born, ok = k => km >= HEX_REVEAL[k] || (k === 'H' && h.revealed) || (h.hexEarly || []).includes(k);   // v17.102：陪他、聊心事會提早看出來
     html += hexRadar(h, ok, km);
     html += `<div class="pb ofc"><div class="hx6">${Object.keys(HEX).map(k => { const v = h.hex[k], T0 = HEX_TXT[k];
       return ok(k) ? `<span class="pb ns hxc"${TIPA('個性', hexWord(k, v), v >= 60 ? T0.hiE : v <= 40 ? T0.loE : '兩種情況都可能')}><b class="f14">${hexWord(k, v).replace(/^比較/, '').replace(/^介於(.)(.)和.*/, '$1$2之間')}</b></span>`
         : `<span class="pb ns hxc lk"${TIPA('鎖', `${T0.lo}／${T0.hi}`, `再相處 ${HEX_REVEAL[k] - km} 個月才看得出來`)}>${IC('鎖', 1)}${IC('時間', 1)}<b class="f14">${HEX_REVEAL[k] - km}月</b></span>`; }).join('')}</div></div>`;
-    html += `<div class="pb ofc"><div class="ofr">${IC('心情', 2)}<b class="f16">最在乎的事</b></div>${h.des.map((k, i) => `<div class="ofr dsr"><b class="f22 mu">${i + 1}</b>${km >= DES_REVEAL[i] ? `<b class="f16"${TIPA('心情', DESIRES[k].n, DESIRES[k].d + '。會怎樣：' + DES_FX[k])}>${DESIRES[k].n}</b><span class="f14 mu">${DESIRES[k].d}</span>` : `${IC('鎖', 1)}${IC('時間', 1)}<b class="f14">${DES_REVEAL[i] - km}月</b>`}</div>`).join('')}</div>`;
+    html += `<div class="pb ofc"><div class="ofr">${IC('心情', 2)}<b class="f16">最在乎的事</b></div>${h.des.map((k, i) => `<div class="ofr dsr"><b class="f22 mu">${i + 1}</b>${km >= DES_REVEAL[i] || i < (h.desEarly || 0) ? `<b class="f16"${TIPA('心情', DESIRES[k].n, DESIRES[k].d + '。會怎樣：' + DES_FX[k])}>${DESIRES[k].n}</b><span class="f14 mu">${DESIRES[k].d}</span>` : `${IC('鎖', 1)}${IC('時間', 1)}<b class="f14">${DES_REVEAL[i] - km}月</b>`}</div>`).join('')}</div>`;
   }
   if (sheetT === 'people' && SS('team')) html += teamView();
   if (sheetT === 'people' && SS('news')) { const nw = (S.news || []).slice().reverse();
@@ -1230,12 +1245,13 @@ function renderSheet(){
       if (hasP(h, 'lame')) { const aid = h.aid || 0;
         if (aid < 2) row('上升', ['拐杖', '魔導義足'][aid], `跛腳治不好，但能減輕：戰力 ${['-15% → -10%', '-10% → -5%'][aid]}，走路也比較快`, [['戰力', '+']], 'aid', [300, 2000][aid], ''); }
       if (h.addict) row('醫務室', '送神殿戒癮', `艾琳修女會陪${pron(h)}戒掉魔藥，要休養 2 個月`, [['', '戒掉魔藥']], 'rehab', 600, '');
+      row('商隊', '送他一匹馬', `每月飼料 ${HORSE_FEED} 金由事務所付；感情越好跑越快，換代會傳給徒弟或孩子`, [['信任', '+'], ['心情', '+']], 'horse', HORSE_PRICE, h.horse ? '已經有馬了' : '');   // v17.102
       row('金幣', '給零用錢', `${pron(h)}的錢包：${fmt(h.wallet)} 金（${h.wallet < 20 ? '快空了' : h.wallet < 150 ? '還夠用' : '很充裕'}）`, [['心情', h.allowM === S.day ? '' : '+']], 'm', 100, '');
       html += rows.join('');
     }
   }
   const lifeIs = k => sheetT === 'hero' && SS('life') && (S.lifeT || 'log') === k;
-  if (sheetT === 'hero' && SS('life')) html += `<div class="lsub">${[['log', '年表', '排程'], ['mem', '回憶', '心情'], ['regret', '遺憾', '危險'], ['own', '自己買', '金幣']].map(([k, n, ic]) => `<button class="pb${(S.lifeT || 'log') === k ? ' g' : ''}" data-lt="${k}">${IC(ic, 1)}<span>${n}</span></button>`).join('')}</div>`;
+  if (sheetT === 'hero' && SS('life')) html += `<div class="lsub">${[['log', '年表', '排程'], ['mem', '回憶', '心情'], ['regret', '遺憾', '危險'], ['own', '自己買', '金幣'], ['album', '相簿', '生平'], ['ach', '成就', '代表作']].map(([k, n, ic]) => `<button class="pb${(S.lifeT || 'log') === k ? ' g' : ''}" data-lt="${k}">${IC(ic, 1)}<span>${n}</span></button>`).join('')}</div>`;
   if (lifeIs('log')) {
     const rg = regrets(h), hp = happyOf(rg), rgn = rg.filter(r => r.lv).length, wn = (h.mem || []).filter(m => m.k === 'wishOk').length;
     html += `<div class="pb ofc"><b class="f16">18 歲 → 50 歲</b><span class="pbar"><i style="width:${clamp((h.age - 18) / 32 * 100, 2, 100)}%;background:var(--gold)"></i></span>
@@ -1257,6 +1273,8 @@ function renderSheet(){
     html += `<div class="f14 mu" style="margin:2px 2px 4px">${h.name}記得的事會影響${pron(h)}怎麼看你${bd > g ? `<b class="co">，${pron(h)}對你有點心結</b>` : g > bd ? `<b class="cg">，${pron(h)}記得你對${pron(h)}的好</b>` : ''}</div>`;
     html += grp(GOOD, '感激你的事', '信任', 'cg', '還沒有') + grp(BAD, '心裡的結', '壓力', 'cr', '還沒有，很好') + grp(null, '人生的記憶', '生平', 'cp', '還沒有特別的回憶');
   }
+  if (lifeIs('album') && typeof albumView === 'function') html += albumView(h);   // v17.102
+  if (lifeIs('ach') && typeof achView === 'function') html += achView(h);
   if (lifeIs('regret')) {
     const rg = regrets(h), hp = happyOf(rg), TIP = ['讓' + pron(h) + '多自己做決定：放寬「自己接任務」、少硬排' + pron(h) + '不想做的事', '多排休息，別讓' + pron(h) + '連續工作太久', '多回應' + pron(h) + '說的話，少「已讀不回」，偶爾關心一下', '讓' + pron(h) + '交朋友：請客、帶朋友一起出任務', '照顧' + pron(h) + '的心情：心願、稱讚、請喝一杯'];
     const hc = hp >= 70 ? 'cg' : hp >= 40 ? 'co' : 'cr', hb = hp >= 70 ? '#43c878' : hp >= 40 ? '#f08a3c' : '#e84537';   // v17.83 新版
@@ -1327,11 +1345,12 @@ function renderSheet(){
         ${pushMsg ? `<div class="f14 dg">${esc(pushMsg)}</div>` : ''}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.101</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.102</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
   B.querySelectorAll('[data-lt]').forEach(b => b.onclick = () => { S.lifeT = b.dataset.lt; renderSheet(); });
+  if (typeof lifeBind === 'function') lifeBind(B);
   B.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => { sub.people = b.dataset.ps; B.scrollTop = 0; renderSheet(); });
   B.querySelectorAll('[data-lf]').forEach(b => b.onclick = () => { S.lifeF = b.dataset.lf; renderSheet(); });
   B.querySelectorAll('[data-cv]').forEach(b => b.onclick = () => cvBuy(b.dataset.cv, +b.dataset.cp));
@@ -1391,7 +1410,7 @@ function renderSheet(){
   if (sheetT === 'office' && SS('art') && artExp && artScroll !== artExp) { artScroll = artExp; const el = $('ac_' + artExp); if (el) B.scrollTop = el.offsetTop - 8; }
   B.querySelectorAll('[data-apol]').forEach(b => b.onclick = () => { const [id, p] = b.dataset.apol.split(':'); setPolicy(id, p); renderSheet(); });
   B.querySelectorAll('[data-acut]').forEach(b => b.onclick = () => { const [id, d] = b.dataset.acut.split(':'), a = arById(id); if (a) setArtistCut(id, a.cut + +d); renderSheet(); });
-  B.querySelectorAll('[data-atalk]').forEach(b => b.onclick = () => { const [id, k] = b.dataset.atalk.split(':'), r = talkArtist(id, k); toast(r.ok ? ({ cheer:'你替他打氣', meal:'你請他吃了一頓', talk:'你們好好談了一次' }[k]) : (r.why || '現在不行')); renderAll(); });
+  B.querySelectorAll('[data-atalk]').forEach(b => b.onclick = () => { const [id, k] = b.dataset.atalk.split(':'), r = talkArtist(id, k); toast(r.ok ? ({ cheer:'你替他打氣', meal:'你請他吃了一頓', talk:'你們好好談了一次', praise:'你稱讚了他', scold:'你責備了他', drink:'你們喝了一杯', gift:'你送了他一份禮物' }[k]) : (r.why || '現在不行')); renderAll(); });
   B.querySelectorAll('[data-aas]').forEach(b => b.onclick = () => { const [id, t] = b.dataset.aas.split(':'); if (assignAg(id, +t)) toast('已指派，下個月出發'); renderAll(); });
   B.querySelectorAll('[data-aswap]').forEach(b => b.onclick = () => { const r = swapMain(b.dataset.aswap); if (!r.ok) toast(r.why || '換不成'); renderAll(); });
   B.querySelectorAll('[data-arel]').forEach(b => b.onclick = () => { const [id, how] = b.dataset.arel.split(':'); if (arArm !== id + how) { arArm = id + how; renderSheet(); return; } arArm = null; releaseArtist(id, how); renderAll(); });
@@ -1423,6 +1442,7 @@ function describe(h){
 function buy(k){ const g0 = S.gold; buy0(k); finAdd('shop', S.gold - g0); }
 function buy0(k){
   const h = H();
+  if (k === 'horse') { if (typeof buyHorse === 'function') buyHorse(); return; }   // v17.102
   if (k === 'rehab') { if (!h.addict || S.gold < 600) return; S.gold -= 600; h.addict = 0; h.bedDays = (h.bedDays || 0) + 2; affAdd('priest', 5); adj('trust', 6); ev('good', '戒癮', `${h.name}住進神殿，由艾琳修女陪著戒魔藥`); logLife('在神殿戒掉魔藥'); return; }
   if (k === 'w') { if (h.wpn >= 3) return; const p = quote(WPN.price[h.wpn + 1], 'agent').p; if (S.gold < p) return; S.gold -= p; S.smithDisc = 0; h.wpn++; adj('trust', 6); adj('mood', 10); say(`${WPN.n[h.wpn]}${WNAME[h.cls]}！謝謝老闆！`); logLife(`經紀人送了${WPN.n[h.wpn]}${WNAME[h.cls]}`); remember('gift'); affAdd('chen', 6); }
   if (k === 'a') { if (h.arm >= 3) return; const p = quote(ARM.price[h.arm + 1], 'agent').p; if (S.gold < p) return; S.gold -= p; S.smithDisc = 0; h.arm++; affAdd('chen', 4); adj('trust', 4); say(`穿上${ARM.n[h.arm]}，安心多了`); }
