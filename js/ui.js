@@ -606,12 +606,15 @@ function aAdj(a, k, v){
 }
 function aExp(a, n){
   if (a === H()) return gainExp(n);
-  n *= (hasP(a, 'genius') ? 1.3 : 1) * (.85 + .3 * hx(a, 'C')) * (S.coach ? 1.2 : 1) * (1 + (S.office.gym || 0) * .12);
+  n *= (hasP(a, 'genius') ? 1.3 : 1) * (.85 + .3 * hx(a, 'C')) * (S.coach ? 1.2 : 1) * (S.dojo ? 1.1 : 1) * (1 + (S.office.gym || 0) * .12);   // v17.100：武館也算藝人
   const m = relOf(a).find(r => r.t === 'mentor' && r.jr === uidOf(a)); if (m) n *= 1.15;   // 師徒：後輩經驗加成
   if (relOf(a).some(r => r.t === 'rival')) n *= 1.1;
   a.exp += n;
   while (a.exp >= expNeed(a.lv)) { a.exp -= expNeed(a.lv); a.lv++; if (a.lv % 5 === 0) a.log.push({ d:S.day, age:a.age, t:`升到 Lv${a.lv}` }); }
 }
+// v17.100：藝人經驗改成照區域怪物給固定量（跟主力一樣，等級越高升越慢）。
+// 主力白天打怪一個月約 10 隻；藝人拿同一區的 7 成。
+const aMonExp = (z, r) => ZONES[z].exp * 10 * RISK_MUL[danger(r).i] * (r > 2 ? .5 : 1) * .7;
 const aLog = (a, t) => { a.log = a.log || []; a.log.push({ d:S.day, age:a.age, t }); };
 const aSafeZone = a => { let z = 0; for (let i = 0; i <= topZ(); i++) if (ratio(a, zD(i)) >= 1.3) z = i; return z; };
 // 跟著主力的藝人，讓主力出任務時戰力加成（好搭檔再多一點）
@@ -682,7 +685,7 @@ function artistTick(){
       aAdj(a, 'stress', -10); a.burn = clamp((a.burn || 0) - 8, 0, 100); a.sta = 100; aAdj(a, 'mood', act === 'slack' ? 3 : 5);
       txt = act === 'slack' ? '這個月擺爛，沒接工作' : '休養了一個月';
     } else if (act === 'follow') {
-      aExp(a, expNeed(a.lv) * .35); const g = Math.round(40 + a.lv * 12); a.wallet += g; aAdj(a, 'stress', 3); a.burn = clamp((a.burn || 0) + 2, 0, 100);
+      { const fz = aSafeZone(a); aExp(a, aMonExp(fz, ratio(a, zD(fz))) * .7); } const g = Math.round(40 + a.lv * 12); a.wallet += g; aAdj(a, 'stress', 3); a.burn = clamp((a.burn || 0) + 2, 0, 100);
       relAdd(uidOf(h), uidOf(a), 2.5, 'follow'); a.mz = 'f'; txt = `跟著${h.name}出任務`;
     } else {
       const r = runArtistJob(a, act); txt = r.txt; if (r.dead) return;
@@ -710,7 +713,7 @@ function runArtistJob(a, act){
   if (offline) { /* 離線只發生平安的事 */ }
   a.burn = clamp((a.burn || 0) + (act === 'fame' ? 4 : 2) + (a.stress > 70 ? 2 : 0), 0, 100); aAdj(a, 'stress', act === 'fame' ? 6 : 3); a.sta = clamp(a.sta - 25, 0, 100);
   if (offline || chance(p)) {
-    aExp(a, expNeed(a.lv) * (ag ? .3 : .5) * (rt < 1.3 ? 1.6 : 1));
+    aExp(a, ag ? ZONES[2].exp * 4 * (it.baseDays || it.days || 1) * .7 : aMonExp(it ? it.z : z, rt));
     if (ag) {
       if (it.ug) infamyAdd(it.inf || 5, `${a.name}完成「${it.n.replace('地下委託：', '')}」`, true);
       const g = it.gold || 0; S.gold += g; finAdd('ag', g); a.wallet += Math.round(g * (it.share || .1)); addFame(it.fame || 0); S.agDone = (S.agDone || 0) + 1; yr().ag++;
@@ -1324,7 +1327,7 @@ function renderSheet(){
         ${pushMsg ? `<div class="f14 dg">${esc(pushMsg)}</div>` : ''}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.92</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.100</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });
