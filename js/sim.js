@@ -958,7 +958,7 @@ function thiefCaught(h, quiet){ addFame(6); repAdd(1, '抓到小偷', true); adj
 function resolveAg(){
   const h = H(), o = h.mission; h.mission = null; h.alpha = 1;
   h.x = o.z >= 0 ? ZONES[o.z].rect[0] + 10 : GX; h.y = o.z >= 0 ? ZONES[o.z].rect[1] + 10 : GY; h.tx = GX; h.ty = GY;
-  if (o.ug) { resolveUg(h, o); if (o.last) { S.underworld = 0; S.quitAfter = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('good', '抽身', '最後一件事辦完了，地下商會放你走了'); } if (h.act !== 'dying' && h.bedDays <= 0 && !h.jailed) setAct('rest'); return; }
+  if (o.ug) { resolveUg(h, o); if (o.last) { S.underworld = 0; S.ugSkip = 0; S.quitAfter = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('good', '抽身', '最後一件事辦完了，地下商會放你走了'); } if (h.act !== 'dying' && h.bedDays <= 0 && !h.jailed) setAct('rest'); return; }
   const pay = () => { const his = Math.round(o.gold * o.share); S.gold += o.gold - his; finAdd('ag', o.gold - his); h.wallet += his; addFame(o.fame); S.agDone = (S.agDone || 0) + 1; yr().ag++; };
   if (o.ag === 'endorse' || o.ag === 'variety' || o.ag === 'meet') {
     pay(); yr().show++; if (S.contract) S.contract.done++; const like = o.ag === 'endorse' ? .6 - dw(h, 'independence') * .5 + dw(h, 'status') * .3 : hx(h, 'X') - .3 + dw(h, 'status') * .3 + dw(h, 'acceptance') * .2;
@@ -1214,7 +1214,9 @@ function dayEnd(){
   repAdd(h.burn > 70 ? -.25 : h.burn < 35 ? .08 : 0, h.burn > 70 ? '勇者長期過勞' : '勇者被照顧得很好', true);
   // 事務所任務：逾期與刷新
   const exp = S.queue.filter(it => it.until && S.day >= it.until);
+  exp.filter(it => it.ug).forEach(ugSkipped);   // v17.99：排了卻沒做的地下委託也算放鴿子
   if (exp.length) { exp.forEach(it => addFame(-Math.round((it.fame || 0) * .3))); if (!offline) ev('warn', '逾期', `${exp.map(it => `「${it.n}」`).join('、')}過了期限沒做，委託方很不滿`); S.queue = S.queue.filter(it => !exp.includes(it)); }
+  S.agTasks.filter(it => it.ug && S.day >= it.until).forEach(ugSkipped);   // v17.99：地下委託放著不接 → 地下商會越來越不耐煩
   S.agTasks = S.agTasks.filter(it => S.day < it.until);
   if (S.day - (S.agDay ?? -99) >= 6) refreshAg();
   scandalTick();

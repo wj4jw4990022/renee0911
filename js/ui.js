@@ -506,6 +506,7 @@ function pushUg(){
   if (!offline) ev('warn', '地下', `有人悄悄塞了一張紙條：「${u.n.replace('地下委託：', '')}」`);
 }
 function resolveUg(h, o){
+  S.ugSkip = 0;   // v17.99：有接就重新算
   const pay = () => { const his = Math.round(o.gold * o.share); S.gold += o.gold - his; finAdd('ag', o.gold - his); h.wallet += his; };
   let ok = true;
   if (o.D) { const r = ratio(h, o.D) * compMul(o.comp); ok = winOf(o, winP(r)); }
@@ -527,6 +528,23 @@ function resolveUg(h, o){
   }
 }
 // 黑心路線的入口：被找上門
+// v17.99：地下委託一直不接，地下商會越來越不耐煩（連續次數 S.ugSkip；接一件就歸零）
+function ugSkipped(it){
+  if (!S.underworld) return; const h = H(), n = S.ugSkip = (S.ugSkip || 0) + 1, nm = it.n.replace('地下委託：', '');
+  if (n === 1) { ev('warn', '地下', `「${nm}」你沒接。送紙條的人只說了一句：「我們記下來了。」`); return; }
+  if (n === 2) { const loss = ri(300, 800); S.gold -= loss; finAdd('other', -loss); adj('stress', 10);
+    ev('bad', '地下', `地下商會的人半夜上門，砸了事務所的門窗（損失 ${fmt(loss)} 金）。「下次就不是門窗了。」`); if (!offline) say('老闆……他們是認真的'); return; }
+  const k = n - 2, mul = 1 + (k - 1) * .5;   // 第 3 次起每多一次加重 50%
+  const hurts = [
+    () => { const heavy = n >= 6 && chance(.3 + (n - 6) * .1); injure(heavy ? 'heavy' : 'light', '在巷子裡被地下商會的人堵'); adj('trust', -3); },
+    () => { addFame(-Math.round(50 * mul)); infamyAdd(Math.round(5 * mul), '地下商會把你的把柄爆給報社', true); },
+    () => { const loss = Math.round(rand(500, 900) * mul); S.gold -= loss; finAdd('other', -loss); ev('bad', '地下', `事務所又被砸了一次（損失 ${fmt(loss)} 金）`); },
+    () => { adj('stress', Math.round(12 * mul)); adj('mood', -Math.round(10 * mul)); ev('bad', '地下', `${h.name}家門口被潑了紅漆`); },
+  ];
+  const cnt = n >= 4 ? 2 : 1; [...hurts].sort(() => Math.random() - .5).slice(0, cnt).forEach(f => f());
+  ev('bad', '地下', `你已經連續 ${n} 次沒接地下委託，地下商會越來越不耐煩了`);
+  if (n >= 5 && !offline && !S.q) quitUnderworld();   // 對方直接「請你出面談談」
+}
 function enterUnderworld(why){ if (S.underworld) return; S.underworld = 1; S.uwSince = S.day; infamyAdd(5, why, true); pushUg(); }
 function quitUnderworld(){
   if (!S.underworld || S.q) return false;
@@ -550,12 +568,12 @@ Object.assign(QH, {
     if (i === 1) { if (chance(.4)) { addFame(-150); infamyAdd(15, '銷毀帳本被發現', true); ev('bad', '稽查', '銷毀帳本的事被發現了，全王國都在罵你的事務所'); } else infamyAdd(5, '銷毀帳本', true); return; }
     jailHero(h, 24, '替事務所頂罪'); adj('trust', -40); S.infamy = Math.max(0, S.infamy - 25); S.accomp = S.accomp || []; S.accomp.push({ d:S.day, t:`讓${h.name}替事務所頂罪` }); },
   vQuit(i){
-    if (i === 0) { const c = quitCost(); if (S.gold < c) { sys('錢不夠，對方不收'); return; } S.gold -= c; S.underworld = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('good', '抽身', '你付了錢，和地下商會斷了關係'); return; }
+    if (i === 0) { const c = quitCost(); if (S.gold < c) { sys('錢不夠，對方不收'); return; } S.gold -= c; S.underworld = 0; S.ugSkip = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('good', '抽身', '你付了錢，和地下商會斷了關係'); return; }
     if (i === 1) { const h = H(), u = UG.find(x => x.k === 'ugGuard'); S.agTasks.push({ id:S.day * 100 + 98, ag:u.k, ug:1, inf:u.inf, violent:1, last:1, n:'地下委託：最後一件事', days:1, D:Math.round(power(h) * 1.2), z:2, fame:0, gold:0, share:0, until:S.day + 6 }); S.quitAfter = 1; ev('warn', '抽身', '對方給了最後一件委託，做完就放你走'); return; }
-    addFame(-100); infamyAdd(10, '翻臉後，地下商會把你的把柄公開了', true); S.underworld = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('bad', '抽身', '你直接翻臉。地下商會把你的把柄公開了'); },
+    addFame(-100); infamyAdd(10, '翻臉後，地下商會把你的把柄公開了', true); S.underworld = 0; S.ugSkip = 0; S.agTasks = S.agTasks.filter(t => !t.ug); ev('bad', '抽身', '你直接翻臉。地下商會把你的把柄公開了'); },
   vWhistle(i, d){ const h = H();
     if (i === 0) { adj('trust', 8); S.agTasks = S.agTasks.filter(t => !t.violent); ev('good', '收手', `你答應${h.name}不再碰這種事`); return; }
-    addFame(-120); infamyAdd(12, `${h.name}向公會舉報了事務所`, true); S.underworld = 0; S.agTasks = S.agTasks.filter(t => !t.ug); die(`受不了事務所的黑幕，向公會舉報後離開`, 'left'); },
+    addFame(-120); infamyAdd(12, `${h.name}向公會舉報了事務所`, true); S.underworld = 0; S.ugSkip = 0; S.agTasks = S.agTasks.filter(t => !t.ug); die(`受不了事務所的黑幕，向公會舉報後離開`, 'left'); },
 });
 ['vCrime', 'vWanted', 'vAudit', 'vQuit', 'vWhistle'].forEach(k => BIG_Q.add(k));
 
@@ -968,7 +986,7 @@ function infamyView(){
   return `<div class="sec">惡名（地下風評：事務所對外做了多少壞事）</div><div class="card" style="border-color:#6a2a2e;background:#24181c">
     <div class="row"><b style="color:${v >= 60 ? '#ff7b7b' : v >= 30 ? '#ffb347' : '#6b4e33'};font-size:15px">${v >= 60 ? '惡名昭彰' : v >= 30 ? '小有惡名' : '有些傳聞'}</b><span>${v} / 100</span></div>
     <div class="xbar" style="margin-top:6px;background:#3a2a2e"><i style="width:${clamp(v, 2, 100)}%;background:#d0505a"></i></div>
-    <div class="k" style="font-size:12px;margin-top:6px">${S.underworld ? '你和地下商會有往來，地下委託會一直送來。' : '目前和地下世界沒有往來。'}惡名會隨時間慢慢下降；60 以上，事務所的稱號會變成地下版本，70 以上可能被王國稽查。</div>
+    <div class="k" style="font-size:12px;margin-top:6px">${S.underworld ? `你和地下商會有往來，地下委託會一直送來。${S.ugSkip ? `已經連續 ${S.ugSkip} 次沒接，一直不接對方會越來越不客氣。` : '一直不接，對方會越來越不客氣。'}` : '目前和地下世界沒有往來。'}惡名會隨時間慢慢下降；60 以上，事務所的稱號會變成地下版本，70 以上可能被王國稽查。</div>
     ${ac.length ? `<details style="margin-top:6px"><summary class="k" style="font-size:12.5px;cursor:pointer">共犯紀錄（${ac.length}）</summary><div style="font-size:12.5px;margin-top:4px;line-height:1.6">${ac.map(x => `${ym(x.d)}：${esc(x.t)}`).join('<br>')}</div></details>` : ''}
     ${S.underworld ? `<button class="btn warn" data-uwq="1" style="width:100%;margin-top:8px" ${S.q ? 'disabled' : ''}>想辦法抽身</button>` : ''}</div>`;
 }
