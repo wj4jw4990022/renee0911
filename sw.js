@@ -1,6 +1,16 @@
 // 孤勇者 App 模式（v17.28）
 // 策略：有網路一律拿最新版（不會卡在舊版，適合還在改遊戲的時候）；沒網路才用上次成功載入時存下來的那份。
 const CACHE = 'guyongzhe-app';
+// v17.98：推播通知。伺服器推來的是空訊息，這裡再去伺服器拿要顯示的字（push/worker.js）
+const PUSH_URL = '';
+self.addEventListener('push', e => e.waitUntil((async () => {
+  let m = { title:'勇者經紀人', body:'回來看看勇者吧' };
+  try { const sub = await self.registration.pushManager.getSubscription(); if (PUSH_URL && sub) m = await (await fetch(PUSH_URL + '/msg?ep=' + encodeURIComponent(sub.endpoint), { cache:'no-store' })).json(); } catch (err) {}
+  await self.registration.showNotification(m.title, { body:m.body, icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:'yongzhe' });
+})()));
+self.addEventListener('notificationclick', e => { e.notification.close(); e.waitUntil((async () => {
+  const cs = await self.clients.matchAll({ type:'window', includeUncontrolled:true }); if (cs.length) return cs[0].focus(); return self.clients.openWindow('./');
+})()); });
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {

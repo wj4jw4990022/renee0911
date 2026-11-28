@@ -1301,6 +1301,9 @@ function renderSheet(){
       <div class="smv"><small id="saveMsg" class="f14 mu"></small><textarea id="saveTxt" rows="4" style="display:none" aria-label="存檔文字"></textarea><div class="sseg" id="saveBtns" style="display:none"><button class="pb sbs" id="bCopy">複製</button><button class="pb sbs g" id="bImp">確定匯入</button></div></div></div>`;
     { const inApp = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || navigator.standalone);
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
+        ${li('鈴鐺', '通知', PUSH_URL ? tgl(pref.push, 'data-push') : '<small class="f14 mu">還沒開通</small>', '離線補算滿 15 個月時提醒你；也可以每天固定時間提醒（那天玩過就不提醒）。iPhone 要從主畫面的 App 打開才能開')}
+        ${pref.push && PUSH_URL ? li('時間', '每天提醒', seg([['', '不要'], ['12:00', '12 點'], ['20:00', '20 點'], ['22:00', '22 點']], pref.daily ?? '20:00', 'data-pd')) : ''}
+        ${pushMsg ? `<div class="f14 dg">${esc(pushMsg)}</div>` : ''}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
     html += `<div class="stFoot">勇者經紀人 v17.92</div>`;
@@ -1356,6 +1359,8 @@ function renderSheet(){
   B.querySelectorAll('[data-fz]').forEach(b => b.onclick = () => { prefSet('fz', +b.dataset.fz); renderSheet(); });
   B.querySelectorAll('[data-sl]').forEach(b => b.onclick = () => { prefSet('sl', +b.dataset.sl); renderSheet(); renderTop(); });
   B.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => { prefSet('fx', pref.fx ? 0 : 1); renderSheet(); });
+  B.querySelectorAll('[data-push]').forEach(b => b.onclick = async () => { pushMsg = ''; if (pref.push) await pushDisable(); else pushMsg = await pushEnable(); renderSheet(); });   // v17.98
+  B.querySelectorAll('[data-pd]').forEach(b => b.onclick = () => { prefSet('daily', b.dataset.pd); pushSync(false); renderSheet(); });
   if ($('bReload')) $('bReload').onclick = async () => { save(); try { const r = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (e) {} location.reload(); };
   if ($('bSaveNow')) $('bSaveNow').onclick = () => { save(); cloudSave(JSON.stringify(S), true); toast('存好了'); };
   if ($('bResetNo')) $('bResetNo').onclick = () => { resetArm = false; renderSheet(); };
@@ -1377,6 +1382,7 @@ function renderSheet(){
 let resetArm = false;
 // v14.5：顯示偏好（存在這台裝置，跟遊戲進度分開，重新開始不會清掉）
 const PREF_KEY = 'guyongzhe_pref';
+let pushMsg = '';
 const pref = (() => { try { return Object.assign({ fz:0, fx:1, sl:1 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch (e) { return { fz:0, fx:1, sl:1 }; } })();
 const MENU_MUL = [1, .25, 0];   // v17.23：看選單時 照常／放慢／暫停
 const menuMul = () => sheetT ? MENU_MUL[pref.sl ?? 1] : 1;

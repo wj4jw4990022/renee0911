@@ -55,7 +55,27 @@ function load(){
   try { const bk = JSON.parse(localStorage.getItem(BK_KEY) || 'null'); const b = bk && parseSave(bk.js); if (b) { setTimeout(() => toast('主存檔讀不到，已從備份還原'), 800); return b; } } catch (e) {}
   return null;
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); cloudSave(JSON.stringify(S), true); }
+// ================= v17.98：推播通知（離線補算滿了、每天提醒） =================
+const pushOK = () => !!PUSH_URL && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const pushStandalone = () => !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches || navigator.standalone);
+const u8 = s => { const b = atob((s + '==='.slice((s.length + 3) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function pushSub(){ try { const r = await navigator.serviceWorker.ready; return await r.pushManager.getSubscription(); } catch (e) { return null; } }
+async function pushSync(away){
+  if (!pref.push || !pushOK()) return; const sub = await pushSub(); if (!sub) return;
+  const h = S && S.hero, alive = h && !['dead', 'retired', 'left'].includes(h.act);
+  const body = JSON.stringify({ sub:sub.toJSON(), name:h ? h.name : '勇者', tz:-new Date().getTimezoneOffset(), daily:pref.daily ?? '20:00',
+    capAt:away && alive && !S.paused ? Date.now() + OFF_MAX_DAYS * OFF_MIN_PER_DAY * 60000 : null });
+  try { await fetch(PUSH_URL + '/sub', { method:'POST', body, keepalive:true, headers:{ 'Content-Type':'text/plain' } }); } catch (e) {} }
+async function pushEnable(){
+  if (!pushOK()) return '這台裝置不支援通知';
+  if (/iPhone|iPad/.test(navigator.userAgent) && !pushStandalone()) return 'iPhone 要從主畫面的 App 打開才能開通知';
+  if (await Notification.requestPermission() !== 'granted') return '沒有允許通知（可以到手機的設定裡打開）';
+  try { const r = await navigator.serviceWorker.ready, k = (await (await fetch(PUSH_URL + '/vapid')).json()).key;
+    let sub = await r.pushManager.getSubscription(); if (!sub) sub = await r.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:u8(k) });
+    prefSet('push', 1); await pushSync(false); return ''; } catch (e) { return '開通知失敗：' + (e.message || e); } }
+async function pushDisable(){ const sub = await pushSub(); prefSet('push', 0);
+  if (sub) { try { await fetch(PUSH_URL + '/sub', { method:'POST', body:JSON.stringify({ sub:sub.toJSON(), off:1 }), headers:{ 'Content-Type':'text/plain' } }); } catch (e) {} try { await sub.unsubscribe(); } catch (e) {} } }
+document.addEventListener('visibilitychange', () => { pushSync(document.hidden); if (document.hidden) { save(); cloudSave(JSON.stringify(S), true); }
   else if (S) { const base = S.lastSave; syncClock().then(() => { if (!S.paused && !$('end').classList.contains('on') && !$('dying').classList.contains('on') && !$('mission').classList.contains('on')) { catchUp(base); renderFeed(); renderAll(); } }); } });
 // 雲端存檔：存在你帳號底下（data/users/你的 id/save），只有你自己讀得到
 const cloud = { ref:null, state:'connecting', at:0, busy:false, pending:null, lastJs:'', remote:null, timer:null };

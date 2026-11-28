@@ -1,0 +1,19 @@
+# 部署推播伺服器（push/ 資料夾）到 Cloudflare Workers
+# 需要在 GitHub repo 的 Settings → Secrets and variables → Actions 加兩個 secret：
+#   CLOUDFLARE_API_TOKEN（Cloudflare「編輯 Cloudflare Workers」範本建的權杖）、CLOUDFLARE_ACCOUNT_ID
+name: 部署推播伺服器
+on:
+  push:
+    branches: [main]
+    paths: ['push/**', '.github/workflows/push.yml']
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: push

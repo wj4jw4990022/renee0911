@@ -1,0 +1,12 @@
+# 勇者經紀人 推播伺服器（v17.98）。部署：GitHub Actions「部署推播伺服器」（.github/workflows/push.yml）
+name = "yongzhe-push"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "KV"
+id = "b58964a8e076451eb57d749bdfb46413"
+
+[triggers]
+crons = ["*/5 * * * *"]

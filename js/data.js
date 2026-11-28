@@ -59,6 +59,8 @@ const sleeping = () => hourOf() >= 22.5 && NIGHT_ACTS.includes(H().act);
 const START_AGE = 18;
 const OFF_MIN_PER_DAY = 4;     // 離線時：現實 4 分鐘＝ 1 天
 const OFF_MAX_DAYS = 15;
+// v17.98：推播伺服器（push/worker.js，Cloudflare Workers）。部署好之後填上網址（sw.js 也要填同一個）
+const PUSH_URL = '';
 const OFF_MAX_NOCLK = 3;
 // v17.97：後期——裝備強化（最高級之後再鍛造 +1～+10）、勇者年紀變大戰力下降
 const FORGE_MAX = 10;
