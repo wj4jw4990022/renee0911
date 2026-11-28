@@ -8,8 +8,8 @@ import sendoff   # 介面字型換粉圓
 import mainscreen
 from style import *
 
-S = 22                # 一個像素放大幾倍（草圖是手機 2 倍大 → 手機上 11 倍）
-NW, NH = 36, 40       # 場景原始像素：蓋住地圖那一塊（780×864）
+S = 32                # 臉部特寫：一個像素放大幾倍（草圖是手機 2 倍大 → 手機上 16 倍）
+NW, NH = 25, 27       # 場景原始像素：蓋住地圖那一塊（780×864）
 TT = HERE + '/../assets/kenney-tiny-town/tiles/'
 FP = HERE + '/firstperson/'
 def hx(c): return tuple(int(c[i:i + 2], 16) for i in (1, 3, 5)) + (255,)
@@ -54,28 +54,88 @@ def emo(name):
             if c: px[x, y] = hx(c)
     return im
 
-def scene(hero_png):
+# ---------- 表情：直接改遊戲小人臉上的幾個像素（Kenney 風格，眼睛 1×2、嘴 1 格） ----------
+EYE = hx('#262b44'); DARK = K['#']; PINK = hx('#e8708a'); TEAR = hx('#5ca0e8'); MOUTH = hx('#c0504a')
+def mix(c, t, a): return tuple(round(c[i] * (1 - a) + t[i] * a) for i in range(3)) + (255,)
+
+def face_info(im):
+    px = im.load(); E = [(x, y) for y in range(11) for x in range(im.width) if px[x, y] == EYE]
+    xs = sorted({x for x, _ in E}); ty = min(y for _, y in E)
+    lx, rx = xs[0], xs[-1]; skin = px[lx + 1, ty + 1]
+    return lx, rx, ty, skin
+
+def express(im, kind):
+    im = im.copy(); px = im.load(); lx, rx, ty, skin = face_info(im); mx, my = (lx + rx) // 2, ty + 2
+    def put(x, y, c):
+        if 0 <= x < im.width and 0 <= y < im.height and px[x, y][3]: px[x, y] = c
+    def eyes_off():
+        for x in (lx, rx):
+            for y in (ty, ty + 1): put(x, y, skin)
+    def tint(t, a):   # 整張臉換色（生氣變紅、喝醉變粉）
+        for y in range(12):
+            for x in range(im.width):
+                if px[x, y][:3] == skin[:3]: px[x, y] = mix(skin, t, a)
+    if kind == '開心':
+        eyes_off()
+        for x in (lx, rx): put(x, ty, EYE); put(x - 1, ty + 1, EYE); put(x + 1, ty + 1, EYE)      # ^ ^
+        put(mx - 1, my, DARK); put(mx, my, MOUTH); put(mx + 1, my, DARK); put(mx, my + 1, DARK)   # 張嘴笑
+        put(lx - 1, ty + 2, PINK); put(rx + 1, ty + 2, PINK)
+    elif kind == '害羞':
+        tint(hx('#f49696'), .25); eyes_off()
+        for x in (lx, rx): put(x, ty + 1, EYE); put(x - 1, ty + 1, EYE) if x == lx else put(x + 1, ty + 1, EYE)   # 眼睛往下看
+        for x in (lx - 1, lx, rx, rx + 1): put(x, ty + 2, PINK)
+        put(mx, my + 1, MOUTH)
+    elif kind == '生氣':
+        tint(hx('#f07a6a'), .28)
+        put(lx, ty, skin); put(lx + 1, ty, EYE); put(rx, ty, skin); put(rx - 1, ty, EYE)          # 眼角往內壓 \ /
+        put(lx - 1, ty - 1, EYE); put(rx + 1, ty - 1, EYE)
+        for x in (mx - 1, mx, mx + 1): put(x, my + 1, DARK)                                         # 抿嘴
+    elif kind == '難過':
+        put(lx, ty, skin); put(lx - 1, ty, EYE); put(rx, ty, skin); put(rx + 1, ty, EYE)          # 眼角往下垂 / \
+        put(lx, ty + 2, TEAR); put(lx, ty + 3, TEAR); put(rx, ty + 2, TEAR)                          # 眼淚
+        put(mx, my, DARK); put(mx - 1, my + 1, DARK); put(mx + 1, my + 1, DARK)                     # 嘴角往下
+    elif kind == '喝醉':
+        tint(hx('#f49696'), .35); eyes_off()
+        for x in (lx - 1, lx, rx, rx + 1): put(x, ty + 1, EYE)                                     # 瞇成一條線
+        for x in (lx - 1, lx, rx, rx + 1): put(x, ty + 2, PINK)
+        put(mx - 1, my + 1, DARK); put(mx, my, DARK); put(mx + 1, my + 1, DARK)                     # 波浪嘴
+    elif kind == '驚訝':
+        put(lx, ty - 1, EYE); put(rx, ty - 1, EYE)                                                   # 眼睛睜大
+        put(mx, my, DARK); put(mx, my + 1, DARK)                                                     # 嘴巴張開 O
+    return im
+
+def hero_img(hero_png):
+    h = tile(hero_png); return h.crop(h.getbbox())
+
+def scene(hero_png, kind='開心', emote='開心'):
     L = Image.new('RGBA', (NW, NH), K['H']); d = ImageDraw.Draw(L)
-    for x in range(3, NW, 6): d.line([(x, 0), (x, 29)], fill=K['h'])          # 木板牆（Kenney 木頭色）
-    # 兩層酒架：Tiny Dungeon 的小藥瓶當酒瓶
-    for sy, names, xs in ((10, ('10_06', '10_07', '10_05', '10_08'), (1, 5, 28, 32)), (21, ('10_08', '10_05', '10_07', '10_06'), (2, 6, 27, 31))):
-        d.rectangle([0, sy, NW, sy + 1], fill=K['o']); d.line([(0, sy + 2), (NW, sy + 2)], fill=K['#'])
-        for x, n in zip(xs, names): b = item(TD + n + '.png'); L.alpha_composite(b, (x, sy - b.height))
-    # 勇者：遊戲裡的樣子原封不動，站在吧台後面（腳被吧台擋住）
-    h = tile(hero_png); h = h.crop(h.getbbox())
-    hx0, hy0 = (NW - h.width) // 2, 15
+    for x in range(2, NW, 6): d.line([(x, 0), (x, NH)], fill=K['h'])            # 木板牆
+    d.rectangle([0, 6, NW, 6], fill=K['o']); d.line([(0, 7), (NW, 7)], fill=K['#'])   # 酒架（後面，只露一截）
+    for x, n in zip((0, 21), ('10_06', '10_07')): b = item(TD + n + '.png'); L.alpha_composite(b, (x, 6 - b.height))
+    h = express(hero_img(hero_png), kind)
+    hx0, hy0 = (NW - h.width) // 2, 6
     L.alpha_composite(h, (hx0, hy0))
-    L.alpha_composite(MUG, (hx0 - 7, hy0 + 2)); d.rectangle([hx0 - 1, hy0 + 7, hx0, hy0 + 8], fill=K['S'])   # 他舉起的酒杯
-    # 吧台
-    d.rectangle([0, 32, NW, NH], fill=K['H']); d.rectangle([0, 30, NW, 31], fill=K['o']); d.line([(0, 29), (NW, 29)], fill=K['#']); d.line([(0, 32), (NW, 32)], fill=K['#'])
-    for x in range(4, NW, 8): d.line([(x, 33), (x, NH)], fill=K['h'])
-    # 你的手和酒杯（右下伸進來）
-    L.alpha_composite(MUG, (26, 27)); L.alpha_composite(HAND, (27, 33)); L.alpha_composite(HAND.crop((0, 5, 9, 8)), (27, 40 - 3))
+    L.alpha_composite(MUG, (0, hy0 + 4)); d.rectangle([hx0 - 1, hy0 + 8, hx0, hy0 + 9], fill=K['S'])   # 他舉起的酒杯
+    # 吧台（只到畫面最下面幾格）
+    d.rectangle([0, 21, NW, NH], fill=K['H']); d.rectangle([0, 19, NW, 20], fill=K['o']); d.line([(0, 18), (NW, 18)], fill=K['#']); d.line([(0, 21), (NW, 21)], fill=K['#'])
+    for x in range(4, NW, 8): d.line([(x, 22), (x, NH)], fill=K['h'])
+    L.alpha_composite(MUG, (18, 16)); L.alpha_composite(HAND, (19, 22))          # 你的手和酒杯
     big = L.resize((NW * S, NH * S), Image.NEAREST)
-    # 表情泡泡：Kenney 原圖，照遊戲裡的比例（勇者的 0.5 倍像素）疊在頭的右上
-    e = emo('開心'); e = e.resize((e.width * S // 2, e.height * S // 2), Image.NEAREST)
-    big.alpha_composite(e, ((hx0 + h.width - 3) * S, hy0 * S - e.height + 2 * S))
-    return big.crop((6, 0, 6 + 780, 864))
+    if emote:   # Kenney 表情泡泡（勇者的一半像素），頭的右上
+        e = emo(emote); e = e.resize((e.width * 12, e.height * 12), Image.NEAREST)
+        big.alpha_composite(e, (NW * S - e.width - 10, 100))
+    out = Image.new('RGBA', (780, 864), K['H']); out.alpha_composite(big, ((780 - big.width) // 2, 0)); return out
+
+def sheet(heroes):
+    kinds = ['普通', '開心', '害羞', '生氣', '難過', '喝醉', '驚訝']; C = 20; cw = 16 * C + 40
+    out = Image.new('RGBA', (cw * len(kinds) + 40, 80 + len(heroes) * (11 * C + 70)), PAPER + (255,)); d = ImageDraw.Draw(out)
+    for i, k in enumerate(kinds): text_c(d, 20 + i * cw + cw // 2, 40, k, 16, TXT, True)
+    for j, hp in enumerate(heroes):
+        for i, k in enumerate(kinds):
+            f = express(hero_img(hp), k).crop((0, 0, 16, 11)); f = f.resize((16 * C, 11 * C), Image.NEAREST)
+            x, y = 20 + i * cw + 20, 80 + j * (11 * C + 70)
+            box(d, x - 10, y - 10, x + f.width + 10, y + f.height + 10, fill=(214, 160, 110)); out.alpha_composite(f, (x, y))
+    return out
 
 def page(hero_png, name):
     im = mainscreen.main(); d = ImageDraw.Draw(im); W = im.width
@@ -98,8 +158,11 @@ def page(hero_png, name):
     return im
 
 if __name__ == '__main__':
-    a = page(FP + 'hero_warrior.png', '小美'); b = page(FP + 'hero_mage.png', '阿豪')
-    out = Image.new('RGBA', (a.width * 2 + 60, a.height + 80), (38, 40, 56, 255)); d = ImageDraw.Draw(out)
-    text(d, 20, 16, '第一人稱：小美（戰士）', 12, (240, 230, 200)); text(d, a.width + 40, 16, '同一畫面換成阿豪（法師）', 12, (240, 230, 200))
-    out.alpha_composite(a, (20, 64)); out.alpha_composite(b, (a.width + 40, 64))
+    a = page(FP + 'hero_warrior.png', '小美')
+    out = Image.new('RGBA', (a.width + 40, a.height + 80), (38, 40, 56, 255)); d = ImageDraw.Draw(out)
+    text(d, 20, 16, '臉部特寫：小美（開心）', 12, (240, 230, 200)); out.alpha_composite(a, (20, 64))
     out.convert('RGB').resize((out.width // 2, out.height // 2), Image.LANCZOS).save(sys.argv[1])
+    sh = sheet([FP + 'hero_warrior.png', FP + 'hero_mage.png'])
+    o2 = Image.new('RGBA', (sh.width + 40, sh.height + 80), (38, 40, 56, 255)); d = ImageDraw.Draw(o2)
+    text(d, 20, 16, '表情：只改小人臉上的幾個像素（上：小美，下：阿豪）', 12, (240, 230, 200)); o2.alpha_composite(sh, (20, 64))
+    o2.convert('RGB').resize((o2.width // 2, o2.height // 2), Image.LANCZOS).save(sys.argv[1].replace('酒館', '表情'))
