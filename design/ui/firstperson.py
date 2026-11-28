@@ -55,7 +55,7 @@ def emo(name):
     return im
 
 # ---------- 表情：直接改遊戲小人臉上的幾個像素（Kenney 風格，眼睛 1×2、嘴 1 格） ----------
-EYE = hx('#262b44'); DARK = K['#']; PINK = hx('#e8708a'); TEAR = hx('#5ca0e8'); MOUTH = hx('#c0504a')
+EYE = hx('#262b44'); DARK = hx('#3c2430'); PINK = hx('#e8708a'); TEAR = hx('#5ca0e8'); MOUTH = hx('#c0504a')
 def mix(c, t, a): return tuple(round(c[i] * (1 - a) + t[i] * a) for i in range(3)) + (255,)
 
 def face_info(im):
@@ -104,36 +104,70 @@ def express(im, kind):
         put(mx, my, DARK); put(mx, my + 1, DARK)                                                     # 嘴巴張開 O
     return im
 
+# ---------- 細線：Kenney 的 1 像素外框改成 1/T 像素（色塊和眼睛照舊是大格） ----------
+import numpy as np
+from scipy import ndimage
+from PIL import ImageFilter, ImageEnhance
+T = 4
+def thin(im, k=T):
+    lo = np.array(im.convert('RGBA')); a_lo = lo[..., 3] > 0
+    ol_lo = a_lo & np.all(lo[..., :3] == K['#'][:3], axis=-1)
+    ring1 = ol_lo & ndimage.binary_dilation(np.pad(~a_lo, 1, constant_values=True), structure=np.ones((3, 3)))[1:-1, 1:-1]
+    ext_lo = ol_lo & ndimage.binary_dilation(ring1, structure=np.ones((3, 3)))          # 外圍的框（Kenney 小人外面是 2 格粗）
+    hi = np.repeat(np.repeat(lo, k, 0), k, 1); a = hi[..., 3] > 0
+    ol = np.repeat(np.repeat(ol_lo, k, 0), k, 1); ext = np.repeat(np.repeat(ext_lo, k, 0), k, 1)
+    col = a & ~ol
+    keep = ol & ~ext & ndimage.binary_dilation(col)                                      # 裡面的框：緊貼色塊的 1 格留著當細線
+    out = hi.copy()
+    out[ext, 3] = 0                                                                      # 外圍的粗框整圈拿掉
+    fill = ol & ~ext & ~keep                                                             # 裡面多出來的框 → 用旁邊的顏色填
+    if fill.any():
+        idx = ndimage.distance_transform_edt(~col, return_distances=False, return_indices=True)
+        out[fill] = hi[idx[0][fill], idx[1][fill]]
+    sil = out[..., 3] > 0                                                                # 沿著新的輪廓外面描一圈細線
+    ring = ndimage.binary_dilation(sil) & ~sil
+    out[ring] = K['#']
+    return Image.fromarray(out)
+
 def hero_img(hero_png):
     h = tile(hero_png); return h.crop(h.getbbox())
 
 def scene(hero_png, kind='開心', emote='開心'):
-    L = Image.new('RGBA', (NW, NH), K['H']); d = ImageDraw.Draw(L)
-    for x in range(2, NW, 6): d.line([(x, 0), (x, NH)], fill=K['h'])            # 木板牆
-    d.rectangle([0, 6, NW, 6], fill=K['o']); d.line([(0, 7), (NW, 7)], fill=K['#'])   # 酒架（後面，只露一截）
-    for x, n in zip((0, 21), ('10_06', '10_07')): b = item(TD + n + '.png'); L.alpha_composite(b, (x, 6 - b.height))
-    h = express(hero_img(hero_png), kind)
-    hx0, hy0 = (NW - h.width) // 2, 6
-    L.alpha_composite(h, (hx0, hy0))
-    L.alpha_composite(MUG, (0, hy0 + 4)); d.rectangle([hx0 - 1, hy0 + 8, hx0, hy0 + 9], fill=K['S'])   # 他舉起的酒杯
-    # 吧台（只到畫面最下面幾格）
+    k = S // T
+    # 背景（牆、酒架、酒瓶）：另外一層，放大後模糊＝景深
+    B = Image.new('RGBA', (NW, NH), K['H']); d = ImageDraw.Draw(B)
+    for x in range(2, NW, 6): d.line([(x, 0), (x, NH)], fill=K['h'])
+    for sy in (6, 15):
+        d.rectangle([0, sy, NW, sy], fill=K['o']); d.line([(0, sy + 1), (NW, sy + 1)], fill=K['#'])
+    for x, n, sy in ((0, '10_06', 6), (3, '10_08', 6), (19, '10_07', 6), (22, '10_05', 6), (1, '10_07', 15), (21, '10_06', 15)):
+        b = item(TD + n + '.png'); B.alpha_composite(b, (x, sy - b.height))
+    big = B.resize((NW * S, NH * S), Image.NEAREST).filter(ImageFilter.GaussianBlur(14))
+    big = ImageEnhance.Color(big).enhance(.8)
+    # 勇者（焦點，清楚）＋他的酒杯
+    F = Image.new('RGBA', (NW, NH), (0, 0, 0, 0)); d = ImageDraw.Draw(F)
+    h = express(hero_img(hero_png), kind); hx0, hy0 = (NW - h.width) // 2, 6
+    F.alpha_composite(MUG, (0, hy0 + 4)); d.rectangle([hx0 - 1, hy0 + 8, hx0, hy0 + 9], fill=K['S'])
+    F.alpha_composite(h, (hx0, hy0))
+    # 吧台（和勇者差不多遠，清楚）
     d.rectangle([0, 21, NW, NH], fill=K['H']); d.rectangle([0, 19, NW, 20], fill=K['o']); d.line([(0, 18), (NW, 18)], fill=K['#']); d.line([(0, 21), (NW, 21)], fill=K['#'])
     for x in range(4, NW, 8): d.line([(x, 22), (x, NH)], fill=K['h'])
-    L.alpha_composite(MUG, (18, 16)); L.alpha_composite(HAND, (19, 22))          # 你的手和酒杯
-    big = L.resize((NW * S, NH * S), Image.NEAREST)
-    if emote:   # Kenney 表情泡泡（勇者的一半像素），頭的右上
-        e = emo(emote); e = e.resize((e.width * 12, e.height * 12), Image.NEAREST)
+    big.alpha_composite(thin(F).resize((NW * S, NH * S), Image.NEAREST))
+    # 你的手和酒杯：離鏡頭最近，稍微模糊
+    Y = Image.new('RGBA', (NW, NH), (0, 0, 0, 0)); Y.alpha_composite(MUG, (18, 16)); Y.alpha_composite(HAND, (19, 22))
+    big.alpha_composite(thin(Y).resize((NW * S, NH * S), Image.NEAREST).filter(ImageFilter.GaussianBlur(4)))
+    if emote:   # Kenney 表情泡泡，也用細線
+        e = thin(emo(emote)); e = e.resize((e.width * 3, e.height * 3), Image.NEAREST)
         big.alpha_composite(e, (NW * S - e.width - 10, 100))
     out = Image.new('RGBA', (780, 864), K['H']); out.alpha_composite(big, ((780 - big.width) // 2, 0)); return out
 
 def sheet(heroes):
-    kinds = ['普通', '開心', '害羞', '生氣', '難過', '喝醉', '驚訝']; C = 20; cw = 16 * C + 40
-    out = Image.new('RGBA', (cw * len(kinds) + 40, 80 + len(heroes) * (11 * C + 70)), PAPER + (255,)); d = ImageDraw.Draw(out)
+    kinds = ['普通', '開心', '害羞', '生氣', '難過', '喝醉', '驚訝']; C = 5; cw = 16 * C * T + 40
+    out = Image.new('RGBA', (cw * len(kinds) + 40, 80 + len(heroes) * (11 * C * T + 70)), PAPER + (255,)); d = ImageDraw.Draw(out)
     for i, k in enumerate(kinds): text_c(d, 20 + i * cw + cw // 2, 40, k, 16, TXT, True)
     for j, hp in enumerate(heroes):
         for i, k in enumerate(kinds):
-            f = express(hero_img(hp), k).crop((0, 0, 16, 11)); f = f.resize((16 * C, 11 * C), Image.NEAREST)
-            x, y = 20 + i * cw + 20, 80 + j * (11 * C + 70)
+            f = thin(express(hero_img(hp), k).crop((0, 0, 16, 11))); f = f.resize((f.width * C, f.height * C), Image.NEAREST)
+            x, y = 20 + i * cw + 20, 80 + j * (11 * C * T + 70)
             box(d, x - 10, y - 10, x + f.width + 10, y + f.height + 10, fill=(214, 160, 110)); out.alpha_composite(f, (x, y))
     return out
 
