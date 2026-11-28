@@ -3,7 +3,7 @@
 'use strict';
 // ================= 基本設定 =================
 const SAVE_KEY = 'guyongzhe_v1';
-const DAY_SEC = 76;            // v17.16：一天是完整 24 小時（6:00 到隔天 6:00），正常速度要 76 秒；勇者睡著時約 3 倍速，所以 x1 一個月約現實 60 秒
+const DAY_SEC = 130;           // v17.101：一天（6:00 到隔天 6:00）正常速度 130 秒（原本 76）；睡著約 3 倍速、演出時 1/3 速（main.js slowMul），x1 一個月約現實 3 分鐘、一年約 35 分鐘
 const STEP = 1.5 * (DAY_SEC / 24) / (30 / 18);   // 戰鬥結算間隔跟著一天的長度放大，每個月打怪的次數和收穫不變（只在白天 7:00～18:30）
 // v6.3：一天的時間。每個「遊戲日」代表那個月裡典型的一天，從清晨 6:00 走到半夜 24:00
 const hourOf = () => 6 + ((S && S.t) || 0) / DAY_SEC * 24;   // 6～30：24 以後是隔天凌晨 0～6 點
@@ -57,8 +57,8 @@ function planTimed(){
 }
 const sleeping = () => hourOf() >= 22.5 && NIGHT_ACTS.includes(H().act);
 const START_AGE = 18;
-const OFF_MIN_PER_DAY = 4;     // 離線時：現實 4 分鐘＝ 1 天
-const OFF_MAX_DAYS = 15;
+const OFF_MIN_PER_DAY = 15;    // v17.101：離線時現實 15 分鐘＝1 天（1 個月）；原本 4
+const OFF_MAX_DAYS = 6;        // v17.101：離線最多補 6 個月（90 分鐘補滿）；原本 15
 // v17.98：推播伺服器（push/worker.js，Cloudflare Workers）。部署好之後填上網址（sw.js 也要填同一個）
 const PUSH_URL = '';
 const OFF_MAX_NOCLK = 3;

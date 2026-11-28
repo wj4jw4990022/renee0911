@@ -1314,7 +1314,7 @@ function renderSheet(){
       ${newer ? `<div class="f14 cr">雲端有比較新的進度：第 ${cr.gen} 代「${esc(cr.name || '')}」，${ym(cr.day || 0)}</div><button class="pb sbtn" id="bCloud">載入雲端存檔（會覆蓋這台裝置）</button>` : ''}</div>`;
     html += `<div class="ssec">遊戲</div><div class="pb sgp">${li('時間', '速度', seg([[1, '×1'], [3, '×3'], [10, '×10']], S.speed, 'data-spd'), 'x1：約現實 60 秒＝1 個月（睡覺時加快）')}
       ${li('設定', '看選單時', seg([[0, IC('播放', 2)], [1, '慢'], [2, IC('暫停', 2)]], pref.sl ?? 1, 'data-sl'), '打開下方選單時，時間照常走／放慢成 1/4／先停住')}
-      ${li('暫停', '暫停', tgl(S.paused, 'data-pz'), `暫停時${pron(h)}不會過日子。離線時：每 4 分鐘＝1 個月，最多 15 個月，只發生平安或好的事`)}</div>`;
+      ${li('暫停', '暫停', tgl(S.paused, 'data-pz'), `暫停時${pron(h)}不會過日子。離線時：每 ${OFF_MIN_PER_DAY} 分鐘＝1 個月，最多 ${OFF_MAX_DAYS} 個月，照常會受傷、遇到事情${pron(h)}自己決定`)}</div>`;
     html += `<div class="ssec">顯示</div><div class="pb sgp">${li('文字', '字的大小', seg([[0, '中'], [1, '大']], pref.fz, 'data-fz'), '影響選單和對話')}${li('飄字', '飄字', tgl(pref.fx, 'data-fx'), '說話後在地圖上顯示數值和表情')}</div>`;
     let arch = null; try { arch = JSON.parse(localStorage.getItem(ARCH_KEY) || 'null'); } catch (e) {}
     html += `<div class="ssec">存檔</div><div class="pb sgp">${li('還原', '清除前的進度', arch && arch.js ? `<button class="pb sbs${archArm ? ' warn' : ''}" id="bArch">${archArm ? '確定？' : '還原'}</button>` : `<button class="pb sbs" disabled>還原</button>`, arch && arch.js ? `改版清除舊紀錄時先收起來的：第 ${arch.gen || 1} 代「${arch.name}」，${ym(arch.day || 0)}。找回會取代現在這一局（現在這一局會先放進備份）` : '目前沒有收起來的舊進度')}
@@ -1322,12 +1322,12 @@ function renderSheet(){
       <div class="smv"><small id="saveMsg" class="f14 mu"></small><textarea id="saveTxt" rows="4" style="display:none" aria-label="存檔文字"></textarea><div class="sseg" id="saveBtns" style="display:none"><button class="pb sbs" id="bCopy">複製</button><button class="pb sbs g" id="bImp">確定匯入</button></div></div></div>`;
     { const inApp = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || navigator.standalone);
       html += `<div class="ssec">App</div><div class="pb sgp">${li('手機', '加到主畫面', inApp ? IC('打勾', 2) : `<span${TIPA('問號', '加到主畫面', 'iPhone：Safari 下方「分享」→「加入主畫面」。Android：Chrome 右上「⋮」→「加到主畫面」')}>${IC('問號', 2)}</span>`, inApp ? '正在用 App 模式玩：有網路時每次打開都會拿最新版' : '')}
-        ${li('鈴鐺', '通知', PUSH_URL ? tgl(pref.push, 'data-push') : '<small class="f14 mu">還沒開通</small>', '離線補算滿 15 個月時提醒你；也可以每天固定時間提醒（那天玩過就不提醒）。iPhone 要從主畫面的 App 打開才能開')}
+        ${li('鈴鐺', '通知', PUSH_URL ? tgl(pref.push, 'data-push') : '<small class="f14 mu">還沒開通</small>', `離線補算滿 ${OFF_MAX_DAYS} 個月時提醒你；也可以每天固定時間提醒（那天玩過就不提醒）。iPhone 要從主畫面的 App 打開才能開`)}
         ${pref.push && PUSH_URL ? li('時間', '每天提醒', seg([['', '不要'], ['12:00', '12 點'], ['20:00', '20 點'], ['22:00', '22 點']], pref.daily ?? '20:00', 'data-pd')) : ''}
         ${pushMsg ? `<div class="f14 dg">${esc(pushMsg)}</div>` : ''}
         ${li('重新整理', '載入最新版', `<button class="pb sbs" id="bReload">更新</button>`, '改完遊戲推上去後，按這裡立刻換新版（會先存檔）')}</div>`; }
     html += `<button class="pb sreset${resetArm ? ' arm' : ''}" id="bReset">${IC('危險', 2)}<b class="f16">${resetArm ? '再按一次：全部刪除重來' : '重新開始'}</b></button>`;
-    html += `<div class="stFoot">勇者經紀人 v17.100</div>`;
+    html += `<div class="stFoot">勇者經紀人 v17.101</div>`;
   }
   B.innerHTML = html; B.scrollTop = st;
   B.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { qSel = null; if (+b.dataset.p !== S.plan) { if (dw(h, 'order') && S.day - (S.planSet || -99) < 3) adj('mood', -3); S.planSet = S.day; } S.plan = +b.dataset.p; addMsg('me', S.plan ? `之後主要去${ZONES[S.plan - 1].n}吧` : '這陣子好好休息'); renderAll(); });

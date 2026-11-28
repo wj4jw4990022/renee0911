@@ -174,12 +174,29 @@ function simulate(dt){
     S.day++; dayStart(); planTimed(); if (!offline) { save(); renderAll(); }
   }
 }
+// v17.101：有事慢、沒事快。畫面上有演出時時鐘放慢到 1/3，讓動畫演完；問你問題時時鐘停住（等你回答或 15 秒到）
+const SLOW_MUL = 1 / 3;
+function slowMul(){
+  if (offline || !S) return 1;
+  try {
+    const h = H(), now = performance.now(); if (!h) return 1;
+    if (S.q) return 0;
+    if (typeof ELX !== 'undefined' && ELX) return SLOW_MUL;   // 精英怪對戰
+    if (heroFx(h, now)) return SLOW_MUL;   // 打怪交手、任務演出、路上遭遇
+    if (CH) return SLOW_MUL;   // 抓小偷
+    if (tourRound() >= 0) return SLOW_MUL;   // 武鬥大會
+    if (arenaMode(h) || plazaMode(h)) return SLOW_MUL;   // 鬥技場、廣場舞台
+    if (lzNow(h) && heroMap(h) === 'vil' && !V.inside) return SLOW_MUL;   // 收工後的休閒（人在外面時）
+  } catch (e) {}
+  return 1;
+}
 function frame(now){
   const dt = Math.min(.1, (now - last) / 1000); last = now;
   const busy = $('mission').classList.contains('on') || $('end').classList.contains('on') || $('dying').classList.contains('on') || $('evp').classList.contains('on');
   const mk = menuMul();   // v17.23：看選單時時間放慢（或暫停），不會一抬頭就錯過事
   const n = (mk < 1 ? 1 : S.speed) * (isAsleep() ? 3 : 1); G_MUL = !busy && mk > 0 && !S.paused ? n * mk : 0;   // v17.93：村子裡走路跟著遊戲速度
-  if (!busy && mk > 0) { for (let i = 0; i < n; i++) simulate(dt * mk); }   // v17.16：睡著時約 3 倍速
+  const sm = slowMul();   // v17.101：有事慢（演出 1/3 速）、問你問題時時鐘停住
+  if (!busy && mk > 0 && sm > 0) { for (let i = 0; i < n; i++) simulate(dt * mk * sm); }   // v17.16：睡著時約 3 倍速
   drawMap(now);
   if (Math.floor(now / 500) !== Math.floor((now - dt * 1000) / 500)) renderTop();
   requestAnimationFrame(frame);

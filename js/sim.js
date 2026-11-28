@@ -85,7 +85,7 @@ function addMsg(kind, text, tag){
 let SAYQ = null;   // v17.9：結算時先收起來，晚上才說
 const say = text => { if (SAYQ) { SAYQ.push(text); return; } if (S) { S.recentL = S.recentL || []; S.recentL.push(text); if (S.recentL.length > 90) S.recentL.shift(); } addMsg('hero', text); bubble(text.length > 12 ? text.slice(0, 11) + '…' : text); };
 const sys = text => addMsg('sys', text);
-const ev = (kind, tag, text) => { addMsg('ev ' + kind, text, tag); epFromEv(tag, text); };
+const ev = (kind, tag, text) => { addMsg('ev ' + kind, text, tag); epFromEv(tag, text); if (kind === 'good' && S && H()) H().goodDay = S.day; };   // v17.101：goodDay＝最近一次好事（互動看時機用）
 function logLife(text){ H().log.push({ d:S.day, age:H().age, t:text }); }
 // v17.27：泡泡不放進存檔。舊版把「顯示到什麼時候」存進存檔，那個時間是用這次開頁面後的計時，重新打開頁面計時歸零，舊的那句就會一直卡在頭上
 const BUB = { q:[], cur:null, h:null };
@@ -123,7 +123,7 @@ function gainExp(n){
   while (h.exp >= expNeed(h.lv)) {
     h.exp -= expNeed(h.lv); h.lv++; h.hp = 1;
     adj('mood', 6);
-    wishHook('lvup');
+    wishHook('lvup'); h.goodDay = S.day;
     if (h.lv % 5 === 0) { logLife(`升到 Lv${h.lv}`); addFame(5); }
     if (h.lv === 15 || h.lv === 30) askJob();
   }
@@ -174,11 +174,11 @@ function dayStart(){
   // 照經紀人的方針，或自己決定
   if (S.plan > topZ() + 1) S.plan = topZ() + 1;
   const plan = S.plan;   // 0 休息、1 草原、2 森林、3 荒地……
-  let obey = .55 + h.trust * .004 - h.stress * .002 + T(h).obey + (h.scolded > 0 ? .12 : 0) + (hx(h, 'A') - .5) * .3 - dw(h, 'independence') * .15;
+  let obey = .55 + h.trust * .004 - h.stress * .002 + T(h).obey + (h.scolded > 0 ? (h.scoldGood ? .24 : .12) : 0) + (hx(h, 'A') - .5) * .3 - dw(h, 'independence') * .15;
   if (plan >= 1) { const d = danger(ratio(h, zD(plan - 1))); if (d.i === 2) obey -= h.trait === 'brave' ? 0 : .25; if (d.i === 1 && h.trait === 'careful') obey -= .15; }
   if (plan === 0 && h.trait === 'lazy') obey = 1;
   if (plan === 0 && h.sta > 85 && (h.trait === 'hot' || h.trait === 'brave')) obey -= .2;
-  h.scolded = Math.max(0, h.scolded - 1);
+  h.scolded = Math.max(0, h.scolded - 1); if (!h.scolded) h.scoldGood = 0;
   const scare = plan >= 1 && h.mem.some(m => (m.k === 'nearDeath' || m.k === 'forced') && m.z === plan - 1 && S.day - m.d < 60);
   if (scare) obey -= .22;
   let choice = plan, own = false;
@@ -216,7 +216,7 @@ function ownChoice(){
   if (h.trait === 'careful' && z > 0 && ratio(h, zD(z)) < 1.5) z--;
   return z + 1;
 }
-function setAct(a){ const h = H(); h.act = a; if (a !== 'hunt') h.zone = -1; if (a === 'rest') h.restStreak++; else if (a !== 'bed') h.restStreak = 0; }
+function setAct(a){ const h = H(); h.act = a; if (a === 'slack' || a === 'strike') h.misDay = S.day;   /* v17.101：擺爛、罷工的日子（責備看時機） */ if (a !== 'hunt') h.zone = -1; if (a === 'rest') h.restStreak++; else if (a !== 'bed') h.restStreak = 0; }
 function startHunt(z){
   const h = H(); h.act = 'hunt'; h.zone = z; h.restStreak = 0; h.hp = Math.max(h.hp, .6); h.zonesSeen[z] = 1;
   h.tx = rand(ZONES[z].rect[0] + 20, ZONES[z].rect[2] - 20); h.ty = rand(ZONES[z].rect[1] + 20, ZONES[z].rect[3] - 20);
@@ -1088,7 +1088,7 @@ function scLine(h, k, att, fake){
   if (att === 'shrug') return pickS(['上新聞而已，過幾天大家就忘了', '反正有人罵就有人愛', '老闆，你看起來比我還緊張', '欸，我上報紙了耶'].concat(k === 'noshow' ? ['那個活動本來就很無聊嘛'] : []));
   return pickS(['又不是我的錯！', '報紙只寫了一半……', '那些記者根本沒問過我'].concat(SC_UNFAIR[k] || [], fake ? ['我根本沒做這種事！', '這是誰編的？那天我人根本不在那裡'] : [])); }
 function revealScandal(k, leak, fake){
-  const h = H(), sc = SCANDALS.find(x => x.k === k); if (!sc) return;
+  const h = H(), sc = SCANDALS.find(x => x.k === k); if (!sc) return; if (!fake) h.misDay = S.day;
   const rp = npc('reporter'), rpm = rp && rp.alive ? (rp.aff >= 50 ? .7 : rp.aff < 15 ? 1.25 : 1) : 1;
   const hit = Math.round(sc.fame * (1 + rkx() * .3) * (leak ? 1.8 : 1) * rpm);
   addFame(-hit); h.scandals = (h.scandals || 0) + 1; yr().sc++;
@@ -2028,9 +2028,14 @@ const TALK = [
   { k:'praise', n:'稱讚', f(){ const h = H(); const did = h.lastGood >= S.day - 1 || (h.earnToday || 0) > 0; adj('mood', 8 * (1 + dw(h, 'acceptance')) * (S.day - (h.lastPraise ?? -99) < 3 ? .4 : 1)); h.lastPraise = S.day; adj('trust', did ? 3 : -1); wishHook('praise'); say(did ? L('praised') : L('praisedOdd')); } },
   { k:'warn', n:'提醒小心', f(){ const h = H(); h.carefulNext = 1; adj('trust', S.day - h.lastHurt < 5 ? 3 : 0); say(h.trait === 'brave' ? '知道啦知道啦，囉嗦' : '嗯，我會小心'); } },
   { k:'cheer', n:'鼓勵', f(){ adj('stress', -8); adj('mood', 4); say(L('cheered')); } },
-  { k:'scold', n:'責備', f(){ const h = H(); h.scolded = 2; adj('mood', -12); adj('stress', 8);
-      if (dw(h, 'acceptance')) adj('mood', -8);
-      if (h.trait === 'hot' || h.trait === 'brave' || hasP(h, 'glass') || hx(h, 'A') < .4) { adj('trust', -8); say(L('scoldAngry')); } else { adj('trust', -2); say(L('scoldSorry')); } } },
+  { k:'scold', n:'責備', f(){ const h = H(), tm = TALK_TM; h.scolded = 2; h.scoldGood = tm === 'good' ? 1 : 0;   // v17.101：看時機
+      const mm = tm === 'bad' ? 1.5 : 1; adj('mood', -12 * mm); adj('stress', 8);
+      if (dw(h, 'acceptance')) adj('mood', -8 * mm);
+      const touchy = h.trait === 'hot' || h.trait === 'brave' || hasP(h, 'glass') || hx(h, 'A') < .4;
+      if (tm === 'good' && !touchy && chance(.4)) { adj('trust', 2); say(pickS(['……你說得對', '是我不好，我會改', '被你罵醒了'])); return; }
+      const tc = tm === 'good' ? .5 : 1;
+      if (touchy) { adj('trust', -8 * tc); say(L('scoldAngry')); } else { adj('trust', -2 * tc); say(L('scoldSorry')); }
+      if (tm === 'bad' && hx(h, 'A') > .6) adj('trust', -5); } },
   { k:'drink', n:'請喝一杯', cost:80, f(){ const h = H(), m = (1 + (S.office.cellar || 0) * .4) * (S.day - (h.lastDrink ?? -99) < 6 ? .4 : 1); h.lastDrink = S.day; S.gold -= 80; adj('mood', 15 * m * (1 + dw(h, 'eating') * .5)); adj('stress', -15 * m); adj('trust', 6 * m); affAdd('tao', 5); wishHook('drink');
       const tao = npc('tao'); if (tao && tao.alive && tao.grumpy) { adj('mood', -4); ev('warn', '臭臉', '阿桃今天擺臭臉，好像剛被前一桌客人罵過'); } if (h.wish && h.wish.k === 'drink') h.wish.p = 1; say(L('drinkCheers')); } },
   { k:'meal', n:'一起吃飯', cost:50, more:1, f(){ const h = H(); h.lastMeal = S.day; S.gold -= 50; adj('mood', 6 + dw(h, 'social') * 3 + dw(h, 'eating') * 3); adj('stress', -6); adj('trust', 2);
@@ -2052,6 +2057,25 @@ const TALK = [
       if (h.goal === 'etf' || dw(h, 'saving')) { h.wallet += 150; adj('mood', 6); adj('trust', 2); say(pickS(['禮物？……不如直接給錢，我存起來', '謝謝！這個我可以拿去換錢嗎？'])); return; }
       adj('mood', 10 + (h.goal === 'seiko' ? 5 : 0)); adj('trust', 3); say(pickS(['哇！你怎麼知道我想要這個', '謝謝老闆！我會好好珍惜', '……突然送禮物，有點不好意思'])); } },
 ];
+// v17.101：互動看時機（不給提示）。對：好處 ×2；錯：好處 ×0.5；只能從他的反應看出來
+let TALK_TM = null;
+function talkTiming(h, k){
+  const d = S.day, win = d - (h.goodDay ?? -99) <= 1, hurt = d - (h.lastHurt ?? -99) <= 2, mis = d - (h.misDay ?? -99) <= 2,
+    low = h.mood < 35 || h.stress > 65, q0 = S.queue && S.queue[0], big = !!(q0 && ((q0.z ?? -1) >= 2 || q0.exam || q0.boss)) || (h.act === 'mission' && h.actDays > 1);
+  const T = {
+    praise:[win, mis],
+    warn:[big || hurt, win && !big],
+    cheer:[big || low || hurt, !low && h.mood > 80],
+    scold:[mis, win || hurt || h.mood < 30],
+    drink:[low || win, hurt || h.sta < 20],
+    meal:[low || hurt, false],
+    heart:[h.stress > 60 || h.mood < 35, h.mood > 75 && h.stress < 30],
+    train:[big, hurt || h.sta < 40],
+    gift:[win, mis] }[k];
+  if (!T) return null; return T[0] ? 'good' : T[1] ? 'bad' : null;
+}
+const TM_SAY = { good:['他眼睛都亮了', '他看起來特別開心', '這句話他好像真的聽進去了', '他笑得很真心'], bad:['他好像沒聽進去', '他愣了一下', '他回得有點敷衍', '他看起來不太是滋味'],
+  scoldGood:['他低下頭，好像真的知道錯了'], scoldBad:['他一臉委屈'] };
 const TALK_CD = { praise:1, cheer:1, warn:2, scold:2, drink:3, meal:2, heart:4, train:3, gift:6 };
 const talkLeft = (h, k) => { const l = h.talked[k]; return l == null ? 0 : Math.max(0, TALK_CD[k] - (S.day - l)); };
 const talkMul = (h, k) => 1 / (1 + ((h.talkLog || {})[k] || []).filter(d => S.day - d < 12).length * .35);
@@ -2094,10 +2118,11 @@ function talk(i){
   if (h.act === 'mission' && !mHome(h) && !MSG_TALK.includes(T0.k)) { toast(`${pron(h)}出門在外，只能傳訊息`); return; }   // v17.7
   h.talked[T0.k] = S.day; if (h.st && ['praise', 'cheer', 'drink'].includes(T0.k)) h.st.cared++;
   addMsg('me', { praise:'做得很好！', warn:'出門小心點，別逞強', cheer:'別擔心，你可以的', scold:'你最近太散漫了！', drink:'走，今晚我請你喝一杯', meal:'一起去吃頓飯吧', heart:'最近還好嗎？想聊聊嗎？', train:'走，我陪你練一下', gift:'這個送你' }[T0.k]);
-  const mul = talkMul(h, T0.k), b = { mood:h.mood, trust:h.trust, stress:h.stress, lv:h.lv, exp:h.exp };
-  T0.f();
-  // 同一種互動用太多次，效果會變差（只打折好處）
-  [['mood', 1], ['trust', 1], ['stress', -1]].forEach(([k, good]) => { const d = h[k] - b[k]; if (d * good > 0 && mul < 1) h[k] = clamp(b[k] + d * mul, 0, 100); });
+  const tm = TALK_TM = talkTiming(h, T0.k), tmul = T0.k === 'scold' ? 1 : tm === 'good' ? 2 : tm === 'bad' ? .5 : 1;   // v17.101：看時機（責備在自己的 f 裡算）
+  const bm = talkMul(h, T0.k), mul = bm * tmul, b = { mood:h.mood, trust:h.trust, stress:h.stress, lv:h.lv, exp:h.exp };
+  T0.f(); TALK_TM = null;
+  // 同一種互動用太多次，效果會變差（只打折好處）；時機對、錯也只放大／打折好處
+  [['mood', 1], ['trust', 1], ['stress', -1]].forEach(([k, good]) => { const d = h[k] - b[k]; if (d * good > 0 && mul !== 1) h[k] = clamp(b[k] + d * mul, 0, 100); });
   h.talkLog = h.talkLog || {}; (h.talkLog[T0.k] = (h.talkLog[T0.k] || []).filter(d => S.day - d < 12)).push(S.day);
   const it = [], dm = Math.round(h.mood - b.mood), dt = Math.round(h.trust - b.trust), ds = Math.round(h.stress - b.stress);
   if (dm) it.push({ t:`心情 ${dm > 0 ? '+' : ''}${dm}`, c:dm > 0 ? '#8fe0b0' : '#ff9a9a' });
@@ -2106,7 +2131,8 @@ function talk(i){
   if (h.lv > b.lv || h.exp > b.exp + 1) it.push({ t:h.lv > b.lv ? '升級！' : '經驗 +', c:'#c9b6ff' });
   const pos = dm + dt - ds > 0;
   talkFx = { t:performance.now(), items:it, em:pos ? { t:'♥', c:'#ff8ab4' } : it.length ? { t:'!', c:'#ff7b7b' } : { t:'…', c:'#c9cfdb' } };
-  toast(it.length ? it.map(x => x.t).join('　') + (mul < .75 ? '（最近太常用，效果變差）' : '') : `${h.name}沒什麼反應`);
+  const tmTxt = tm ? pickS(TM_SAY[T0.k === 'scold' ? (tm === 'good' ? 'scoldGood' : 'scoldBad') : tm]) + '　' : '';
+  toast(tmTxt + (it.length ? it.map(x => x.t).join('　') + (bm < .75 ? '（最近太常用，效果變差）' : '') : `${h.name}沒什麼反應`));
   renderAll();
 }
 
